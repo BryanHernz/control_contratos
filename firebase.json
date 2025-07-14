@@ -1,1 +1,37 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"contratos-control","appId":"1:233057701817:android:658338bd7d1499d7cf7068","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"contratos-control","configurations":{"android":"1:233057701817:android:658338bd7d1499d7cf7068","web":"1:233057701817:web:26a75cb2d96783f8cf7068","windows":"1:233057701817:web:49d0ddaafa3484fecf7068"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "contratos-control",
+          "appId": "1:233057701817:android:658338bd7d1499d7cf7068",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "contratos-control",
+          "configurations": {
+            "android": "1:233057701817:android:658338bd7d1499d7cf7068",
+            "web": "1:233057701817:web:26a75cb2d96783f8cf7068",
+            "windows": "1:233057701817:web:49d0ddaafa3484fecf7068"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
