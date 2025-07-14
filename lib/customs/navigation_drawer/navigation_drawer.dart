@@ -65,21 +65,6 @@ class NavigationDrawerCustom extends StatelessWidget {
                         tabPressed!(1);
                       },
                     ),
-                    const Divider(
-                      thickness: 0.5,
-                      color: Color.fromRGBO(200, 200, 200, 1),
-                      indent: 20,
-                      endIndent: 20,
-                    ),
-                    DrawerItem(
-                      title: 'Editar Plantillas',
-                      icon: Icons.edit_note,
-                      selected: selectedTab == 2 ? true : false,
-                      onPressed: () {
-                        Scaffold.of(context).closeDrawer();
-                        tabPressed!(2);
-                      },
-                    ),
                   ],
                 ),
                 Column(
