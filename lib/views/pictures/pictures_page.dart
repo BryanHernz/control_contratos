@@ -13,6 +13,11 @@ import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb; // Import for platform check
+import 'package:image_picker/image_picker.dart'; // Import for image selection
+// import 'package:image_cropper/image_cropper.dart'; // REMOVED: Import for image cropping
+import 'package:image_editor_plus/image_editor_plus.dart'; // ADDED: Import for image editing
+import 'dart:typed_data'; // Import for Uint8List
 
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
@@ -37,9 +42,11 @@ class _PicturesPageState extends State<PicturesPage> {
   }
 
   Future<void> _checkPermissions() async {
-    await Permission.camera.request();
-    await Permission.storage.request();
-    if (Platform.isIOS) await Permission.photos.request();
+    if (!kIsWeb) { // Permissions are not applicable/handled differently on web
+      await Permission.camera.request();
+      await Permission.storage.request();
+      if (Platform.isIOS) await Permission.photos.request();
+    }
   }
 
   @override
@@ -170,31 +177,80 @@ class _PicturesPageState extends State<PicturesPage> {
 
   Future<void> _scanDocument(int position) async {
     try {
-      if (!await _verifyPermissions()) return;
-
       setState(() => _isUploading = true);
-      
-      final List<String>? scannedImages = await FlutterDocScanner().getScannedDocumentAsImages();
 
-      if (scannedImages == null || scannedImages.isEmpty) {
-        _showInfo('No se seleccionó ninguna imagen.');
-        setState(() => _isUploading = false);
-        return;
-      }
-      
-      if (scannedImages.length > 1) {
-        _showInfo('Se seleccionaron varias imágenes. Solo se procesará la primera.');
-      }
-      
-      final imagePath = await _validateFilePath(scannedImages.first);
-      if (imagePath == null) {
-        _showError('No se pudo procesar el documento escaneado');
-        setState(() => _isUploading = false);
-        return;
+      String? imagePath;
+      Uint8List? imageBytes;
+
+      if (kIsWeb) {
+        final ImagePicker picker = ImagePicker();
+        final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+        if (pickedFile != null) {
+          Uint8List? selectedImageBytes = await pickedFile.readAsBytes();
+          if (selectedImageBytes != null) {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ImageEditor(image: selectedImageBytes!),
+              ),
+            );
+
+            if (result != null) {
+              imageBytes = result as Uint8List;
+            } else {
+              _showInfo('No se editó ninguna imagen.');
+              setState(() => _isUploading = false);
+              return;
+            }
+          } else {
+            _showInfo('No se pudo leer la imagen seleccionada.');
+            setState(() => _isUploading = false);
+            return;
+          }
+        } else {
+          _showInfo('No se seleccionó ninguna imagen.');
+          setState(() => _isUploading = false);
+          return;
+        }
+      } else {
+        if (!await _verifyPermissions()) {
+          setState(() => _isUploading = false);
+          return;
+        }
+
+        final List<String>? scannedImages = await FlutterDocScanner().getScannedDocumentAsImages();
+
+        if (scannedImages == null || scannedImages.isEmpty) {
+          _showInfo('No se seleccionó ninguna imagen.');
+          setState(() => _isUploading = false);
+          return;
+        }
+        
+        if (scannedImages.length > 1) {
+          _showInfo('Se seleccionaron varias imágenes. Solo se procesará la primera.');
+        }
+
+        imagePath = await _validateFilePath(scannedImages.first);
+        if (imagePath == null) {
+          _showError('No se pudo procesar el documento escaneado');
+          setState(() => _isUploading = false);
+          return;
+        }
       }
 
-      await _uploadFile(position, imagePath);
-      await _cleanupScanCache();
+      if (kIsWeb && imageBytes != null) {
+        await _uploadBytesFile(position, imageBytes);
+      } else if (!kIsWeb && imagePath != null) {
+        await _uploadFile(position, imagePath);
+      } else {
+        _showInfo('No se obtuvo una imagen para subir.');
+      }
+      
+      if (!kIsWeb) { // Only cleanup for mobile platforms where a cache might exist
+        await _cleanupScanCache();
+      }
+
     } catch (e) {
       _showError('Error durante el escaneo: ${e.toString()}');
       debugPrint('Error details: $e');
@@ -238,7 +294,6 @@ class _PicturesPageState extends State<PicturesPage> {
     return true;
   }
 
-
   Future<void> _uploadFile(int position, String imagePath) async {
     try {
       final file = File(imagePath);
@@ -257,6 +312,43 @@ class _PicturesPageState extends State<PicturesPage> {
       final metadata = SettableMetadata(contentType: 'image/jpeg');
       
       final uploadTask = FirebaseStorage.instance.ref(path).putFile(file, metadata);
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('Trabajadores')
+          .doc(widget.worker.id)
+          .update({
+            position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl
+          });
+
+      setState(() {
+        if (position == 1) {
+          widget.worker.imageFront = downloadUrl;
+        } else {
+          widget.worker.imageBack = downloadUrl;
+        }
+      });
+
+      _showSuccess('Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
+    } catch (e) {
+      _showError('Error al subir: ${e.toString()}');
+    }
+  }
+
+  // New function to upload bytes for web
+  Future<void> _uploadBytesFile(int position, Uint8List imageBytes) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        _showError('Usuario no autenticado');
+        return;
+      }
+
+      final path = 'WorkersIdImages/${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
+      
+      final uploadTask = FirebaseStorage.instance.ref(path).putData(imageBytes, metadata);
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
