@@ -2,8 +2,34 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pattern_formatter/numeric_formatter.dart';
+import 'package:intl/intl.dart';
 import 'constants_values.dart';
+
+// Definición de la clase que reemplaza a ThousandsFormatter
+class ThousandsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.isEmpty) {
+      return newValue.copyWith(text: '');
+    }
+
+    final number = int.tryParse(newValue.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    if (number == null) {
+      return oldValue;
+    }
+
+    final formatter = NumberFormat.decimalPattern('es_CL');
+    final newString = formatter.format(number);
+
+    return TextEditingValue(
+      text: newString,
+      selection: TextSelection.collapsed(offset: newString.length),
+    );
+  }
+}
 
 class InputTextField extends StatelessWidget {
   InputTextField(
@@ -46,7 +72,7 @@ class InputTextField extends StatelessWidget {
           if (formater != null) ...[formater!],
           if (money == true && money!) ...[ThousandsFormatter()],
           if (decimal == true && decimal!) ...[
-            FilteringTextInputFormatter.allow('.')
+            FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))
           ],
         ],
         onTap: onTap,
@@ -71,18 +97,6 @@ class InputTextField extends StatelessWidget {
                   ),
                 )
               : null,
-          /*InfoPopupWidget(
-            arrowTheme: const InfoPopupArrowTheme(
-              color: Colors.transparent,
-            ),
-            contentOffset: const Offset(0, -20),
-            contentTitle: 'Nombre del componente principal del producto.',
-            child: Icon(
-              CupertinoIcons.info,
-              color: secundario.withOpacity(0.3),
-              size: 16,
-            ),
-          ),*/
           prefixText: prefix,
           focusedErrorBorder: OutlineInputBorder(
             borderSide: BorderSide(color: primario),
@@ -250,7 +264,7 @@ class CustomButton extends StatelessWidget {
     super.key,
     required this.funcion,
     required this.texto,
-    required this.cancelar,
+    this.cancelar = false,
   });
   final VoidCallback funcion;
   final String texto;

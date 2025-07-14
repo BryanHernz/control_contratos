@@ -32,10 +32,6 @@ dependencies:
   google_fonts: ^6.2.1
   
   flutter_doc_scanner: ^0.0.16
-  
-  # Añadido para la lista alfabética
-  scrollable_positioned_list: ^0.3.8
-  pattern_formatter: ^4.0.0
 
 
 dev_dependencies:

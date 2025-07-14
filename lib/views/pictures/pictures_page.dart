@@ -28,7 +28,6 @@ class PicturesPage extends StatefulWidget {
 }
 
 class _PicturesPageState extends State<PicturesPage> {
-  List<String> _pictures = [];
   bool _isUploading = false;
 
   @override
@@ -148,9 +147,10 @@ class _PicturesPageState extends State<PicturesPage> {
                 return progress == null
                     ? child
                     : Container(
-        padding: const EdgeInsets.all(20),
-        height: 200,
-        width: 350,child: const Center(child: CircularProgressIndicator()));
+                        padding: const EdgeInsets.all(20),
+                        height: 200,
+                        width: 350,
+                        child: const Center(child: CircularProgressIndicator()));
               },
             ),
           ),
@@ -174,17 +174,26 @@ class _PicturesPageState extends State<PicturesPage> {
 
       setState(() => _isUploading = true);
       
-      final result = await FlutterDocScanner().getScannedDocumentAsImages();
-      debugPrint('Raw scan result: ${result.toString()}');
+      final List<String>? scannedImages = await FlutterDocScanner().getScannedDocumentAsImages();
 
-      final imagePath = await _processScanResult(result);
+      if (scannedImages == null || scannedImages.isEmpty) {
+        _showInfo('No se seleccionó ninguna imagen.');
+        setState(() => _isUploading = false);
+        return;
+      }
+      
+      if (scannedImages.length > 1) {
+        _showInfo('Se seleccionaron varias imágenes. Solo se procesará la primera.');
+      }
+      
+      final imagePath = await _validateFilePath(scannedImages.first);
       if (imagePath == null) {
         _showError('No se pudo procesar el documento escaneado');
+        setState(() => _isUploading = false);
         return;
       }
 
-      setState(() => _pictures = [imagePath]);
-      await _uploadFile(position);
+      await _uploadFile(position, imagePath);
       await _cleanupScanCache();
     } catch (e) {
       _showError('Error durante el escaneo: ${e.toString()}');
@@ -194,44 +203,12 @@ class _PicturesPageState extends State<PicturesPage> {
     }
   }
 
-  Future<String?> _processScanResult(dynamic result) async {
-    try {
-      // Handle direct string path
-      if (result is String && result.startsWith('file://')) {
-        return await _validateFilePath(result);
-      }
-
-      // Handle complex scanner output format
-      final resultString = result.toString();
-      final filePath = _extractFilePath(resultString);
-      
-      if (filePath == null) {
-        debugPrint('No se encontró ruta de archivo válida');
-        return null;
-      }
-
-      return await _validateFilePath(filePath);
-    } catch (e) {
-      debugPrint('Error processing scan result: $e');
-      return null;
-    }
-  }
-
-  String? _extractFilePath(String input) {
-    try {
-      // Improved regex pattern that matches file URIs in the scanner output
-      final pattern = r'file:\/\/(?:[^\s}])+\.(?:jpg|jpeg|png)';
-      final match = RegExp(pattern).firstMatch(input);
-      return match?.group(0);
-    } catch (e) {
-      debugPrint('Error extracting file path: $e');
-      return null;
-    }
-  }
-
   Future<String?> _validateFilePath(String fileUri) async {
     try {
-      final filePath = fileUri.replaceFirst('file://', '');
+      final filePath = fileUri.startsWith('file://') 
+          ? fileUri.replaceFirst('file://', '')
+          : fileUri;
+
       final file = File(filePath);
       
       if (!await file.exists()) {
@@ -247,88 +224,24 @@ class _PicturesPageState extends State<PicturesPage> {
   }
 
   Future<bool> _verifyPermissions() async {
-    // Verificar el estado del permiso de cámara
     var cameraStatus = await Permission.camera.status;
-
-    // Si no ha sido concedido
     if (!cameraStatus.isGranted) {
-      // Si ha sido denegado permanentemente, informar al usuario y abrir configuración
-      if (cameraStatus.isPermanentlyDenied) {
-        _showError('Se requiere permiso de cámara. Por favor, otórguelo en la configuración de la aplicación.');
-        openAppSettings(); // Abre la configuración de la app
-        return false;
-      }
-
-      // Si aún no ha sido solicitado o fue denegado, solicitarlo
       final result = await Permission.camera.request();
       if (!result.isGranted) {
         _showError('Se requiere permiso de cámara');
+        if(await Permission.camera.isPermanentlyDenied) {
+           openAppSettings();
+        }
         return false;
       }
     }
-
-    // Verificar el estado del permiso de almacenamiento
-    var storageStatus = await Permission.storage.status;
-
-    // Para iOS, verificar también el permiso de fotos
-    if (Platform.isIOS) {
-      var photosStatus = await Permission.photos.status;
-      if (!photosStatus.isGranted) {
-         if (photosStatus.isPermanentlyDenied) {
-            _showError('Se requiere permiso de fotos. Por favor, otórguelo en la configuración de la aplicación.');
-            openAppSettings(); // Abre la configuración de la app
-            return false;
-          }
-        final result = await Permission.photos.request();
-        if (!result.isGranted) {
-          _showError('Se requiere permiso de fotos');
-          return false;
-        }
-      }
-       // En iOS, si el permiso de fotos está concedido, el de almacenamiento a menudo no es estrictamente necesario dependiendo de la implementación específica
-        if (!storageStatus.isGranted && !photosStatus.isGranted) {
-           if (storageStatus.isPermanentlyDenied) {
-              _showError('Se requiere permiso de almacenamiento. Por favor, otórguelo en la configuración de la aplicación.');
-              openAppSettings(); // Abre la configuración de la app
-              return false;
-            }
-          final result = await Permission.storage.request();
-           if (!result.isGranted) {
-             _showError('Se requiere permiso de almacenamiento');
-             return false;
-           }
-        }
-
-    } else {
-      // En Android, solo verificar el permiso de almacenamiento
-       if (!storageStatus.isGranted) {
-           if (storageStatus.isPermanentlyDenied) {
-              _showError('Se requiere permiso de almacenamiento. Por favor, otórguelo en la configuración de la aplicación.');
-              openAppSettings(); // Abre la configuración de la app
-              return false;
-            }
-          final result = await Permission.storage.request();
-           if (!result.isGranted) {
-             _showError('Se requiere permiso de almacenamiento');
-             return false;
-           }
-        }
-    }
-
-
-    // Si todos los permisos necesarios están concedidos
     return true;
   }
 
 
-  Future<void> _uploadFile(int position) async {
+  Future<void> _uploadFile(int position, String imagePath) async {
     try {
-      if (_pictures.isEmpty) {
-        _showError('No hay imágenes para subir');
-        return;
-      }
-
-      final file = File(_pictures.first);
+      final file = File(imagePath);
       if (!await file.exists()) {
         _showError('El archivo no existe');
         return;
@@ -520,6 +433,13 @@ class _PicturesPageState extends State<PicturesPage> {
     AnimatedSnackBar.material(
       message,
       type: AnimatedSnackBarType.success,
+    ).show(context);
+  }
+   void _showInfo(String message) {
+    if (!mounted) return;
+    AnimatedSnackBar.material(
+      message,
+      type: AnimatedSnackBarType.info,
     ).show(context);
   }
 }
