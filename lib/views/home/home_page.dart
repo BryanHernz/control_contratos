@@ -1,10 +1,10 @@
-// ignore_for_file: avoid_types_as_parameter_names
 
-import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
-import '../../customs/constants_values.dart';
+import 'package:flutter/material.dart';
+
 import '../../customs/navigation_drawer/navigation_drawer.dart';
 import '../contract/contract.dart';
 import '../workers/workers_page.dart';
+import '../templates/template_editor_page.dart'; // Importar la nueva página
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,51 +14,24 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late PageController _tabsPageController;
   int _selectedTab = 0;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
 
-  @override
-  void initState() {
-    _tabsPageController = PageController();
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    _tabsPageController.dispose();
-    super.dispose();
-  }
-
+  final List<Widget> _children = [
+    const WorkersPage(),
+    const ContractPage(),
+    const TemplateEditorPage(), // Añadir la nueva página a la lista
+  ];
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false,
-      key: _scaffoldKey,
-      drawer: NavigationDrawerCustom(
-        selectedTab: _selectedTab,
-        tabPressed: (num) {
-          _tabsPageController.jumpToPage(num);
-        },
-      ),
-      appBar: AppBar(
-        title: const Text('CONTROL DE CONTRATOS'),
-        centerTitle: true,
-        backgroundColor: primario,
-        foregroundColor: Colors.white,
-      ),
-      body: SafeArea(
-        child: PageView(
-          physics: const NeverScrollableScrollPhysics(),
-          controller: _tabsPageController,
-          onPageChanged: (num) {
+        drawer: NavigationDrawerCustom(
+          selectedTab: _selectedTab,
+          tabPressed: (index) {
             setState(() {
-              _selectedTab = num;
+              _selectedTab = index;
             });
           },
-          children: const [WorkersPage(), ContractPage()],
         ),
-      ),
-    );
+        body: _children[_selectedTab]);
   }
 }
