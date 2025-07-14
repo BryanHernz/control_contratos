@@ -31,7 +31,7 @@ class MyApp extends StatelessWidget {
         // Obtiene los datos de MediaQuery actuales
         final mediaQueryData = MediaQuery.of(context);
         // Define tu factor de escala deseado (ajusta este valor)
-        final double scaleFactor = 0.8; // Reducir la escala al 80%
+        final double scaleFactor = 0.9; // Reducir la escala al 80%
 
         // Aplica el factor de escala a los datos de MediaQuery
         final newMediaQueryData = mediaQueryData.copyWith(
