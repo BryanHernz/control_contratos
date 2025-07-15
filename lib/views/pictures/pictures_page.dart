@@ -13,7 +13,8 @@ import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart' show kIsWeb; // Import for platform check
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // Import for platform check
 import 'package:image_picker/image_picker.dart'; // Import for image selection
 // import 'package:image_cropper/image_cropper.dart'; // REMOVED: Import for image cropping
 import 'package:image_editor_plus/image_editor_plus.dart'; // ADDED: Import for image editing
@@ -42,7 +43,8 @@ class _PicturesPageState extends State<PicturesPage> {
   }
 
   Future<void> _checkPermissions() async {
-    if (!kIsWeb) { // Permissions are not applicable/handled differently on web
+    if (!kIsWeb) {
+      // Permissions are not applicable/handled differently on web
       await Permission.camera.request();
       await Permission.storage.request();
       if (Platform.isIOS) await Permission.photos.request();
@@ -75,23 +77,42 @@ class _PicturesPageState extends State<PicturesPage> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20),
           child: Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildImageSection(
-                  imageUrl: widget.worker.imageFront,
-                  position: 1,
-                  label: 'frontal',
-                ),
-                const SizedBox(height: 10),
-                _buildImageSection(
-                  imageUrl: widget.worker.imageBack,
-                  position: 2,
-                  label: 'trasera',
-                ),
-              ],
-            ),
+            child: kIsWeb
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildImageSection(
+                        imageUrl: widget.worker.imageFront,
+                        position: 1,
+                        label: 'frontal',
+                      ),
+                      const SizedBox(
+                          width: 20), // Add spacing between images in web view
+                      _buildImageSection(
+                        imageUrl: widget.worker.imageBack,
+                        position: 2,
+                        label: 'trasera',
+                      ),
+                    ],
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _buildImageSection(
+                        imageUrl: widget.worker.imageFront,
+                        position: 1,
+                        label: 'frontal',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildImageSection(
+                        imageUrl: widget.worker.imageBack,
+                        position: 2,
+                        label: 'trasera',
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -114,28 +135,35 @@ class _PicturesPageState extends State<PicturesPage> {
       child: Container(
         padding: const EdgeInsets.all(20),
         height: 200,
-        width: 350,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            Text(
-              'No hay imagen $label de Carnet para este trabajador.',
-              textAlign: TextAlign.center,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FloatingActionButton.extended(
-                  heroTag: 'add_$position',
-                  onPressed: _isUploading ? null : () => _scanDocument(position),
-                  icon: const Icon(Icons.add_photo_alternate),
-                  label: const Text('Agregar'),
-                ),
-              ],
-            ),
-          ],
-        ),
+        width: kIsWeb ? 300 : 350, // Adjust width for web view
+        child: kIsWeb
+            ? Center(
+                // Center content in web view
+                child: _buildAddButton(position, label),
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text(
+                    'No hay imagen $label de Carnet para este trabajador.',
+                    textAlign: TextAlign.center,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [_buildAddButton(position, label)],
+                  ),
+                ],
+              ),
       ),
+    );
+  }
+
+  Widget _buildAddButton(int position, String label) {
+    return FloatingActionButton.extended(
+      heroTag: 'add_$position',
+      onPressed: _isUploading ? null : () => _scanDocument(position),
+      icon: const Icon(Icons.add_photo_alternate),
+      label: const Text('Agregar'),
     );
   }
 
@@ -157,7 +185,8 @@ class _PicturesPageState extends State<PicturesPage> {
                         padding: const EdgeInsets.all(20),
                         height: 200,
                         width: 350,
-                        child: const Center(child: CircularProgressIndicator()));
+                        child:
+                            const Center(child: CircularProgressIndicator()));
               },
             ),
           ),
@@ -184,7 +213,8 @@ class _PicturesPageState extends State<PicturesPage> {
 
       if (kIsWeb) {
         final ImagePicker picker = ImagePicker();
-        final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
+        final XFile? pickedFile =
+            await picker.pickImage(source: ImageSource.gallery);
 
         if (pickedFile != null) {
           Uint8List? selectedImageBytes = await pickedFile.readAsBytes();
@@ -219,16 +249,18 @@ class _PicturesPageState extends State<PicturesPage> {
           return;
         }
 
-        final List<String>? scannedImages = await FlutterDocScanner().getScannedDocumentAsImages();
+        final List<String>? scannedImages =
+            await FlutterDocScanner().getScannedDocumentAsImages();
 
         if (scannedImages == null || scannedImages.isEmpty) {
           _showInfo('No se seleccionó ninguna imagen.');
           setState(() => _isUploading = false);
           return;
         }
-        
+
         if (scannedImages.length > 1) {
-          _showInfo('Se seleccionaron varias imágenes. Solo se procesará la primera.');
+          _showInfo(
+              'Se seleccionaron varias imágenes. Solo se procesará la primera.');
         }
 
         imagePath = await _validateFilePath(scannedImages.first);
@@ -246,11 +278,11 @@ class _PicturesPageState extends State<PicturesPage> {
       } else {
         _showInfo('No se obtuvo una imagen para subir.');
       }
-      
-      if (!kIsWeb) { // Only cleanup for mobile platforms where a cache might exist
+
+      if (!kIsWeb) {
+        // Only cleanup for mobile platforms where a cache might exist
         await _cleanupScanCache();
       }
-
     } catch (e) {
       _showError('Error durante el escaneo: ${e.toString()}');
       debugPrint('Error details: $e');
@@ -261,12 +293,12 @@ class _PicturesPageState extends State<PicturesPage> {
 
   Future<String?> _validateFilePath(String fileUri) async {
     try {
-      final filePath = fileUri.startsWith('file://') 
+      final filePath = fileUri.startsWith('file://')
           ? fileUri.replaceFirst('file://', '')
           : fileUri;
 
       final file = File(filePath);
-      
+
       if (!await file.exists()) {
         debugPrint('Archivo no existe en la ruta: $filePath');
         return null;
@@ -285,8 +317,8 @@ class _PicturesPageState extends State<PicturesPage> {
       final result = await Permission.camera.request();
       if (!result.isGranted) {
         _showError('Se requiere permiso de cámara');
-        if(await Permission.camera.isPermanentlyDenied) {
-           openAppSettings();
+        if (await Permission.camera.isPermanentlyDenied) {
+          openAppSettings();
         }
         return false;
       }
@@ -308,19 +340,19 @@ class _PicturesPageState extends State<PicturesPage> {
         return;
       }
 
-      final path = 'WorkersIdImages/${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
+      final path =
+          'WorkersIdImages/${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
       final metadata = SettableMetadata(contentType: 'image/jpeg');
-      
-      final uploadTask = FirebaseStorage.instance.ref(path).putFile(file, metadata);
+
+      final uploadTask =
+          FirebaseStorage.instance.ref(path).putFile(file, metadata);
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
       await FirebaseFirestore.instance
           .collection('Trabajadores')
           .doc(widget.worker.id)
-          .update({
-            position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl
-          });
+          .update({position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl});
 
       setState(() {
         if (position == 1) {
@@ -330,7 +362,8 @@ class _PicturesPageState extends State<PicturesPage> {
         }
       });
 
-      _showSuccess('Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
+      _showSuccess(
+          'Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
     } catch (e) {
       _showError('Error al subir: ${e.toString()}');
     }
@@ -345,19 +378,19 @@ class _PicturesPageState extends State<PicturesPage> {
         return;
       }
 
-      final path = 'WorkersIdImages/${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
+      final path =
+          'WorkersIdImages/${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
       final metadata = SettableMetadata(contentType: 'image/jpeg');
-      
-      final uploadTask = FirebaseStorage.instance.ref(path).putData(imageBytes, metadata);
+
+      final uploadTask =
+          FirebaseStorage.instance.ref(path).putData(imageBytes, metadata);
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
       await FirebaseFirestore.instance
           .collection('Trabajadores')
           .doc(widget.worker.id)
-          .update({
-            position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl
-          });
+          .update({position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl});
 
       setState(() {
         if (position == 1) {
@@ -367,7 +400,8 @@ class _PicturesPageState extends State<PicturesPage> {
         }
       });
 
-      _showSuccess('Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
+      _showSuccess(
+          'Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
     } catch (e) {
       _showError('Error al subir: ${e.toString()}');
     }
@@ -427,16 +461,15 @@ class _PicturesPageState extends State<PicturesPage> {
   Future<void> _deleteImage(int position) async {
     try {
       const path = 'WorkersIdImages/';
-      final fileName = '${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
-      
+      final fileName =
+          '${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
+
       await FirebaseStorage.instance.ref(path).child(fileName).delete();
-      
+
       await FirebaseFirestore.instance
           .collection('Trabajadores')
           .doc(widget.worker.id)
-          .update({
-            position == 1 ? 'imagenFront' : 'imagenBack': ''
-          });
+          .update({position == 1 ? 'imagenFront' : 'imagenBack': ''});
 
       Get.back();
       setState(() {
@@ -458,7 +491,7 @@ class _PicturesPageState extends State<PicturesPage> {
       final url1 = widget.worker.imageFront?.isNotEmpty == true
           ? widget.worker.imageFront!
           : 'https://firebasestorage.googleapis.com/v0/b/contratos-control.appspot.com/o/white.jpg?alt=media&token=5ac45bdc-6b4b-4ef0-949c-a717c2bec1e7';
-      
+
       final url2 = widget.worker.imageBack?.isNotEmpty == true
           ? widget.worker.imageBack!
           : 'https://firebasestorage.googleapis.com/v0/b/contratos-control.appspot.com/o/white.jpg?alt=media&token=5ac45bdc-6b4b-4ef0-949c-a717c2bec1e7';
@@ -506,11 +539,11 @@ class _PicturesPageState extends State<PicturesPage> {
       _showError('Error al generar PDF: ${e.toString()}');
     }
   }
+
   Future<pw.ImageProvider> _loadImage(String url) async {
     final response = await http.get(Uri.parse(url));
     return pw.MemoryImage(response.bodyBytes);
   }
-  
 
   void _showError(String message) {
     if (!mounted) return;
@@ -527,7 +560,8 @@ class _PicturesPageState extends State<PicturesPage> {
       type: AnimatedSnackBarType.success,
     ).show(context);
   }
-   void _showInfo(String message) {
+
+  void _showInfo(String message) {
     if (!mounted) return;
     AnimatedSnackBar.material(
       message,
