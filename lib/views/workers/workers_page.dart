@@ -57,11 +57,13 @@ class _WorkersPageState extends State<WorkersPage> {
 
     setState(() {
       if (query.isEmpty) {
-        _displayedWorkers = _allWorkers; // Si la búsqueda está vacía, mostrar todos
+        _displayedWorkers =
+            _allWorkers; // Si la búsqueda está vacía, mostrar todos
       } else {
         // Filtrar por nombre o apellido (normalizados)
         _displayedWorkers = _allWorkers.where((worker) {
-          final normalizedFullName = _normalizeString('${worker.name} ${worker.lastName}');
+          final normalizedFullName =
+              _normalizeString('${worker.name} ${worker.lastName}');
           return normalizedFullName.contains(query);
         }).toList();
       }
@@ -100,7 +102,8 @@ class _WorkersPageState extends State<WorkersPage> {
               .collection('Trabajadores')
               .orderBy('nombres')
               .snapshots(),
-          builder: (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          builder:
+              (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
             if (snapshot.hasError) {
               return Center(
                 child: Text('Error al cargar trabajadores: ${snapshot.error}'),
@@ -113,39 +116,37 @@ class _WorkersPageState extends State<WorkersPage> {
               );
             }
 
-            // Cuando llegan nuevos datos, actualizamos _allWorkers.
-            // Luego, determinamos _displayedWorkers based on the current search query.
+            // Cuando llegan nuevos datos, actualizamos _allWorkers incondicionalmente.
             final List<WorkerModel> fetchedWorkers = snapshot.data!.docs
                 .map((doc) => WorkerModel.fromDocumentSnapshot(doc))
                 .toList();
 
-            // Solo actualiza _allWorkers si los datos han cambiado
-            // Puedes usar una comparación más robusta si necesitas,
-            // pero para este caso, la longitud es un buen primer filtro.
-            if (_allWorkers.length != fetchedWorkers.length || !_listEquals(_allWorkers, fetchedWorkers)) { // Agregamos _listEquals para una comparación más profunda
-                 _allWorkers = fetchedWorkers;
-                 // Si los datos base han cambiado, necesitamos re-evaluar _displayedWorkers
-                 final query = _normalizeString(_searchController.text); // Normalizar la consulta
-                 if (query.isEmpty) {
-                   _displayedWorkers = _allWorkers;
-                 } else {
-                   _displayedWorkers = _allWorkers.where((worker) {
-                     final normalizedFullName = _normalizeString('${worker.name} ${worker.lastName}');
-                     return normalizedFullName.contains(query);
-                   }).toList();
-                 }
+            // Siempre actualizamos _allWorkers con los datos más recientes
+            _allWorkers = fetchedWorkers;
+
+            // Y siempre re-evaluamos _displayedWorkers basado en la consulta actual
+            final query = _normalizeString(_searchController.text);
+            if (query.isEmpty) {
+              _displayedWorkers = _allWorkers;
+            } else {
+              _displayedWorkers = _allWorkers.where((worker) {
+                final normalizedFullName =
+                    _normalizeString('${worker.name} ${worker.lastName}');
+                return normalizedFullName.contains(query);
+              }).toList();
             }
 
-
-            if (_displayedWorkers.isEmpty && _searchController.text.isNotEmpty) {
+            if (_displayedWorkers.isEmpty &&
+                _searchController.text.isNotEmpty) {
               return const Center(
                 child: Text('No existen coincidencias para su búsqueda'),
               );
             }
 
             if (_displayedWorkers.isEmpty && _searchController.text.isEmpty) {
-               return const Center(
-                child: Text('No hay trabajadores registrados. ¡Toca el botón "+" para añadir uno!'),
+              return const Center(
+                child: Text(
+                    'No hay trabajadores registrados. ¡Toca el botón "+" para añadir uno!'),
               );
             }
 
@@ -156,7 +157,8 @@ class _WorkersPageState extends State<WorkersPage> {
               children: List.generate(
                 _displayedWorkers.length,
                 (int index) {
-                  final worker = _displayedWorkers[index]; // Usa el trabajador de la lista filtrada
+                  final worker = _displayedWorkers[
+                      index]; // Usa el trabajador de la lista filtrada
                   return GestureDetector(
                     onTap: () {
                       showCupertinoModalBottomSheet(
@@ -164,7 +166,8 @@ class _WorkersPageState extends State<WorkersPage> {
                         builder: (context) => Container(
                           constraints: const BoxConstraints(maxHeight: 600),
                           child: WorkerDetails(
-                            worker: worker, // Pasa el objeto WorkerModel directamente
+                            worker:
+                                worker, // Pasa el objeto WorkerModel directamente
                           ),
                         ),
                       );
@@ -229,7 +232,9 @@ class _WorkersPageState extends State<WorkersPage> {
   // Widget para la barra de búsqueda
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0,),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8.0,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.2), // Color de fondo para la barra
         borderRadius: BorderRadius.circular(10.0),
