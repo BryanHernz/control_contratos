@@ -16,8 +16,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart'
     show kIsWeb; // Import for platform check
 import 'package:image_picker/image_picker.dart'; // Import for image selection
-// import 'package:image_cropper/image_cropper.dart'; // REMOVED: Import for image cropping
-import 'package:image_editor_plus/image_editor_plus.dart'; // ADDED: Import for image editing
+import 'package:image_cropper/image_cropper.dart' as ic; // Import with prefix
 import 'dart:typed_data'; // Import for Uint8List
 
 import '../../customs/constants_values.dart';
@@ -39,17 +38,18 @@ class _PicturesPageState extends State<PicturesPage> {
   @override
   void initState() {
     super.initState();
-    _checkPermissions();
+    // Se eliminó _checkPermissions() de initState.
+    // Los permisos se solicitarán cuando sean necesarios en _scanDocument.
   }
 
-  Future<void> _checkPermissions() async {
-    if (!kIsWeb) {
-      // Permissions are not applicable/handled differently on web
-      await Permission.camera.request();
-      await Permission.storage.request();
-      if (Platform.isIOS) await Permission.photos.request();
-    }
-  }
+  // Este método ya no se llama en initState, su funcionalidad se integró en _verifyPermissions
+  // Future<void> _checkPermissions() async {
+  //   if (!kIsWeb) {
+  //     await Permission.camera.request();
+  //     await Permission.storage.request();
+  //     if (Platform.isIOS) await Permission.photos.request();
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -77,42 +77,23 @@ class _PicturesPageState extends State<PicturesPage> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20),
           child: Center(
-            child: kIsWeb
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildImageSection(
-                        imageUrl: widget.worker.imageFront,
-                        position: 1,
-                        label: 'frontal',
-                      ),
-                      const SizedBox(
-                          width: 20), // Add spacing between images in web view
-                      _buildImageSection(
-                        imageUrl: widget.worker.imageBack,
-                        position: 2,
-                        label: 'trasera',
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildImageSection(
-                        imageUrl: widget.worker.imageFront,
-                        position: 1,
-                        label: 'frontal',
-                      ),
-                      const SizedBox(height: 10),
-                      _buildImageSection(
-                        imageUrl: widget.worker.imageBack,
-                        position: 2,
-                        label: 'trasera',
-                      ),
-                    ],
-                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildImageSection(
+                  imageUrl: widget.worker.imageFront,
+                  position: 1,
+                  label: 'frontal',
+                ),
+                const SizedBox(height: 10),
+                _buildImageSection(
+                  imageUrl: widget.worker.imageBack,
+                  position: 2,
+                  label: 'trasera',
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -135,35 +116,29 @@ class _PicturesPageState extends State<PicturesPage> {
       child: Container(
         padding: const EdgeInsets.all(20),
         height: 200,
-        width: kIsWeb ? 300 : 350, // Adjust width for web view
-        child: kIsWeb
-            ? Center(
-                // Center content in web view
-                child: _buildAddButton(position, label),
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Text(
-                    'No hay imagen $label de Carnet para este trabajador.',
-                    textAlign: TextAlign.center,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [_buildAddButton(position, label)],
-                  ),
-                ],
-              ),
+        width: 350,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            Text(
+              'No hay imagen $label de Carnet para este trabajador.',
+              textAlign: TextAlign.center,
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                FloatingActionButton.extended(
+                  heroTag: 'add_$position',
+                  onPressed:
+                      _isUploading ? null : () => _scanDocument(position),
+                  icon: const Icon(Icons.add_photo_alternate),
+                  label: const Text('Agregar'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildAddButton(int position, String label) {
-    return FloatingActionButton.extended(
-      heroTag: 'add_$position',
-      onPressed: _isUploading ? null : () => _scanDocument(position),
-      icon: const Icon(Icons.add_photo_alternate),
-      label: const Text('Agregar'),
     );
   }
 
@@ -217,24 +192,23 @@ class _PicturesPageState extends State<PicturesPage> {
             await picker.pickImage(source: ImageSource.gallery);
 
         if (pickedFile != null) {
-          Uint8List? selectedImageBytes = await pickedFile.readAsBytes();
-          if (selectedImageBytes != null) {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ImageEditor(image: selectedImageBytes!),
+          final croppedFile = await ic.ImageCropper().cropImage(
+            sourcePath: pickedFile.path,
+            uiSettings: [
+              ic.WebUiSettings(
+                context: context,
+                presentStyle: ic.WebPresentStyle.dialog,
+                themeData: const ic.WebThemeData(
+                    // Parámetros válidos para WebThemeData (solo los disponibles en la versión que estás usando)
+                    // Puedes personalizar iconos o colores específicos que estén definidos aquí.
+                    ),
               ),
-            );
-
-            if (result != null) {
-              imageBytes = result as Uint8List;
-            } else {
-              _showInfo('No se editó ninguna imagen.');
-              setState(() => _isUploading = false);
-              return;
-            }
+            ],
+          );
+          if (croppedFile != null) {
+            imageBytes = await croppedFile.readAsBytes();
           } else {
-            _showInfo('No se pudo leer la imagen seleccionada.');
+            _showInfo('No se recortó ninguna imagen.');
             setState(() => _isUploading = false);
             return;
           }
@@ -244,6 +218,7 @@ class _PicturesPageState extends State<PicturesPage> {
           return;
         }
       } else {
+        // En plataformas móviles, verificar permisos antes de usar flutter_doc_scanner
         if (!await _verifyPermissions()) {
           setState(() => _isUploading = false);
           return;
@@ -311,19 +286,25 @@ class _PicturesPageState extends State<PicturesPage> {
     }
   }
 
+  // Método actualizado para verificar y solicitar permisos para Android/iOS
   Future<bool> _verifyPermissions() async {
-    var cameraStatus = await Permission.camera.status;
-    if (!cameraStatus.isGranted) {
-      final result = await Permission.camera.request();
-      if (!result.isGranted) {
-        _showError('Se requiere permiso de cámara');
-        if (await Permission.camera.isPermanentlyDenied) {
-          openAppSettings();
-        }
-        return false;
+    // Solicitar permisos de cámara y almacenamiento
+    final cameraStatus = await Permission.camera.request();
+    final photosStatus =
+        await Permission.photos.request(); // Usar photos en lugar de storage
+
+    if (cameraStatus.isGranted && photosStatus.isGranted) {
+      return true;
+    } else {
+      _showError(
+          'Se requieren permisos de cámara y acceso a fotos para esta función.');
+      // Si alguno de los permisos es permanentemente denegado, guiar al usuario a la configuración
+      if (cameraStatus.isPermanentlyDenied ||
+          photosStatus.isPermanentlyDenied) {
+        openAppSettings(); // Abre la configuración de la aplicación
       }
+      return false;
     }
-    return true;
   }
 
   Future<void> _uploadFile(int position, String imagePath) async {
