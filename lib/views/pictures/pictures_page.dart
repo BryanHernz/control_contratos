@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart'; // Corrected import
 import 'package:get/get.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -198,10 +198,6 @@ class _PicturesPageState extends State<PicturesPage> {
               ic.WebUiSettings(
                 context: context,
                 presentStyle: ic.WebPresentStyle.dialog,
-                themeData: const ic.WebThemeData(
-                    // Parámetros válidos para WebThemeData (solo los disponibles en la versión que estás usando)
-                    // Puedes personalizar iconos o colores específicos que estén definidos aquí.
-                    ),
               ),
             ],
           );
@@ -218,29 +214,49 @@ class _PicturesPageState extends State<PicturesPage> {
           return;
         }
       } else {
-        // En plataformas móviles, verificar permisos antes de usar flutter_doc_scanner
+        // Lógica corregida para plataformas móviles
         if (!await _verifyPermissions()) {
           setState(() => _isUploading = false);
           return;
         }
 
-        final List<String>? scannedImages =
+        final dynamic scannedResult =
             await FlutterDocScanner().getScannedDocumentAsImages();
 
-        if (scannedImages == null || scannedImages.isEmpty) {
-          _showInfo('No se seleccionó ninguna imagen.');
+        // 1. Primero, verifica si el resultado es un Map (caso de error o cancelación)
+        if (scannedResult is Map) {
+          debugPrint(
+              'La operación fue cancelada o hubo un error: $scannedResult');
+          _showInfo('No se seleccionó ningún documento.');
           setState(() => _isUploading = false);
           return;
         }
 
-        if (scannedImages.length > 1) {
-          _showInfo(
-              'Se seleccionaron varias imágenes. Solo se procesará la primera.');
-        }
+        // 2. Luego, verifica si es el tipo esperado (List<String>)
+        if (scannedResult is List<String>) {
+          final List<String> scannedImages = scannedResult;
 
-        imagePath = await _validateFilePath(scannedImages.first);
-        if (imagePath == null) {
-          _showError('No se pudo procesar el documento escaneado');
+          if (scannedImages.isEmpty) {
+            _showInfo('No se seleccionó ninguna imagen.');
+            setState(() => _isUploading = false);
+            return;
+          }
+
+          if (scannedImages.length > 1) {
+            _showInfo(
+                'Se seleccionaron varias imágenes. Solo se procesará la primera.');
+          }
+
+          imagePath = await _validateFilePath(scannedImages.first);
+          if (imagePath == null) {
+            _showError('No se pudo procesar el documento escaneado');
+            setState(() => _isUploading = false);
+            return;
+          }
+        } else {
+          // 3. Maneja cualquier otro tipo inesperado
+          _showError(
+              'Error al escanear el documento. El formato recibido no es válido.');
           setState(() => _isUploading = false);
           return;
         }
@@ -255,7 +271,6 @@ class _PicturesPageState extends State<PicturesPage> {
       }
 
       if (!kIsWeb) {
-        // Only cleanup for mobile platforms where a cache might exist
         await _cleanupScanCache();
       }
     } catch (e) {
@@ -452,7 +467,6 @@ class _PicturesPageState extends State<PicturesPage> {
           .doc(widget.worker.id)
           .update({position == 1 ? 'imagenFront' : 'imagenBack': ''});
 
-      Get.back();
       setState(() {
         if (position == 1) {
           widget.worker.imageFront = '';
