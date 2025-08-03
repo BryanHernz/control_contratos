@@ -2,22 +2,17 @@ import 'dart:io';
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
-import 'package:flutter_doc_scanner/flutter_doc_scanner.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_mlkit_document_scanner/google_mlkit_document_scanner.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path_provider/path_provider.dart'; // Corrected import
 import 'package:get/get.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart'
     show kIsWeb; // Import for platform check
-import 'package:image_picker/image_picker.dart'; // Import for image selection
-import 'package:image_cropper/image_cropper.dart' as ic; // Import with prefix
-import 'dart:typed_data'; // Import for Uint8List
 
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
@@ -34,22 +29,6 @@ class PicturesPage extends StatefulWidget {
 
 class _PicturesPageState extends State<PicturesPage> {
   bool _isUploading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Se eliminó _checkPermissions() de initState.
-    // Los permisos se solicitarán cuando sean necesarios en _scanDocument.
-  }
-
-  // Este método ya no se llama en initState, su funcionalidad se integró en _verifyPermissions
-  // Future<void> _checkPermissions() async {
-  //   if (!kIsWeb) {
-  //     await Permission.camera.request();
-  //     await Permission.storage.request();
-  //     if (Platform.isIOS) await Permission.photos.request();
-  //   }
-  // }
 
   @override
   Widget build(BuildContext context) {
@@ -124,17 +103,11 @@ class _PicturesPageState extends State<PicturesPage> {
               'No hay imagen $label de Carnet para este trabajador.',
               textAlign: TextAlign.center,
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FloatingActionButton.extended(
-                  heroTag: 'add_$position',
-                  onPressed:
-                      _isUploading ? null : () => _scanDocument(position),
-                  icon: const Icon(Icons.add_photo_alternate),
-                  label: const Text('Agregar'),
-                ),
-              ],
+            FloatingActionButton.extended(
+              heroTag: 'scan_$position',
+              onPressed: _isUploading ? null : () => _scanDocument(position),
+              icon: const Icon(Icons.add_a_photo),
+              label: const Text('Escanear Documento'),
             ),
           ],
         ),
@@ -180,157 +153,44 @@ class _PicturesPageState extends State<PicturesPage> {
   }
 
   Future<void> _scanDocument(int position) async {
+    if (kIsWeb) {
+      _showError(
+          "La función de escaneo no está disponible en la web. Por favor, suba una imagen desde su dispositivo.");
+      return;
+    }
     try {
       setState(() => _isUploading = true);
 
-      String? imagePath;
-      Uint8List? imageBytes;
+      // Corrected DocumentScannerOptions
+      final DocumentScannerOptions options = DocumentScannerOptions(
+        mode: ScannerMode.full,
+        pageLimit: 1,
+      );
 
-      if (kIsWeb) {
-        final ImagePicker picker = ImagePicker();
-        final XFile? pickedFile =
-            await picker.pickImage(source: ImageSource.gallery);
+      final DocumentScanner documentScanner = DocumentScanner(options: options);
+      final DocumentScanningResult result =
+          await documentScanner.scanDocument();
 
-        if (pickedFile != null) {
-          final croppedFile = await ic.ImageCropper().cropImage(
-            sourcePath: pickedFile.path,
-            uiSettings: [
-              ic.WebUiSettings(
-                context: context,
-                presentStyle: ic.WebPresentStyle.dialog,
-              ),
-            ],
-          );
-          if (croppedFile != null) {
-            imageBytes = await croppedFile.readAsBytes();
-          } else {
-            _showInfo('No se recortó ninguna imagen.');
-            setState(() => _isUploading = false);
-            return;
-          }
-        } else {
-          _showInfo('No se seleccionó ninguna imagen.');
-          setState(() => _isUploading = false);
-          return;
-        }
+      if (result.images.isNotEmpty) {
+        await _uploadFile(position, result.images.first);
       } else {
-        // Lógica corregida para plataformas móviles
-        if (!await _verifyPermissions()) {
-          setState(() => _isUploading = false);
-          return;
-        }
-
-        final dynamic scannedResult =
-            await FlutterDocScanner().getScannedDocumentAsImages();
-
-        // 1. Primero, verifica si el resultado es un Map (caso de error o cancelación)
-        if (scannedResult is Map) {
-          debugPrint(
-              'La operación fue cancelada o hubo un error: $scannedResult');
-          _showInfo('No se seleccionó ningún documento.');
-          setState(() => _isUploading = false);
-          return;
-        }
-
-        // 2. Luego, verifica si es el tipo esperado (List<String>)
-        if (scannedResult is List<String>) {
-          final List<String> scannedImages = scannedResult;
-
-          if (scannedImages.isEmpty) {
-            _showInfo('No se seleccionó ninguna imagen.');
-            setState(() => _isUploading = false);
-            return;
-          }
-
-          if (scannedImages.length > 1) {
-            _showInfo(
-                'Se seleccionaron varias imágenes. Solo se procesará la primera.');
-          }
-
-          imagePath = await _validateFilePath(scannedImages.first);
-          if (imagePath == null) {
-            _showError('No se pudo procesar el documento escaneado');
-            setState(() => _isUploading = false);
-            return;
-          }
-        } else {
-          // 3. Maneja cualquier otro tipo inesperado
-          _showError(
-              'Error al escanear el documento. El formato recibido no es válido.');
-          setState(() => _isUploading = false);
-          return;
-        }
-      }
-
-      if (kIsWeb && imageBytes != null) {
-        await _uploadBytesFile(position, imageBytes);
-      } else if (!kIsWeb && imagePath != null) {
-        await _uploadFile(position, imagePath);
-      } else {
-        _showInfo('No se obtuvo una imagen para subir.');
-      }
-
-      if (!kIsWeb) {
-        await _cleanupScanCache();
+        _showInfo('No se seleccionó o escaneó ningún documento.');
       }
     } catch (e) {
-      _showError('Error durante el escaneo: ${e.toString()}');
-      debugPrint('Error details: $e');
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
-  Future<String?> _validateFilePath(String fileUri) async {
-    try {
-      final filePath = fileUri.startsWith('file://')
-          ? fileUri.replaceFirst('file://', '')
-          : fileUri;
-
-      final file = File(filePath);
-
-      if (!await file.exists()) {
-        debugPrint('Archivo no existe en la ruta: $filePath');
-        return null;
-      }
-
-      return file.path;
-    } catch (e) {
-      debugPrint('Error validando archivo: $e');
-      return null;
-    }
-  }
-
-  // Método actualizado para verificar y solicitar permisos para Android/iOS
-  Future<bool> _verifyPermissions() async {
-    // Solicitar permisos de cámara y almacenamiento
-    final cameraStatus = await Permission.camera.request();
-    final photosStatus =
-        await Permission.photos.request(); // Usar photos en lugar de storage
-
-    if (cameraStatus.isGranted && photosStatus.isGranted) {
-      return true;
-    } else {
       _showError(
-          'Se requieren permisos de cámara y acceso a fotos para esta función.');
-      // Si alguno de los permisos es permanentemente denegado, guiar al usuario a la configuración
-      if (cameraStatus.isPermanentlyDenied ||
-          photosStatus.isPermanentlyDenied) {
-        openAppSettings(); // Abre la configuración de la aplicación
+          'Ocurrió un error con el escáner de documentos: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isUploading = false);
       }
-      return false;
     }
   }
 
   Future<void> _uploadFile(int position, String imagePath) async {
     try {
       final file = File(imagePath);
-      if (!await file.exists()) {
-        _showError('El archivo no existe');
-        return;
-      }
-
       final user = FirebaseAuth.instance.currentUser;
+
       if (user == null) {
         _showError('Usuario no autenticado');
         return;
@@ -362,56 +222,6 @@ class _PicturesPageState extends State<PicturesPage> {
           'Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
     } catch (e) {
       _showError('Error al subir: ${e.toString()}');
-    }
-  }
-
-  // New function to upload bytes for web
-  Future<void> _uploadBytesFile(int position, Uint8List imageBytes) async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _showError('Usuario no autenticado');
-        return;
-      }
-
-      final path =
-          'WorkersIdImages/${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
-      final metadata = SettableMetadata(contentType: 'image/jpeg');
-
-      final uploadTask =
-          FirebaseStorage.instance.ref(path).putData(imageBytes, metadata);
-      final snapshot = await uploadTask;
-      final downloadUrl = await snapshot.ref.getDownloadURL();
-
-      await FirebaseFirestore.instance
-          .collection('Trabajadores')
-          .doc(widget.worker.id)
-          .update({position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl});
-
-      setState(() {
-        if (position == 1) {
-          widget.worker.imageFront = downloadUrl;
-        } else {
-          widget.worker.imageBack = downloadUrl;
-        }
-      });
-
-      _showSuccess(
-          'Imagen ${position == 1 ? 'frontal' : 'trasera'} actualizada');
-    } catch (e) {
-      _showError('Error al subir: ${e.toString()}');
-    }
-  }
-
-  Future<void> _cleanupScanCache() async {
-    try {
-      final tempDir = await getTemporaryDirectory();
-      final scanDir = Directory('${tempDir.path}/mlkit_docscan_ui_client');
-      if (await scanDir.exists()) {
-        await scanDir.delete(recursive: true);
-      }
-    } catch (e) {
-      debugPrint('Cache cleanup error: $e');
     }
   }
 
@@ -460,6 +270,7 @@ class _PicturesPageState extends State<PicturesPage> {
       final fileName =
           '${widget.worker.rut}_${position == 1 ? 'front' : 'back'}';
 
+      Get.back();
       await FirebaseStorage.instance.ref(path).child(fileName).delete();
 
       await FirebaseFirestore.instance
