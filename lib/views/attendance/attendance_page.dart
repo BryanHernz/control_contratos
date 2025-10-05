@@ -12,6 +12,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:file_saver/file_saver.dart';
+import 'dart:typed_data';
 
 import '../../services/attendance_service.dart';
 import '../../utils/normalize.dart';
@@ -46,10 +48,7 @@ class _AttendancePageState extends State<AttendancePage> {
     super.dispose();
   }
 
-  // Nombre a mostrar universal: "NOMBRES APELLIDOS"
-  // 1) intenta por workerId (más fiable),
-  // 2) luego por RUT,
-  // 3) si no, usa el 'name' guardado en el doc del día.
+  // ===== Helpers de nombres/orden =====
   String _displayNameFor(Map<String, dynamic> e) {
     final wid = (e['workerId'] ?? '').toString().trim();
     if (wid.isNotEmpty) {
@@ -58,7 +57,6 @@ class _AttendancePageState extends State<AttendancePage> {
         return '${byId.first.nombres} ${byId.first.apellidos}'.trim();
       }
     }
-
     final rut = (e['rut'] ?? '').toString().trim();
     if (rut.isNotEmpty) {
       final byRut = _all.where((w) => w.rut.trim() == rut);
@@ -66,12 +64,12 @@ class _AttendancePageState extends State<AttendancePage> {
         return '${byRut.first.nombres} ${byRut.first.apellidos}'.trim();
       }
     }
-
     return (e['name'] ?? '').toString().trim();
   }
 
   String _sortKeyFor(Map<String, dynamic> e) => normalize(_displayNameFor(e));
 
+  // ===== Firestore: carga de trabajadores y filtro =====
   void _listenWorkers() {
     FirebaseFirestore.instance
         .collection('Trabajadores')
@@ -112,13 +110,14 @@ class _AttendancePageState extends State<AttendancePage> {
     });
   }
 
+  // ===== Acciones agregar / quitar =====
   Future<void> _add(_Worker w) async {
     final user = FirebaseAuth.instance.currentUser;
     final addedBy = user?.uid ?? 'manual';
     await AttendanceService.addPresent(
       normalizeDay(_selectedDate),
       workerId: w.id,
-      name: '${w.nombres} ${w.apellidos}'.trim(), // NOMBRES APELLIDOS
+      name: '${w.nombres} ${w.apellidos}'.trim(),
       rut: w.rut.toUpperCase(),
       addedBy: addedBy,
     );
@@ -131,8 +130,111 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  Future<void> _exportPdf(List<Map<String, dynamic>> entries) async {
-    // Ordenar por el mismo criterio que la lista
+  Future<bool> _confirmRemoveSheet(String displayName) async {
+    final r = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  'Quitar de asistencia',
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '¿Estás seguro de quitar a:\n${displayName.toUpperCase()}?',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primario,
+                        ),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text(
+                          'Sí, quitar',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return r == true;
+  }
+
+  // ===== Exportar/Guardar PDF =====
+  Future<void> _savePdfBytes(Uint8List bytes, String fileName) async {
+    try {
+      await FileSaver.instance.saveFile(
+        name: fileName.replaceAll('.pdf', ''),
+        ext: 'pdf',
+        mimeType: MimeType.pdf,
+        bytes: bytes,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF guardado correctamente.')),
+        );
+      }
+    } catch (e) {
+      // Fallback visible: abre UI del sistema (imprimir/guardar)
+      try {
+        await Printing.layoutPdf(onLayout: (_) async => bytes);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text(
+                    'Se abrió el diálogo del sistema para guardar/imprimir.')),
+          );
+        }
+      } catch (e2) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('No se pudo guardar el PDF: $e2')),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _exportPdf(List<Map<String, dynamic>> entries,
+      {required bool saveNotShare}) async {
     final ordered = [...entries]
       ..sort((a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)));
 
@@ -201,6 +303,11 @@ class _AttendancePageState extends State<AttendancePage> {
     final fileName =
         'asistencia_${AttendanceService.dateKeyFrom(_selectedDate)}.pdf';
 
+    if (saveNotShare) {
+      await _savePdfBytes(bytes, fileName);
+      return;
+    }
+
     if (kIsWeb) {
       try {
         await Share.shareXFiles(
@@ -215,11 +322,11 @@ class _AttendancePageState extends State<AttendancePage> {
       return;
     }
 
+    // Compartir (Android/iOS/desktop)
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/$fileName';
     final file = File(path);
     await file.writeAsBytes(bytes, flush: true);
-
     await Share.shareXFiles(
       [XFile(path, mimeType: 'application/pdf')],
       text:
@@ -228,6 +335,7 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 
+  // ===== UI =====
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -288,11 +396,23 @@ class _AttendancePageState extends State<AttendancePage> {
               stream: AttendanceService.listenPresents(_selectedDate),
               builder: (context, snap) {
                 final list = snap.data ?? const [];
-                return IconButton(
-                  tooltip: 'Exportar PDF',
-                  onPressed: list.isEmpty ? null : () => _exportPdf(list),
+                return PopupMenuButton<String>(
+                  tooltip: 'Exportar',
                   icon: const Icon(Icons.picture_as_pdf_outlined,
                       color: Colors.white),
+                  onSelected: (v) async {
+                    final list = snap.data ?? const [];
+                    if (list.isEmpty) return;
+                    if (v == 'save') {
+                      await _exportPdf(list, saveNotShare: true);
+                    } else {
+                      await _exportPdf(list, saveNotShare: false);
+                    }
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: 'save', child: Text('Guardar PDF')),
+                    PopupMenuItem(value: 'share', child: Text('Compartir PDF')),
+                  ],
                 );
               },
             ),
@@ -301,60 +421,80 @@ class _AttendancePageState extends State<AttendancePage> {
       ),
       body: Column(
         children: [
-          // SUGERENCIAS (dropdown) — solo aparece cuando hay texto
+          // SUGERENCIAS tipo "dropdown" dentro del body (más alto en móvil)
           if (_search.text.isNotEmpty)
-            Expanded(
-              flex: 1,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: primario,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.5 > 420
+                      ? 420
+                      : MediaQuery.of(context).size.height * 0.5,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: ListView.separated(
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const Divider(
-                      height: 1,
-                      thickness: 0.2,
-                      color: Colors.white24,
-                      indent: 12,
-                      endIndent: 12,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: primario,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: _filtered.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        thickness: 0.2,
+                        color: Colors.white24,
+                        indent: 12,
+                        endIndent: 12,
+                      ),
+                      itemBuilder: (_, i) {
+                        final w = _filtered[i];
+                        return ListTile(
+                          textColor: Colors.white,
+                          dense: true,
+                          title: Text(
+                            '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
+                          subtitle: Text(
+                            w.rut.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                          ),
+                          trailing: IconButton(
+                            tooltip: 'Agregar a asistencia',
+                            onPressed: () async {
+                              await _add(w);
+                              _search.clear(); // limpiar
+                              setState(
+                                  () {}); // cierra el panel (porque _search queda vacío)
+                            },
+                            icon: const Icon(Icons.add_outlined,
+                                color: Colors.white),
+                          ),
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 12),
+                        );
+                      },
                     ),
-                    itemBuilder: (_, i) {
-                      final w = _filtered[i];
-                      return ListTile(
-                        textColor: Colors.white,
-                        dense: true,
-                        title: Text(
-                          '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: false,
-                        ),
-                        subtitle: Text(
-                          w.rut.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          softWrap: false,
-                        ),
-                        trailing: IconButton(
-                          tooltip: 'Agregar a asistencia',
-                          onPressed: () => _add(w),
-                          icon: const Icon(Icons.add_outlined,
-                              color: Colors.white),
-                        ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12),
-                      );
-                    },
                   ),
                 ),
               ),
             ),
 
-          // LISTA DEL DÍA (fondo siempre blanco)
+          // LISTA DEL DÍA
           Expanded(
-            flex: 2,
             child: StreamBuilder<List<Map<String, dynamic>>>(
               stream: AttendanceService.listenPresents(_selectedDate),
               builder: (context, snap) {
@@ -370,7 +510,6 @@ class _AttendancePageState extends State<AttendancePage> {
                       child: Text('Aún no hay asistentes para este día.'));
                 }
 
-                // Ordenar por el mismo criterio que PDF
                 entries
                     .sort((a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)));
 
@@ -403,8 +542,13 @@ class _AttendancePageState extends State<AttendancePage> {
                         ),
                         trailing: IconButton(
                           tooltip: 'Quitar',
-                          onPressed: () =>
-                              _remove((e['workerId'] ?? '').toString()),
+                          onPressed: () async {
+                            final name = _displayNameFor(e);
+                            final ok = await _confirmRemoveSheet(name);
+                            if (ok) {
+                              await _remove((e['workerId'] ?? '').toString());
+                            }
+                          },
                           icon: Icon(Icons.delete_outline, color: primario),
                         ),
                       );
