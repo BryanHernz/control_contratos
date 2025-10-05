@@ -29,45 +29,42 @@ class MyApp extends StatelessWidget {
     return Builder(
       builder: (BuildContext context) {
         // Obtiene los datos de MediaQuery actuales
-        final mediaQueryData = MediaQuery.of(context);
-        // Define tu factor de escala deseado (ajusta este valor)
-        const double scaleFactor = 0.9; // Reducir la escala al 80%
-
-        // Aplica el factor de escala a los datos de MediaQuery
-        final newMediaQueryData = mediaQueryData.copyWith(
-          textScaler: TextScaler.linear(mediaQueryData.textScaleFactor * scaleFactor),
-          // Puedes intentar escalar otras propiedades si tu diseño las usa
-          // size: mediaQueryData.size * scaleFactor, // Esto podría tener efectos complejos
-          // padding: mediaQueryData.padding * scaleFactor,
-        );
 
         // Envuelve la aplicación con el nuevo MediaQuery
-        return MediaQuery(
-          data: newMediaQueryData,
-          child: GetMaterialApp(
-            debugShowCheckedModeBanner: false,
-            useInheritedMediaQuery: true, // Importante: usa el MediaQuery heredado
-            title: 'CONTROL DE CONTRATOS',
-            theme: ThemeData(
-              useMaterial3: true,
-              visualDensity: VisualDensity.adaptivePlatformDensity,
-              colorScheme: ColorScheme(
-                  surfaceTint: Colors.white,
-                  brightness: Brightness.light,
-                  primary: primario,
-                  onPrimary: Colors.white,
-                  secondary: Colors.white,
-                  onSecondary: Colors.black,
-                  error: Colors.black,
-                  onError: Colors.white,
-                  surface: Colors.white,
-                  onSurface: Colors.black),
-              scaffoldBackgroundColor: Colors.white,
-              fontFamily: GoogleFonts.rajdhani().fontFamily,
-              textTheme: GoogleFonts.rajdhaniTextTheme(Theme.of(context).textTheme),
-            ),
-            home: const MainPage(),
+        return GetMaterialApp(
+          debugShowCheckedModeBanner: false,
+          useInheritedMediaQuery:
+              true, // Importante: usa el MediaQuery heredado
+          title: 'CONTROL DE CONTRATOS',
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme(
+                surfaceTint: Colors.white,
+                brightness: Brightness.light,
+                primary: primario,
+                onPrimary: Colors.white,
+                secondary: Colors.white,
+                onSecondary: Colors.black,
+                error: Colors.black,
+                onError: Colors.white,
+                surface: Colors.white,
+                onSurface: Colors.black),
+            scaffoldBackgroundColor: Colors.white,
+            fontFamily: GoogleFonts.rajdhani().fontFamily,
+            textTheme:
+                GoogleFonts.rajdhaniTextTheme(Theme.of(context).textTheme),
           ),
+          builder: (context, child) {
+            // Obtenemos los datos del MediaQuery actual
+            final mediaQueryData = MediaQuery.of(context);
+
+            // Retornamos un nuevo MediaQuery con el textScaleFactor fijo
+            return MediaQuery(
+              data: mediaQueryData.copyWith(textScaler: TextScaler.linear(1.0)),
+              child: child!,
+            );
+          },
+          home: const MainPage(),
         );
       },
     );

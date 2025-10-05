@@ -163,7 +163,8 @@ class _PicturesPageState extends State<PicturesPage> {
 
       // Corrected DocumentScannerOptions
       final DocumentScannerOptions options = DocumentScannerOptions(
-        mode: ScannerMode.full,
+        mode: ScannerMode.base,
+        isGalleryImport: true,
         pageLimit: 1,
       );
 

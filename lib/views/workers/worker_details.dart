@@ -184,7 +184,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               );
             },
             label: const Text('Finiquito'),
-            icon: const Icon(Icons.file_copy),
+            icon: const Icon(Icons.file_copy, size: 10),
           ),
           const SizedBox(
             width: 10,
@@ -260,7 +260,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               );
             },
             label: const Text('Documentos'),
-            icon: const Icon(Icons.local_print_shop),
+            icon: const Icon(Icons.local_print_shop, size: 10),
           ),
           const SizedBox(
             width: 10,
@@ -279,7 +279,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               );
             },
             label: const Text('Carnet'),
-            icon: const Icon(Icons.picture_in_picture),
+            icon: const Icon(Icons.picture_in_picture, size: 10),
           ),
         ],
       ),
@@ -463,7 +463,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       fontSize: 18),
                 ),
                 Text(
-                  widget.worker.email!.toUpperCase(),
+                  widget.worker.email?.toUpperCase()??"",
                   style: const TextStyle(
                       color: Colors.black54,
                       fontWeight: FontWeight.bold,
@@ -729,7 +729,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
           .collection('Otros')
           .doc('contrato')
           .get();
-       var empresa = await FirebaseFirestore.instance
+      var empresa = await FirebaseFirestore.instance
           .collection('Otros')
           .doc('empresadata')
           .get();
@@ -1184,8 +1184,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           ),
                           pw.TextSpan(
                             baseline: baselina,
-                            text:
-                                '44 horas semanales.',
+                            text: '44 horas semanales.',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibriBold),
                               fontSize: letterSize,
@@ -1293,7 +1292,8 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                         children: [
                           pw.TextSpan(
                             baseline: baselina,
-                            text: 'El trabajador se encuentra afiliado a la AFP ',
+                            text:
+                                'El trabajador se encuentra afiliado a la AFP ',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,
@@ -1309,7 +1309,8 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           ),
                           pw.TextSpan(
                             baseline: baselina,
-                            text: '. Asimismo, se encuentra afiliado a la Previsión de Salud ',
+                            text:
+                                '. Asimismo, se encuentra afiliado a la Previsión de Salud ',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,
@@ -2676,16 +2677,16 @@ class _WorkerDetailsState extends State<WorkerDetails> {
 
     var cambria = await rootBundle.load("lib/images/Cambria.ttf");
     var calibri = await rootBundle.load("lib/images/Calibri Regular.ttf");
-      var calibriBold = await rootBundle.load("lib/images/Calibri Bold.ttf");
+    var calibriBold = await rootBundle.load("lib/images/Calibri Bold.ttf");
 
     double baselina = 4;
     double letterSize = 12;
 
     var empresa = await FirebaseFirestore.instance
-      .collection('Otros')
-      .doc('empresadata')
-      .get();
-      
+        .collection('Otros')
+        .doc('empresadata')
+        .get();
+
     pdf.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.letter,
