@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import '../../customs/constants_values.dart';
 import '../../customs/navigation_drawer/navigation_drawer.dart';
+import '../attendance/attendance_page.dart';
 import '../contract/contract.dart';
 import '../workers/workers_page.dart';
 
@@ -56,7 +57,7 @@ class _HomePageState extends State<HomePage> {
               _selectedTab = num;
             });
           },
-          children: const [WorkersPage(), ContractPage()],
+          children: const [WorkersPage(), AttendancePage(), ContractPage()],
         ),
       ),
     );

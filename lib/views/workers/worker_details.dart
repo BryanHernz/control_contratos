@@ -3,6 +3,7 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:flutter/services.dart';
 import 'package:flutter_holo_date_picker/date_picker.dart';
@@ -2668,7 +2669,9 @@ class _WorkerDetailsState extends State<WorkerDetails> {
           onLayout: (formato) async => pdf.save(),
           format: PdfPageFormat.letter);
     } catch (e) {
-      print(e);
+      if (kDebugMode) {
+        print(e);
+      }
     }
   }
 

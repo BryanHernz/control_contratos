@@ -1,4 +1,3 @@
-
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,12 +56,21 @@ class NavigationDrawerCustom extends StatelessWidget {
                       },
                     ),
                     DrawerItem(
-                      title: 'Contrato',
-                      icon: Icons.file_copy_rounded,
-                      selected: selectedTab == 1 ? true : false,
+                      title: 'Asistencia',
+                      icon: Icons.today_outlined,
+                      selected: selectedTab == 1,
                       onPressed: () {
                         Scaffold.of(context).closeDrawer();
                         tabPressed!(1);
+                      },
+                    ),
+                    DrawerItem(
+                      title: 'Contrato',
+                      icon: Icons.file_copy_rounded,
+                      selected: selectedTab == 2 ? true : false,
+                      onPressed: () {
+                        Scaffold.of(context).closeDrawer();
+                        tabPressed!(2);
                       },
                     ),
                   ],

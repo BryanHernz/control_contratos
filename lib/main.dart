@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
 
             // Retornamos un nuevo MediaQuery con el textScaleFactor fijo
             return MediaQuery(
-              data: mediaQueryData.copyWith(textScaler: TextScaler.linear(1.0)),
+              data: mediaQueryData.copyWith(textScaler: const TextScaler.linear(1.0)),
               child: child!,
             );
           },

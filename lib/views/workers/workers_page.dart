@@ -251,19 +251,4 @@ class _WorkersPageState extends State<WorkersPage> {
       ),
     );
   }
-
-  // Función de utilidad para comparar si dos listas de WorkerModel son iguales
-  // (útil para evitar re-filtrados innecesarios cuando los datos de Firestore no cambian)
-  bool _listEquals(List<WorkerModel> list1, List<WorkerModel> list2) {
-    if (list1.length != list2.length) {
-      return false;
-    }
-    for (int i = 0; i < list1.length; i++) {
-      // Asume que el ID es suficiente para identificar un WorkerModel único
-      if (list1[i].id != list2[i].id) {
-        return false;
-      }
-    }
-    return true;
-  }
 }
