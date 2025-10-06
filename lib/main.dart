@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
 
         // Envuelve la aplicación con el nuevo MediaQuery
         return GetMaterialApp(
+          scrollBehavior: AppScrollBehavior(),
           debugShowCheckedModeBanner: false,
           useInheritedMediaQuery:
               true, // Importante: usa el MediaQuery heredado
@@ -60,7 +62,8 @@ class MyApp extends StatelessWidget {
 
             // Retornamos un nuevo MediaQuery con el textScaleFactor fijo
             return MediaQuery(
-              data: mediaQueryData.copyWith(textScaler: const TextScaler.linear(1.0)),
+              data: mediaQueryData.copyWith(
+                  textScaler: const TextScaler.linear(1.0)),
               child: child!,
             );
           },
@@ -69,4 +72,15 @@ class MyApp extends StatelessWidget {
       },
     );
   }
+}
+
+class AppScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.unknown,
+      };
 }
