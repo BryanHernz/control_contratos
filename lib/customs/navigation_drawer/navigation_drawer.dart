@@ -1,6 +1,7 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'drawer_item.dart';
@@ -48,7 +49,7 @@ class NavigationDrawerCustom extends StatelessWidget {
                     const NavigationDrawerHeader(),
                     DrawerItem(
                       title: 'Trabajadores',
-                      icon: Icons.work,
+                      icon: CupertinoIcons.briefcase,
                       selected: selectedTab == 0 ? true : false,
                       onPressed: () {
                         Scaffold.of(context).closeDrawer();
@@ -57,7 +58,7 @@ class NavigationDrawerCustom extends StatelessWidget {
                     ),
                     DrawerItem(
                       title: 'Asistencia',
-                      icon: Icons.today_outlined,
+                      icon: CupertinoIcons.calendar_today,
                       selected: selectedTab == 1,
                       onPressed: () {
                         Scaffold.of(context).closeDrawer();
@@ -66,7 +67,7 @@ class NavigationDrawerCustom extends StatelessWidget {
                     ),
                     DrawerItem(
                       title: 'Contrato',
-                      icon: Icons.file_copy_rounded,
+                      icon: CupertinoIcons.doc_on_clipboard,
                       selected: selectedTab == 2 ? true : false,
                       onPressed: () {
                         Scaffold.of(context).closeDrawer();

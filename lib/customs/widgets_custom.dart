@@ -16,7 +16,8 @@ class ThousandsFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
 
-    final number = int.tryParse(newValue.text.replaceAll(RegExp(r'[^0-9]'), ''));
+    final number =
+        int.tryParse(newValue.text.replaceAll(RegExp(r'[^0-9]'), ''));
     if (number == null) {
       return oldValue;
     }
@@ -287,6 +288,45 @@ class CustomButton extends StatelessWidget {
             texto,
             style: const TextStyle(
               color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class CustomButton2 extends StatelessWidget {
+  const CustomButton2({
+    super.key,
+    required this.funcion,
+    required this.texto,
+    this.cancelar = false,
+  });
+  final VoidCallback funcion;
+  final String texto;
+  final bool cancelar;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: funcion,
+      child: Container(
+        height: 40,
+        width: 200,
+        padding: const EdgeInsets.symmetric(horizontal: 15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: primario, width: 1),
+        ),
+        child: Center(
+          child: Text(
+            texto,
+            style: TextStyle(
+              color: primario,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),

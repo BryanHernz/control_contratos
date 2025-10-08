@@ -1,6 +1,7 @@
 // ignore_for_file: empty_catches
 
 import 'package:animated_snack_bar/animated_snack_bar.dart';
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -356,20 +357,26 @@ class _NewWorkerState extends State<NewWorker> {
               hint: 'Fecha de nacimiento',
               formater: RutFormatter(),
               onTap: () async {
-                var datePicked = await DatePicker.showSimpleDatePicker(
-                  context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(1950),
-                  lastDate: DateTime.now().add(const Duration(days: 30)),
-                  dateFormat: "dd-MMMM-yyyy",
-                  locale: DateTimePickerLocale.es,
-                  looping: true,
+                final datePicked = await showCalendarDatePicker2Dialog(
+                  context: context,
+                  config: CalendarDatePicker2WithActionButtonsConfig(
+                    calendarType: CalendarDatePicker2Type.single,
+                    selectedDayHighlightColor: primario,
+                    firstDate: DateTime(1950),
+                    lastDate: DateTime.now(), // No permitir fechas futuras
+                    currentDate: DateTime.now(),
+                    
+                  ),
+                  dialogSize: const Size(325, 400),
+                  value: _birhtController.text.isNotEmpty
+                      ? [DateFormat.yMMMMd('es').parse(_birhtController.text)]
+                      : [DateTime.now()],
                 );
 
-                if (datePicked != null) {
+                if (datePicked != null && datePicked.isNotEmpty) {
                   setState(() {
                     _birhtController.text =
-                        DateFormat.yMMMMd('es').format(datePicked).toString();
+                        DateFormat.yMMMMd('es').format(datePicked.first!).toString();
                   });
                 }
               },
@@ -912,20 +919,25 @@ class _NewWorkerState extends State<NewWorker> {
               hint: 'Fecha de ingreso',
               formater: RutFormatter(),
               onTap: () async {
-                var datePicked = await DatePicker.showSimpleDatePicker(
-                  context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2023),
-                  lastDate: DateTime.now().add(const Duration(days: 30)),
-                  dateFormat: "dd-MMMM-yyyy",
-                  locale: DateTimePickerLocale.es,
-                  looping: true,
+                final datePicked = await showCalendarDatePicker2Dialog(
+                  context: context,
+                  config: CalendarDatePicker2WithActionButtonsConfig(
+                    calendarType: CalendarDatePicker2Type.single,
+                    selectedDayHighlightColor: primario,
+                    firstDate: DateTime(2023),
+                    lastDate: DateTime.now().add(const Duration(days: 30)),
+                    currentDate: DateTime.now(),
+                  ),
+                  dialogSize: const Size(325, 400),
+                  value: _ingressController.text.isNotEmpty
+                      ? [DateFormat.yMMMMd('es').parse(_ingressController.text)]
+                      : [DateTime.now()],
                 );
 
-                if (datePicked != null) {
+                if (datePicked != null && datePicked.isNotEmpty) {
                   setState(() {
                     _ingressController.text =
-                        DateFormat.yMMMMd('es').format(datePicked).toString();
+                        DateFormat.yMMMMd('es').format(datePicked.first!).toString();
                   });
                 }
               },

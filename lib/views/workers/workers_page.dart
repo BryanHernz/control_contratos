@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:responsive_grid_list/responsive_grid_list.dart';
@@ -93,7 +94,7 @@ class _WorkersPageState extends State<WorkersPage> {
         title: _buildSearchBar(), // Barra de búsqueda en el AppBar
         backgroundColor: primario,
         centerTitle: true,
-        toolbarHeight: 70,
+        toolbarHeight: 80,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15.0),
@@ -153,6 +154,7 @@ class _WorkersPageState extends State<WorkersPage> {
             return ResponsiveGridList(
               horizontalGridMargin: 0,
               verticalGridMargin: 10,
+              verticalGridSpacing: 5,
               minItemWidth: 400,
               children: List.generate(
                 _displayedWorkers.length,
@@ -246,7 +248,7 @@ class _WorkersPageState extends State<WorkersPage> {
           hintText: 'Buscar por nombre o apellido...',
           hintStyle: TextStyle(color: Colors.white70),
           border: InputBorder.none,
-          icon: Icon(Icons.search, color: Colors.white),
+          icon: Icon(CupertinoIcons.search, color: Colors.white),
         ),
       ),
     );

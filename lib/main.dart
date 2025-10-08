@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'auth/auth_pages.dart';
@@ -33,6 +34,20 @@ class MyApp extends StatelessWidget {
 
         // Envuelve la aplicación con el nuevo MediaQuery
         return GetMaterialApp(
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          // ------------------------------------
+
+          supportedLocales: const [
+            Locale('es', ''), // Español
+            // Locale('en', ''), // Puede agregar más si es necesario
+            // Locale('zh', ''),
+            // Locale('ru', ''),
+            // Locale('hi', ''),
+          ],
           scrollBehavior: AppScrollBehavior(),
           debugShowCheckedModeBanner: false,
           useInheritedMediaQuery:

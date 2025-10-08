@@ -2,182 +2,156 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class AttendanceService {
+  // Utils fecha
   static String dateKeyFrom(DateTime d) {
     final x = DateTime(d.year, d.month, d.day);
     return DateFormat('yyyy-MM-dd').format(x);
   }
 
-  static Future<void> ensureDayDoc(DateTime day) async {
-    final x = DateTime(day.year, day.month, day.day);
-    final dateKey = dateKeyFrom(x);
-    final doc =
-        FirebaseFirestore.instance.collection('Asistencias').doc(dateKey);
-    await doc.set({
-      'fecha': Timestamp.fromDate(x),
-      'dateKey': dateKey,
+  // Refs
+  static DocumentReference<Map<String, dynamic>> _typesRef() =>
+      FirebaseFirestore.instance.collection('Otros').doc('listas-asistencia');
+
+  static DocumentReference<Map<String, dynamic>> _dayRef(DateTime day) {
+    final key = dateKeyFrom(DateTime(day.year, day.month, day.day));
+    return FirebaseFirestore.instance.collection('Asistencias').doc(key);
+  }
+
+  // Tipos globales
+  static Stream<List<String>> listenAllListTypes() {
+    return _typesRef().snapshots().map((snap) {
+      final raw =
+          (snap.data()?['tipos'] as List?)?.cast<dynamic>() ?? <dynamic>[];
+      final tipos = raw
+          .map((e) => e.toString().trim().toUpperCase())
+          .where((e) => e.isNotEmpty)
+          .toSet()
+          .toList();
+      tipos.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      return tipos;
+    });
+  }
+
+  static Future<void> addListType(String rawName) async {
+    final name = rawName.trim().toUpperCase();
+    if (name.isEmpty) return;
+    final ref = _typesRef();
+    await ref.set({
+      'nombre': 'listas_asistencia',
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    final snap = await ref.get();
+    final current = (snap.data()?['tipos'] as List?)?.cast<dynamic>() ?? [];
+    final normalized =
+        current.map((e) => e.toString().trim().toUpperCase()).toList();
+    if (!normalized.contains(name)) {
+      await ref.set({
+        'tipos': FieldValue.arrayUnion([name]),
+        'lastUpdate': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    }
+  }
+
+  // Día
+  static Future<void> _ensureDayDoc(DateTime day) async {
+    final ref = _dayRef(day);
+    await ref.set({
+      'fecha': Timestamp.fromDate(DateTime(day.year, day.month, day.day)),
+      'dateKey': dateKeyFrom(day),
       'lastUpdate': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
-  /// Detecta si el `presentes` es del esquema antiguo (mapa directo de workerId->entrada)
-  static bool _isLegacyPresentes(Object? presentes) {
-    if (presentes is! Map) return false;
-    // Si alguno de los values parece entrada (tiene 'rut' o 'name') entonces es legacy
-    return presentes.values.any((v) =>
-        v is Map &&
-        (v.containsKey('rut') ||
-            v.containsKey('name') ||
-            v.containsKey('workerId')));
-  }
-
-  /// Devuelve el mapa de presentes para una LISTA (grupo) dada, haciendo compatibilidad.
-  static Map<String, dynamic> _extractGroupMap(
-    Map<String, dynamic>? data,
-    String group,
-  ) {
-    final presentes = data?['presentes'];
-    if (presentes is Map<String, dynamic>) {
-      // Compatibilidad: si es legacy, usar como GENERAL
-      if (_isLegacyPresentes(presentes)) {
-        return group == 'GENERAL'
-            ? Map<String, dynamic>.from(presentes)
-            : <String, dynamic>{};
-      }
-      // Esquema nuevo: presentes[group] es un mapa de workerId -> entrada
-      final g = presentes[group];
-      if (g is Map) return Map<String, dynamic>.from(g.cast<String, dynamic>());
-    }
-    return <String, dynamic>{};
-  }
-
-  /// Lista de grupos existentes en el día (si es legacy => ['GENERAL'])
-  static Stream<List<String>> listenGroups(DateTime day) {
-    final x = DateTime(day.year, day.month, day.day);
-    final dateKey = dateKeyFrom(x);
-    return FirebaseFirestore.instance
-        .collection('Asistencias')
-        .doc(dateKey)
-        .snapshots()
-        .map((snap) {
+  // Listas activas del día (mapa)
+  static Stream<List<String>> listenDayActiveLists(DateTime day) {
+    return _dayRef(day).snapshots().map((snap) {
       final data = snap.data();
-      final presentes = data?['presentes'];
-      if (presentes is Map<String, dynamic>) {
-        if (_isLegacyPresentes(presentes)) {
-          return const ['GENERAL'];
-        }
-        // esquema nuevo: claves = nombres de listas
-        final keys = presentes.keys.map((e) => e.toString()).toList();
-        keys.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-        return keys.isEmpty ? <String>['GENERAL'] : keys;
-      }
-      return const ['GENERAL'];
+      final listas = (data?['listas'] as Map?)?.cast<String, dynamic>() ?? {};
+      final names = listas.keys
+          .map((k) => k.toString().trim().toUpperCase())
+          .where((k) => k.isNotEmpty)
+          .toList();
+      names.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      return names;
     });
   }
 
-  /// Crea la lista (grupo) si no existe. No toca lo demás.
-  static Future<void> ensureGroup(DateTime day, String group) async {
-    final x = DateTime(day.year, day.month, day.day);
-    final dateKey = dateKeyFrom(x);
-    final ref =
-        FirebaseFirestore.instance.collection('Asistencias').doc(dateKey);
-
-    await ensureDayDoc(x);
-
-    await FirebaseFirestore.instance.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final data = snap.data() ?? {};
-      final presentes = data['presentes'];
-
-      Map<String, dynamic> newPresentes;
-
-      if (presentes is Map<String, dynamic>) {
-        if (_isLegacyPresentes(presentes)) {
-          // migrar legacy a formato nuevo bajo GENERAL
-          newPresentes = {
-            'GENERAL': Map<String, dynamic>.from(presentes),
-          };
-        } else {
-          newPresentes = Map<String, dynamic>.from(presentes);
-        }
-      } else {
-        newPresentes = {};
-      }
-
-      newPresentes.putIfAbsent(group, () => {});
-      tx.set(
-          ref,
-          {
-            'presentes': newPresentes,
-            'lastUpdate': FieldValue.serverTimestamp(),
-          },
-          SetOptions(
-              merge:
-                  false)); // reescribe 'presentes' con la versión migrada/asegurada
-    });
-  }
-
-  static Future<void> addPresent(
-    DateTime day, {
-    required String group, // NUEVO
-    required String workerId,
-    required String name,
-    required String rut,
-    required String addedBy,
-  }) async {
-    final x = DateTime(day.year, day.month, day.day);
-    final dateKey = dateKeyFrom(x);
-    final doc =
-        FirebaseFirestore.instance.collection('Asistencias').doc(dateKey);
-
-    await ensureDayDoc(x);
-    await ensureGroup(x, group); // asegura el grupo y migra si hace falta
-
-    await doc.set({
-      'presentes': {
-        group: {
-          workerId: {
-            'workerId': workerId,
-            'name': name,
-            'rut': rut,
-            'addedBy': addedBy,
-            'createdAt': FieldValue.serverTimestamp(),
-          }
+  static Future<void> addActiveList(DateTime day, String rawName) async {
+    final name = rawName.trim().toUpperCase();
+    if (name.isEmpty) return;
+    final ref = _dayRef(day);
+    await _ensureDayDoc(day);
+    await ref.set({
+      'listas': {
+        name: {
+          'name': name,
+          'createdAt': FieldValue.serverTimestamp(),
         }
       },
       'lastUpdate': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
 
-  static Future<void> removePresent(
-      DateTime day, String group, String workerId) async {
-    final x = DateTime(day.year, day.month, day.day);
-    final dateKey = dateKeyFrom(x);
-    final doc =
-        FirebaseFirestore.instance.collection('Asistencias').doc(dateKey);
+  // Presentes
+  static Future<void> addOrMovePresent(
+    DateTime day, {
+    required String workerId,
+    required String name,
+    required String rut,
+    required String list,
+    required String addedBy,
+  }) async {
+    final ref = _dayRef(day);
+    await _ensureDayDoc(day);
+    await addActiveList(day, list.toUpperCase());
 
-    await doc.update({
-      'presentes.$group.$workerId': FieldValue.delete(),
+    await ref.set({
+      'presentes': {
+        workerId: {
+          'workerId': workerId,
+          'name': name,
+          'rut': rut,
+          'list': list.toString().toUpperCase(),
+          'addedBy': addedBy,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        }
+      },
+      'lastUpdate': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  static Future<void> removePresent(DateTime day, String workerId) async {
+    final ref = _dayRef(day);
+    await ref.update({
+      'presentes.$workerId': FieldValue.delete(),
       'lastUpdate': FieldValue.serverTimestamp(),
     });
   }
 
   static Stream<List<Map<String, dynamic>>> listenPresents(
       DateTime day, String group) {
-    final x = DateTime(day.year, day.month, day.day);
-    final dateKey = dateKeyFrom(x);
-    return FirebaseFirestore.instance
-        .collection('Asistencias')
-        .doc(dateKey)
-        .snapshots()
-        .map((snap) {
+    return _dayRef(day).snapshots().map((snap) {
       final data = snap.data();
-      final map = _extractGroupMap(data, group);
-      final list =
-          map.values.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final presentes =
+          (data?['presentes'] as Map?)?.cast<String, dynamic>() ?? {};
+      final list = presentes.values
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .where((e) => group == 'GENERAL'
+              ? true
+              : (e['list'] ?? '').toString().toUpperCase() ==
+                  group.toUpperCase())
+          .toList();
       list.sort((a, b) => (a['name'] ?? '')
           .toString()
           .toLowerCase()
           .compareTo((b['name'] ?? '').toString().toLowerCase()));
+      for (var e in list) {
+        if ((e['list'] ?? '') is String) {
+          e['list'] = (e['list'] ?? '').toString().toUpperCase();
+        }
+      }
       return list;
     });
   }

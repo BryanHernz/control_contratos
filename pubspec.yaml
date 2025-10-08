@@ -15,7 +15,7 @@ dependencies:
   firebase_core: ^3.15.1
   firebase_storage: ^12.4.9
   animated_snack_bar: ^0.4.0
-  intl: ^0.19.0
+  intl: ^0.20.2
   cloud_firestore: ^5.6.11
   get: ^4.6.5
   modal_bottom_sheet: ^3.0.0-pre
@@ -38,6 +38,11 @@ dependencies:
   share_plus: ^10.0.2
   file_saver: ^0.2.12
   open_filex: ^4.5.0
+  calendar_date_picker2: ^2.0.1
+
+  # Dependencia oficial de localizaciones (del SDK)
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

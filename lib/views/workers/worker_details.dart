@@ -230,6 +230,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                               "Derecho a saber",
                               "EPP",
                               "Registro",
+                              "EPP + Registro",
                               if (widget.worker.imageFront != '') "Carnet",
                             ],
                           ),
@@ -464,7 +465,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       fontSize: 18),
                 ),
                 Text(
-                  widget.worker.email?.toUpperCase()??"",
+                  widget.worker.email?.toUpperCase() ?? "",
                   style: const TextStyle(
                       color: Colors.black54,
                       fontWeight: FontWeight.bold,
@@ -2630,6 +2631,580 @@ class _WorkerDetailsState extends State<WorkerDetails> {
             },
           ),
         );
+      }
+
+      if (selections.contains('EPP + Registro')) {
+        pdf.addPage(
+          pw.Page(
+            pageFormat: PdfPageFormat.letter,
+            margin: const pw.EdgeInsets.symmetric(vertical: 40, horizontal: 60),
+            build: (pw.Context context) {
+              return pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Text(
+                        '${empresa['nombreempresa']} - RUT ${empresa['rut']} - EPP',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(cambria),
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      pw.Text(
+                        'AÑO ${DateTime.now().year}',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(cambria),
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 30),
+                    child: pw.Center(
+                      child: pw.Text(
+                        'FICHA DE ENTREGA DE ELEMENTOS DE PROTECCION',
+                        style: pw.TextStyle(
+                          decoration: pw.TextDecoration.underline,
+                          font: pw.Font.ttf(calibriBold),
+                          fontSize: letterSize,
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 30),
+                    child: pw.RichText(
+                      textAlign: pw.TextAlign.justify,
+                      text: pw.TextSpan(
+                        baseline: baselina,
+                        text:
+                            'Según lo establecido en el articulo 53 del decreto supremo 594, el empleador deberá proporcionar a sus trabajadores, libre de costo, los elementos de protección personal adecuados al riesgo a cubrir y el adiestramiento necesario para su correcto empleo, debiendo, además, mantenerlo en perfecto estado de funcionamiento. Por su parte, el trabajador deberá usarlos en forma permanente mientras se encuentre expuesto al riesgo.',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(calibri),
+                          fontSize: letterSize,
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 20),
+                    child: pw.RichText(
+                      textAlign: pw.TextAlign.justify,
+                      text: pw.TextSpan(
+                        baseline: baselina,
+                        text:
+                            'Asimismo, se recuerda lo establecido en el articulo 68 de la Ley N° 16.744 donde se indica que “las empresas deberán proporcionar a sus trabajadores los equipos e implementos de protección necesarios, no pudiendo en caso alguno cobrarles su valor”.',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(calibri),
+                          fontSize: letterSize,
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 30),
+                    child: pw.Table(
+                      border: const pw.TableBorder(
+                          top: pw.BorderSide(width: 1),
+                          bottom: pw.BorderSide(width: 1),
+                          left: pw.BorderSide(width: 1),
+                          right: pw.BorderSide(width: 1),
+                          horizontalInside: pw.BorderSide(width: 1),
+                          verticalInside: pw.BorderSide(width: 1)),
+                      children: [
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Text(
+                                'DETALLE IMPLEMENTOS',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Text(
+                                'FECHA DE ENTREGA',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Text(
+                                'FECHA DEVOLUCION',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(5),
+                              child: pw.Text(
+                                'FIRMA TRABAJADOR',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                'GORRO LEGENDARIO',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                'ANTIPARRAS',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                'GUANTES',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        pw.TableRow(
+                          children: [
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                'BLOQUEADOR',
+                                textAlign: pw.TextAlign.center,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.all(10),
+                              child: pw.Text(
+                                '',
+                                textAlign: pw.TextAlign.left,
+                                style: pw.TextStyle(
+                                  font: pw.Font.ttf(calibriBold),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 30),
+                    child: pw.Center(
+                      child: pw.Text(
+                        'REGISTRO DE ENTREGA DE REGLAMENTO DE HIGIENE Y SEGURIDAD',
+                        style: pw.TextStyle(
+                          decoration: pw.TextDecoration.underline,
+                          font: pw.Font.ttf(calibriBold),
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: letterSize,
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.Center(
+                    child: pw.Text(
+                      '(LEY 16.744 CODIGO DEL TRABAJO)',
+                      style: pw.TextStyle(
+                        decoration: pw.TextDecoration.underline,
+                        font: pw.Font.ttf(calibriBold),
+                        fontSize: letterSize,
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 20),
+                    child: pw.RichText(
+                      textAlign: pw.TextAlign.justify,
+                      text: pw.TextSpan(
+                        baseline: baselina,
+                        text: 'Yo: ',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(calibri),
+                          fontSize: letterSize,
+                        ),
+                        children: [
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text:
+                                '${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: ', RUT: N° ',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: widget.worker.rut,
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: ', Cargo: ',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: widget.worker.labor!.toUpperCase(),
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: ', con fecha: ',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: widget.worker.ingress!.toUpperCase(),
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(top: 20),
+                    child: pw.RichText(
+                      textAlign: pw.TextAlign.justify,
+                      text: pw.TextSpan(
+                        baseline: baselina,
+                        text:
+                            'Bajo mi firma declaro haber recibido un ejemplar del reglamento interno de orden higiene y seguridad de la empresa ',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(calibri),
+                          fontSize: letterSize,
+                        ),
+                        children: [
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: '${empresa['nombreempresa']}.,',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: ' RUT N° ',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: '${empresa['rut']}',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: ', Representada por Don ',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: 'OCTAVIO ORLANDO NUNEZ MENARES',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: ' RUT N° ',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text: '11.171.021-K',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                          pw.TextSpan(
+                            baseline: baselina,
+                            text:
+                                ', del cual me comprometo a tomar conocimiento en su totalidad no pudiendo alegar desconocimiento de su texto a su entrega, reconociendo además en forma expresa que este reglamento interno es parte integrante del contrato de trabajo que mantengo vigente con la empresa.',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibri),
+                              fontSize: letterSize,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(height: 45),
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.center,
+                        mainAxisAlignment: pw.MainAxisAlignment.start,
+                        children: [
+                          pw.Text(
+                            '_______________________________',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          pw.SizedBox(height: 8),
+                          pw.Text(
+                            '${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          pw.Text(
+                            'RUT N°: ${widget.worker.rut}',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                          pw.Text(
+                            'FIRMA TRABAJADOR',
+                            style: pw.TextStyle(
+                              font: pw.Font.ttf(calibriBold),
+                              fontWeight: pw.FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Center(
+                    child: pw.Text(
+                      "O’Higgins Pelay Lt 2 H Pc N° 2 A, Comuna San Francisco De Mostazal",
+                      style: pw.TextStyle(
+                          font: pw.Font.ttf(calibriBold),
+                          fontSize: 10,
+                          color: PdfColor.fromHex('#9B9B9B')),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ); // Page
       }
 
       if (selections.contains('Carnet')) {
