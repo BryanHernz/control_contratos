@@ -1,0 +1,55 @@
+workflows:
+  ios_testflight:
+    name: iOS → TestFlight
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      vars:
+        BUNDLE_ID: "com.tuempresa.controlcontratos"   # <-- cámbialo si tu bundle es distinto
+    scripts:
+      - flutter --version
+      - flutter pub get
+      # Fuerza iOS 15.5 por si alguien lo baja
+      - |
+        perl -0777 -pe "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+/IPHONEOS_DEPLOYMENT_TARGET = 15.5/g" \
+        -i ios/Runner.xcodeproj/project.pbxproj
+      # Limpieza e instalación CocoaPods controlada
+      - |
+        cd ios
+        rm -rf Pods Podfile.lock
+        echo "Instalando CocoaPods 1.15.2 con Bundler..."
+        if ! command -v bundle >/dev/null 2>&1; then
+          gem install bundler --no-document
+        fi
+        echo 'source "https://rubygems.org"' > Gemfile
+        echo 'gem "cocoapods", "1.15.2"' >> Gemfile
+        bundle install
+        bundle exec pod repo update
+        bundle exec pod install
+        cd ..
+      - flutter build ipa --release --export-method app-store
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        api_key: $APPSTORE_API_KEY
+        key_id: $APPSTORE_KEY_ID
+        issuer_id: $APPSTORE_ISSUER_ID
+        submit_to_testflight: true
+
+  android_play_internal:
+    name: Android → Play (Internal)
+    max_build_duration: 60
+    environment:
+      flutter: stable
+    scripts:
+      - flutter --version
+      - flutter pub get
+      - flutter build appbundle --release
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+    publishing:
+      google_play:
+        credentials: $PLAY_JSON
+        track: internal   # usa 'production' cuando quieras publicar
