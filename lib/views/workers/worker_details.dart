@@ -1,13 +1,12 @@
 // ignore_for_file: empty_catches, unrelated_type_equality_checks
 
 import 'package:animated_snack_bar/animated_snack_bar.dart';
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:flutter/services.dart';
-import 'package:flutter_holo_date_picker/date_picker.dart';
-import 'package:flutter_holo_date_picker/i18n/date_picker_i18n.dart';
 import 'package:get/get.dart';
 import 'package:group_button/group_button.dart';
 import 'package:intl/intl.dart';
@@ -64,7 +63,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       ),
                     ),
                     body: Form(
-                      key: _formKey,
+                      key: _formKey, // Asumiendo que _formKey es accesible
                       child: ResponsiveGridList(
                         minItemsPerRow: 1,
                         maxItemsPerRow: 3,
@@ -76,27 +75,55 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             padding: const EdgeInsets.all(8.0),
                             child: InputTextField(
                               teclado: TextInputType.none,
-                              textController: _exitController,
+                              textController:
+                                  _exitController, // Asumiendo que _exitController es accesible
                               hint: 'Fecha de Egreso',
-                              formater: RutFormatter(),
+                              formater:
+                                  RutFormatter(), // El formater es irrelevante aquí ya que el teclado es 'none'
                               onTap: () async {
-                                var datePicked =
-                                    await DatePicker.showSimpleDatePicker(
-                                  context,
-                                  initialDate: DateTime.now(),
-                                  firstDate: DateTime(2023),
-                                  lastDate: DateTime.now()
-                                      .add(const Duration(days: 30)),
-                                  dateFormat: "dd-MMMM-yyyy",
-                                  locale: DateTimePickerLocale.es,
-                                  looping: true,
-                                );
+                                // 1. Determinar la fecha inicial para el calendario
+                                DateTime initialDate;
+                                try {
+                                  // Intentar parsear el valor actual (asumiendo formato 'es')
+                                  initialDate = DateFormat.yMMMMd('es')
+                                      .parse(_exitController.text);
+                                } catch (_) {
+                                  initialDate = DateTime
+                                      .now(); // Usar la fecha actual si falla
+                                }
 
-                                if (datePicked != null) {
+                                // 2. 🚀 Usar showCalendarDatePicker2Dialog 🚀
+                                final datePicked =
+                                    await showCalendarDatePicker2Dialog(
+                                  context: context,
+                                  config:
+                                      CalendarDatePicker2WithActionButtonsConfig(
+                                    calendarType:
+                                        CalendarDatePicker2Type.single,
+                                    selectedDayHighlightColor: primario,
+                                    firstDate: DateTime(1950),
+                                    lastDate: DateTime
+                                        .now(), // No permitir fechas futuras
+                                    currentDate: DateTime.now(),
+                                  ),
+                                  dialogSize: const Size(325, 400),
+                                  value: _exitController.text.isNotEmpty
+                                      ? [
+                                          DateFormat.yMMMMd('es')
+                                              .parse(_exitController.text)
+                                        ]
+                                      : [DateTime.now()],
+                                );
+                                // ----------------------------------------------------
+
+                                if (datePicked != null &&
+                                    datePicked.isNotEmpty &&
+                                    datePicked.first != null) {
+                                  // 3. Actualizar el controlador con el formato español
                                   setState(() {
                                     _exitController.text =
                                         DateFormat.yMMMMd('es')
-                                            .format(datePicked)
+                                            .format(datePicked.first!)
                                             .toString();
                                   });
                                 }
@@ -115,7 +142,8 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                               padding: const EdgeInsets.all(8.0),
                               child: InputTextField(
                                 teclado: TextInputType.number,
-                                textController: _vacationsController,
+                                textController:
+                                    _vacationsController, // Asumiendo que es accesible
                                 formater:
                                     FilteringTextInputFormatter.digitsOnly,
                                 hint: 'Vacaciones proporcionales',
@@ -136,7 +164,8 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                               padding: const EdgeInsets.all(8.0),
                               child: InputTextField(
                                 teclado: TextInputType.number,
-                                textController: _totalController,
+                                textController:
+                                    _totalController, // Asumiendo que es accesible
                                 formater:
                                     FilteringTextInputFormatter.digitsOnly,
                                 hint: 'Total',
@@ -164,16 +193,16 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                                   cancelar: true,
                                 ),
                                 CustomButton(
-                                    funcion: () {
-                                      if (_formKey.currentState!.validate() &&
-                                          _formKey.currentState!.validate()) {
-                                        _formKey.currentState!.save();
-                                        printingEnd();
-                                        Get.back();
-                                      }
-                                    },
-                                    texto: 'Imprimir',
-                                    cancelar: false)
+                                  funcion: () {
+                                    if (_formKey.currentState!.validate()) {
+                                      _formKey.currentState!.save();
+                                      printingEnd(); // Asumiendo que printingEnd es accesible y existe
+                                      Get.back();
+                                    }
+                                  },
+                                  texto: 'Imprimir',
+                                  cancelar: false,
+                                ),
                               ],
                             ),
                           ),
@@ -2119,11 +2148,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2167,11 +2196,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2215,11 +2244,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2263,11 +2292,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2785,11 +2814,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2833,11 +2862,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2881,11 +2910,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
@@ -2929,11 +2958,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                             pw.Padding(
                               padding: const pw.EdgeInsets.all(10),
                               child: pw.Text(
-                                '',
+                                widget.worker.ingress!.toUpperCase(),
                                 textAlign: pw.TextAlign.left,
                                 style: pw.TextStyle(
                                   font: pw.Font.ttf(calibriBold),
-                                  fontSize: 12,
+                                  fontSize: 10,
                                 ),
                               ),
                             ),
