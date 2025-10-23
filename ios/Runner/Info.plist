@@ -45,8 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSCameraUsageDescription</key><string>La app necesita la cámara para escanear el carnet.</string>
-<key>NSPhotoLibraryUsageDescription</key><string>La app necesita acceder a tus fotos para subir imágenes.</string>
-<key>NSPhotoLibraryAddUsageDescription</key><string>La app necesita guardar archivos generados.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>La app necesita la cámara para escanear el carnet.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>La app necesita acceder a tus fotos para subir imágenes.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>La app necesita guardar archivos generados.</string>
 </dict>
 </plist>
