@@ -1,4 +1,4 @@
-platform :ios, '15.5'   # 👈 mínimo iOS requerido
+platform :ios, '15.5'   # iOS mínimo para google_mlkit_document_scanner
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -32,10 +32,13 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  # Fuerza iOS 15.5 para TODOS los pods (evita el error de ML Kit)
   installer.pods_project.targets.each do |t|
     t.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'  # 👈 fuerza 15.5 en todos los pods
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
     end
   end
+
+  # Ajustes estándar de Flutter
   flutter_additional_ios_build_settings(installer)
 end
