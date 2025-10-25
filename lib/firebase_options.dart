@@ -23,10 +23,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for macos - '
@@ -57,7 +54,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCshva9axWGAMQ78nFnf9ZUcnKcraR2wow',
-    appId: '1:233057701817:android:658338bd7d1499d7cf7068',
+    appId: '1:233057701817:android:98832fd4815140e0cf7068',
     messagingSenderId: '233057701817',
     projectId: 'contratos-control',
     storageBucket: 'contratos-control.appspot.com',
@@ -71,4 +68,14 @@ class DefaultFirebaseOptions {
     authDomain: 'contratos-control.firebaseapp.com',
     storageBucket: 'contratos-control.appspot.com',
   );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyDADykfF20_Ggsc6wqZobjqh-51irdaeS0',
+    appId: '1:233057701817:ios:e2820e4af8002bf3cf7068',
+    messagingSenderId: '233057701817',
+    projectId: 'contratos-control',
+    storageBucket: 'contratos-control.appspot.com',
+    iosBundleId: 'cl.controlcontratos.app',
+  );
+
 }
