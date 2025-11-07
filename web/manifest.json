@@ -1,10 +1,10 @@
 {
     "name": "Contratos Control",
-    "short_name": "myapp",
+    "short_name": "Contratos",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#FFFFFF",
-    "theme_color": "#FFFFFF",
+    "background_color": "#455A64",
+    "theme_color": "#455A64",
     "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,

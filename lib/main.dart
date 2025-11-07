@@ -6,85 +6,97 @@ import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
+
 import 'auth/auth_pages.dart';
-import 'customs/constants_values.dart';
+import 'customs/constants_values.dart'; // aquí tienes `primario = Colors.blueGrey[700]!`
 import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(
-    [DeviceOrientation.portraitUp],
-  );
-  initializeDateFormatting();
+
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Localización de fechas en español
+  await initializeDateFormatting('es');
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.white,
-    ));
+    // Colores de barra de estado / navegación (afecta Android/iOS nativo; en web es no-op)
+    final overlay = SystemUiOverlayStyle(
+      statusBarColor: primario, // fondo barra de estado
+      statusBarIconBrightness:
+          Brightness.light, // iconos/texto blancos (Android)
+      statusBarBrightness: Brightness.dark, // texto blanco en iOS
+      systemNavigationBarColor: primario, // barra navegación Android
+      systemNavigationBarIconBrightness: Brightness.light,
+    );
+    SystemChrome.setSystemUIOverlayStyle(overlay);
 
-    return Builder(
-      builder: (BuildContext context) {
-        // Obtiene los datos de MediaQuery actuales
+    final textTheme = GoogleFonts.rajdhaniTextTheme();
 
-        // Envuelve la aplicación con el nuevo MediaQuery
-        return GetMaterialApp(
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          // ------------------------------------
-
-          supportedLocales: const [
-            Locale('es', ''), // Español
-            // Locale('en', ''), // Puede agregar más si es necesario
-            // Locale('zh', ''),
-            // Locale('ru', ''),
-            // Locale('hi', ''),
-          ],
-          scrollBehavior: AppScrollBehavior(),
-          debugShowCheckedModeBanner: false,
-          useInheritedMediaQuery:
-              true, // Importante: usa el MediaQuery heredado
-          title: 'CONTROL DE CONTRATOS',
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme(
-                surfaceTint: Colors.white,
-                brightness: Brightness.light,
-                primary: primario,
-                onPrimary: Colors.white,
-                secondary: Colors.white,
-                onSecondary: Colors.black,
-                error: Colors.black,
-                onError: Colors.white,
-                surface: Colors.white,
-                onSurface: Colors.black),
-            scaffoldBackgroundColor: Colors.white,
-            fontFamily: GoogleFonts.rajdhani().fontFamily,
-            textTheme:
-                GoogleFonts.rajdhaniTextTheme(Theme.of(context).textTheme),
+    return GetMaterialApp(
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('es', ''),
+      ],
+      scrollBehavior: AppScrollBehavior(),
+      debugShowCheckedModeBanner: false,
+      useInheritedMediaQuery: true,
+      title: 'CONTROL DE CONTRATOS',
+      theme: ThemeData(
+        useMaterial3: true,
+        // Alineamos todo con tu primario blueGrey[700] (#455A64)
+        colorScheme: ColorScheme(
+          brightness: Brightness.light,
+          primary: primario,
+          onPrimary: Colors.white,
+          secondary: Colors.white,
+          onSecondary: Colors.black,
+          error: Colors.red.shade700,
+          onError: Colors.white,
+          surface: Colors.white,
+          onSurface: Colors.black,
+          surfaceTint: Colors.white,
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: primario,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          systemOverlayStyle: overlay, // asegura contraste correcto bajo AppBar
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: primario,
+          contentTextStyle: const TextStyle(color: Colors.white),
+          behavior: SnackBarBehavior.floating,
+        ),
+        textTheme: textTheme,
+        fontFamily: GoogleFonts.rajdhani().fontFamily,
+      ),
+      builder: (context, child) {
+        // Fija el escalado de texto a 1.0 para consistencia visual
+        final mediaQueryData = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQueryData.copyWith(
+            textScaler: const TextScaler.linear(1.0),
           ),
-          builder: (context, child) {
-            // Obtenemos los datos del MediaQuery actual
-            final mediaQueryData = MediaQuery.of(context);
-
-            // Retornamos un nuevo MediaQuery con el textScaleFactor fijo
-            return MediaQuery(
-              data: mediaQueryData.copyWith(
-                  textScaler: const TextScaler.linear(1.0)),
-              child: child!,
-            );
-          },
-          home: const MainPage(),
+          child: child!,
         );
       },
+      home: const MainPage(),
     );
   }
 }

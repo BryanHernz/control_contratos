@@ -22,16 +22,36 @@
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="myapp">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Contratos">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#455A64">
   <!-- Favicon -->
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
 
   <title>Control Contratos</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Pintamos el fondo del documento con tu color */
+    html, body { margin:0; background:#455A64; }
+  
+    /* Cuando está instalada como PWA, agregamos padding superior igual al notch/status bar */
+    .pwa-safe { padding-top: env(safe-area-inset-top); }
+  
+    /* Si usas fondo claro dentro de Flutter, puedes sobreescribir aquí */
+    #flutter_container, flutter-view { background:#455A64 !important; }
+  </style>
+  
+  <script>
+    // Añade la clase solo cuando corre como PWA (iOS: navigator.standalone)
+    (function () {
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (isPWA) document.body.classList.add('pwa-safe');
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
