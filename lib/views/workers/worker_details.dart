@@ -1106,7 +1106,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           pw.TextSpan(
                             baseline: baselina,
                             text:
-                                'El Empleador contrata al trabajador para ejecutar la labor de ',
+                                'El Empleador contrata al trabajador para ejecutar ',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,
@@ -3531,7 +3531,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       pw.TextSpan(
                         baseline: baselina,
                         text:
-                            ', prestó servicios a “${empresa['nombreempresa']}”, ejecutando la labor de ',
+                            ', prestó servicios a “${empresa['nombreempresa']}”, ejecutando ',
                         style: pw.TextStyle(
                           font: pw.Font.ttf(calibri),
                           fontSize: letterSize,
