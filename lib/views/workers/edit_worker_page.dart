@@ -6,10 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_holo_date_picker/flutter_holo_date_picker.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:responsive_grid_list/responsive_grid_list.dart';
 import 'package:rut_utils/rut_utils.dart';
 import '../../customs/constants_values.dart';
@@ -241,12 +239,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewNacionality(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewNacionality(),
                             );
                           },
                           child: const Row(
@@ -340,12 +336,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewCivilState(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewCivilState(),
                             );
                           },
                           child: const Row(
@@ -505,12 +499,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewCommune(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewCommune(),
                             );
                           },
                           child: const Row(
@@ -604,12 +596,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewLabor(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewLabor(),
                             );
                           },
                           child: const Row(
@@ -703,12 +693,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewPlace(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewPlace(),
                             );
                           },
                           child: const Row(
@@ -802,12 +790,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewAfp(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewAfp(),
                             );
                           },
                           child: const Row(
@@ -901,12 +887,10 @@ class _EditWorkerState extends State<EditWorker> {
                         child: TextButton(
                           onPressed: () {
                             Get.back();
-                            showCupertinoModalBottomSheet(
+                            showModalBottomSheet(
                               context: context,
-                              builder: (context) => const SizedBox(
-                                height: 250,
-                                child: NewPrevision(),
-                              ),
+                              isScrollControlled: true,
+                              builder: (context) => const NewPrevision(),
                             );
                           },
                           child: const Row(
@@ -1088,61 +1072,64 @@ class _NewNacionalityState extends State<NewNacionality> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Center(child: SubTitleWidget(text: 'Nueva Nacionalidad')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'Nacionalidad',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese una nacionalidad';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nueva Nacionalidad',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'Nacionalidad',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese una nacionalidad';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewNacionality();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewNacionality();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }
 
@@ -1178,61 +1165,64 @@ class _NewCivilStateState extends State<NewCivilState> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Center(child: SubTitleWidget(text: 'Nuevo estado civil')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'Estado civil',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese un estado civil';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nuevo estado civil',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'Estado civil',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese un estado civil';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewNacionality();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewNacionality();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }
 
@@ -1265,61 +1255,64 @@ class _NewCommuneState extends State<NewCommune> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Center(child: SubTitleWidget(text: 'Nueva comuna')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'Comuna',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese una comuna';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nueva comuna',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'Comuna',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese una comuna';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewCommune();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewCommune();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }
 
@@ -1352,61 +1345,64 @@ class _NewLaborState extends State<NewLabor> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Center(child: SubTitleWidget(text: 'Nueva labor')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'Labor',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese una labor';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nueva labor',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'Labor',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese una labor';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewLabor();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewLabor();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }
 
@@ -1439,62 +1435,64 @@ class _NewPlaceState extends State<NewPlace> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title:
-            const Center(child: SubTitleWidget(text: 'Nuevo establecimiento')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'Establecimiento',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese un establecimiento';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nuevo establecimiento',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'Establecimiento',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese un establecimiento';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewPlace();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewPlace();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }
 
@@ -1527,61 +1525,64 @@ class _NewAfpState extends State<NewAfp> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Center(child: SubTitleWidget(text: 'Nueva AFP')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'AFP',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese una AFP';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nueva AFP',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'AFP',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese una AFP';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewAfp();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewAfp();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }
 
@@ -1614,60 +1615,63 @@ class _NewPrevisionState extends State<NewPrevision> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        toolbarHeight: 70,
-        automaticallyImplyLeading: false,
-        title: const Center(child: SubTitleWidget(text: 'Nueva prevision')),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ResponsiveGridList(
-          minItemsPerRow: 1,
-          maxItemsPerRow: 2,
-          horizontalGridMargin: 25,
-          verticalGridMargin: 25,
-          minItemWidth: 250,
-          children: [
-            InputTextField(
-              textController: _tipoController,
-              hint: 'Prevision',
-              validator: (value) {
-                if (value == '') {
-                  return 'Por favor ingrese una prevision';
-                }
-                return null;
-              },
+    return SingleChildScrollView(
+        child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
+            child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
+                ),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Nueva prevision',
+                        style: TextStyle(
+                            fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: _tipoController,
+                        hint: 'Prevision',
+                        validator: (value) {
+                          if (value == '') {
+                            return 'Por favor ingrese una prevision';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back();
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                              funcion: () {
+                                if (_formKey.currentState!.validate()) {
+                                  _formKey.currentState!.save();
+                                  saveNewPrevision();
+                                }
+                              },
+                              texto: 'Agregar',
+                              cancelar: false)
+                        ],
+                      ),
+                    ],
                   ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewPrevision();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+                ))));
   }
 }

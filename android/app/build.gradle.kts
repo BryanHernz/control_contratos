@@ -18,15 +18,15 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "cl.controlcontratos.app"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "cl.controlcontratos.app"
-        minSdk = 23
-        targetSdk = 35
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = 23 // Increased to 23 for Firebase Auth compatibility
+        targetSdk = 36
+        versionCode = 1 // Hardcoded to bypass flutter.versionCode issue
+        versionName = "1.0.0" // Hardcoded to bypass flutter.versionName issue
     }
 
     compileOptions {

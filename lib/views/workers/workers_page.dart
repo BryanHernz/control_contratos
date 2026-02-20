@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
+import 'package:flutter/material.dart';
 import 'package:responsive_grid_list/responsive_grid_list.dart';
 
 import '../../customs/constants_values.dart';
@@ -79,12 +78,10 @@ class _WorkersPageState extends State<WorkersPage> {
         heroTag: null,
         tooltip: 'Nuevo Trabajador',
         onPressed: () {
-          showCupertinoModalBottomSheet(
+          showModalBottomSheet(
             context: context,
-            builder: (context) => Container(
-              constraints: const BoxConstraints(maxHeight: 750),
-              child: const NewWorker(),
-            ),
+            isScrollControlled: true,
+            builder: (context) => const NewWorker(),
           );
         },
         child: const Icon(Icons.person_add_outlined),
@@ -163,14 +160,12 @@ class _WorkersPageState extends State<WorkersPage> {
                       index]; // Usa el trabajador de la lista filtrada
                   return GestureDetector(
                     onTap: () {
-                      showCupertinoModalBottomSheet(
+                      showModalBottomSheet(
                         context: context,
-                        builder: (context) => Container(
-                          constraints: const BoxConstraints(maxHeight: 600),
-                          child: WorkerDetails(
-                            worker:
-                                worker, // Pasa el objeto WorkerModel directamente
-                          ),
+                        isScrollControlled: true,
+                        builder: (context) => WorkerDetails(
+                          worker:
+                              worker, // Pasa el objeto WorkerModel directamente
                         ),
                       );
                     },

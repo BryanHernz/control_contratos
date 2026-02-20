@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -285,35 +284,38 @@ class _AttendancePageState extends State<AttendancePage> {
 
   Future<void> _showActivateListsSheet() async {
     final picked = <String>{};
-    await showCupertinoModalBottomSheet<void>(
+    await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+      ),
       builder: (ctx) {
-        return SizedBox(
-          height: 390,
-          child: StatefulBuilder(
-            builder: (context, setSt) {
-              return Scaffold(
-                appBar: AppBar(
-                  automaticallyImplyLeading: false,
-                  toolbarHeight: 48,
-                  centerTitle: true,
-                  backgroundColor: Colors.white,
-                  elevation: 0,
-                  title: Text(
-                    'Agregar listas al día',
-                    style: Theme.of(ctx)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
-                  ),
+        return StatefulBuilder(
+          builder: (context, setSt) {
+            return SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
                 ),
-                body: SafeArea(
+                child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        Center(
+                          child: Text(
+                            'Agregar listas al día',
+                            style: Theme.of(ctx)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         StreamBuilder<List<String>>(
                           stream: AttendanceService.listenAllListTypes(),
                           builder: (context, snap) {
@@ -421,9 +423,9 @@ class _AttendancePageState extends State<AttendancePage> {
                     ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -434,99 +436,100 @@ class _AttendancePageState extends State<AttendancePage> {
 
     return showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (ctx) {
-        return SafeArea(
+        return SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-            child: StatefulBuilder(
-              builder: (ctx, setSt) {
-                // <- recalculamos ACTUALMENTE las listas activas aquí,
-                // en cada reconstrucción del StatefulBuilder.
-                final actives = [..._activeLists]
-                  ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                child: StatefulBuilder(
+                  builder: (ctx, setSt) {
+                    final actives = [..._activeLists]
+                      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Selecciona lista',
-                      style: Theme.of(ctx)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    if (actives.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 12),
-                        child:
-                            Text('No hay listas activas hoy. Agrega alguna.'),
-                      ),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // ahora usamos la lista recalculada
-                        for (final t in actives)
-                          ChoiceChip(
-                            label: Text(t.toUpperCase()),
-                            selected: picked == t,
-                            selectedColor: primario.withOpacity(0.15),
-                            onSelected: (sel) =>
-                                setSt(() => picked = sel ? t : null),
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                        ActionChip(
-                          avatar: const Icon(Icons.add, size: 18),
-                          label: const Text('Agregar listas del día'),
-                          onPressed: () async {
-                            // abrimos el sheet de activar listas; cuando regrese
-                            // _activeLists ya estará actualizado por el stream y
-                            // al llamar setSt(() {}) forzamos reconstrucción y
-                            // recalculamos actives arriba.
-                            await _showActivateListsSheet();
-                            setSt(() {}); // dispara la recomputación de actives
-                          },
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Selecciona lista',
+                          style: Theme.of(ctx)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        if (actives.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: Text(
+                                'No hay listas activas hoy. Agrega alguna.'),
+                          ),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final t in actives)
+                              ChoiceChip(
+                                label: Text(t.toUpperCase()),
+                                selected: picked == t,
+                                selectedColor: primario.withOpacity(0.15),
+                                onSelected: (sel) =>
+                                    setSt(() => picked = sel ? t : null),
+                              ),
+                            ActionChip(
+                              avatar: const Icon(Icons.add, size: 18),
+                              label: const Text('Agregar listas del día'),
+                              onPressed: () async {
+                                await _showActivateListsSheet();
+                                setSt(() {});
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            CustomButton(
+                              funcion: () {
+                                Navigator.pop(ctx, null);
+                              },
+                              texto: 'Cancelar',
+                              cancelar: true,
+                            ),
+                            CustomButton(
+                              funcion: () {
+                                if (picked != null) {
+                                  Navigator.pop(ctx, picked);
+                                }
+                              },
+                              texto: 'Usar esta lista',
+                              cancelar: false,
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        CustomButton(
-                          funcion: () {
-                            Navigator.pop(ctx, null);
-                          },
-                          texto: 'Cancelar',
-                          cancelar: true,
-                        ),
-                        CustomButton(
-                          funcion: () {
-                            if (picked != null) {
-                              Navigator.pop(ctx, picked);
-                            }
-                          },
-                          texto: 'Usar esta lista',
-                          cancelar: false,
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         );
@@ -538,72 +541,72 @@ class _AttendancePageState extends State<AttendancePage> {
     final ctrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    await showCupertinoModalBottomSheet<bool>(
-      context: context,
-      builder: (context) => SizedBox(
-        height: 250,
-        child: Scaffold(
-          resizeToAvoidBottomInset: false,
-          appBar: AppBar(
-            toolbarHeight: 70,
-            automaticallyImplyLeading: false,
-            title: Center(
-              child: Text(
-                'Nuevo tipo de lista',
-                style: Theme.of(context).textTheme.headlineSmall,
+    await showModalBottomSheet<bool>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) {
+          return SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
-            ),
-          ),
-          body: Form(
-            key: formKey,
-            child: ResponsiveGridList(
-              minItemsPerRow: 1,
-              maxItemsPerRow: 2,
-              horizontalGridMargin: 25,
-              verticalGridMargin: 25,
-              minItemWidth: 250,
-              children: [
-                InputTextField(
-                  textController: ctrl,
-                  hint: 'Nombre (EJ: PODA, COSECHA)',
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Ingresa un nombre';
-                    }
-                    return null;
-                  },
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 15.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      CustomButton(
-                        funcion: () {
-                          Get.back(result: false);
-                        },
-                        texto: 'Cancelar',
-                        cancelar: true,
+                      Text(
+                        'Nuevo tipo de lista',
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      CustomButton(
-                        funcion: () {
-                          if (formKey.currentState!.validate()) {
-                            formKey.currentState!.save();
-                            _submitCreateType(formKey, ctrl);
+                      const SizedBox(height: 16),
+                      InputTextField(
+                        textController: ctrl,
+                        hint: 'Nombre (EJ: PODA, COSECHA)',
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) {
+                            return 'Ingresa un nombre';
                           }
+                          return null;
                         },
-                        texto: 'Agregar',
-                        cancelar: false,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          CustomButton(
+                            funcion: () {
+                              Get.back(result: false);
+                            },
+                            texto: 'Cancelar',
+                            cancelar: true,
+                          ),
+                          CustomButton(
+                            funcion: () {
+                              if (formKey.currentState!.validate()) {
+                                formKey.currentState!.save();
+                                _submitCreateType(formKey, ctrl);
+                              }
+                            },
+                            texto: 'Agregar',
+                            cancelar: false,
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
-    );
+          );
+        });
   }
 
   // PDF generation helpers (complete)
@@ -947,73 +950,73 @@ class _AttendancePageState extends State<AttendancePage> {
         backgroundColor: primario,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          if (_search.text.isNotEmpty)
-            SizedBox(
-              height: _suggestionsHeight(context),
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: primario),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: ListView.separated(
-                      padding: EdgeInsets.zero,
-                      physics: _filtered.length <= 8
-                          ? const NeverScrollableScrollPhysics()
-                          : const ClampingScrollPhysics(),
-                      itemCount: _filtered.length,
-                      separatorBuilder: (_, __) => const Divider(
-                          height: 1,
-                          thickness: 0.2,
-                          color: Colors.white24,
-                          indent: 12,
-                          endIndent: 12),
-                      itemBuilder: (_, i) {
-                        final w = _filtered[i];
-                        return ListTile(
-                          onTap: () async {
-                            await _add(w);
-                          },
-                          hoverColor: Colors.white.withOpacity(0.08),
-                          textColor: Colors.white,
-                          dense: true,
-                          visualDensity:
-                              const VisualDensity(horizontal: -2, vertical: -2),
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 12),
-                          title: Text(
-                            '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
-                          ),
-                          subtitle: Text(
-                            w.rut.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
-                          ),
-                          trailing: IconButton(
-                            tooltip: 'Agregar a asistencia',
-                            onPressed: () async {
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            if (_search.text.isNotEmpty)
+              SizedBox(
+                height: _suggestionsHeight(context),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: primario),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: ListView.separated(
+                        padding: EdgeInsets.zero,
+                        physics: _filtered.length <= 8
+                            ? const NeverScrollableScrollPhysics()
+                            : const ClampingScrollPhysics(),
+                        itemCount: _filtered.length,
+                        separatorBuilder: (_, __) => const Divider(
+                            height: 1,
+                            thickness: 0.2,
+                            color: Colors.white24,
+                            indent: 12,
+                            endIndent: 12),
+                        itemBuilder: (_, i) {
+                          final w = _filtered[i];
+                          return ListTile(
+                            onTap: () async {
                               await _add(w);
-                              _search.clear();
-                              if (mounted) setState(() {});
                             },
-                            icon: const Icon(Icons.add_outlined,
-                                color: Colors.white),
-                          ),
-                        );
-                      },
+                            hoverColor: Colors.white.withOpacity(0.08),
+                            textColor: Colors.white,
+                            dense: true,
+                            visualDensity:
+                                const VisualDensity(horizontal: -2, vertical: -2),
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                            title: Text(
+                              '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                            ),
+                            subtitle: Text(
+                              w.rut.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              softWrap: false,
+                            ),
+                            trailing: IconButton(
+                              tooltip: 'Agregar a asistencia',
+                              onPressed: () async {
+                                await _add(w);
+                                _search.clear();
+                                if (mounted) setState(() {});
+                              },
+                              icon: const Icon(Icons.add_outlined,
+                                  color: Colors.white),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
+            StreamBuilder<List<Map<String, dynamic>>>(
               stream: AttendanceService.listenPresents(_selectedDate, _group),
               builder: (context, snap) {
                 if (snap.hasError) {
@@ -1033,6 +1036,8 @@ class _AttendancePageState extends State<AttendancePage> {
                 return Material(
                   color: Colors.white,
                   child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
                     itemCount: entries.length,
                     separatorBuilder: (_, __) => Divider(
                         height: 1,
@@ -1081,8 +1086,8 @@ class _AttendancePageState extends State<AttendancePage> {
                 );
               },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

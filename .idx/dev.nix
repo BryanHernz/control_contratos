@@ -7,6 +7,7 @@
   packages = [
     pkgs.jdk17
     pkgs.unzip
+    pkgs.flutter
   ];
   # Sets environment variables in the workspace
   env = {};
@@ -18,8 +19,13 @@
     ];
     workspace = {
       # Runs when a workspace is first created with this `dev.nix` file
-      onCreate = { };
+      onCreate = {
+        build-flutter = "flutter pub get && flutter run --machine -d web-server --web-hostname 0.0.0.0 --web-port $PORT";
+      };
       # To run something each time the workspace is (re)started, use the `onStart` hook
+      onStart = {
+        build-flutter = "flutter pub get && flutter run --machine -d web-server --web-hostname 0.0.0.0 --web-port $PORT";
+      };
     };
     # Enable previews and customize configuration
     previews = {
@@ -30,7 +36,7 @@
           manager = "flutter";
         };
         android = {
-          command = ["flutter" "run" "--machine" "-d" "android" "-d" "localhost:5555"];
+          command = ["flutter" "run" "--machine" "-d" "emulator-5554"];
           manager = "flutter";
         };
       };

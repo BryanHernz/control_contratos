@@ -10,7 +10,6 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:group_button/group_button.dart';
 import 'package:intl/intl.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -47,166 +46,166 @@ class _WorkerDetailsState extends State<WorkerDetails> {
           FloatingActionButton.extended(
             heroTag: null,
             onPressed: () {
-              showCupertinoModalBottomSheet(
+              showModalBottomSheet(
                 context: context,
-                builder: (context) => Container(
-                  constraints: const BoxConstraints(maxHeight: 480),
-                  child: Scaffold(
-                    appBar: AppBar(
-                      automaticallyImplyLeading: false,
-                      toolbarHeight: 70,
-                      centerTitle: true,
-                      title: Text(
-                        'FINIQUITO ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-                        maxLines: 3,
-                        textAlign: TextAlign.center,
-                      ),
+                isScrollControlled: true,
+                builder: (context) => SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    body: Form(
-                      key: _formKey, // Asumiendo que _formKey es accesible
-                      child: ResponsiveGridList(
-                        minItemsPerRow: 1,
-                        maxItemsPerRow: 3,
-                        horizontalGridMargin: 25,
-                        verticalGridMargin: 25,
-                        minItemWidth: 250,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: InputTextField(
-                              teclado: TextInputType.none,
-                              textController:
-                                  _exitController, // Asumiendo que _exitController es accesible
-                              hint: 'Fecha de Egreso',
-                              formater:
-                                  RutFormatter(), // El formater es irrelevante aquí ya que el teclado es 'none'
-                              onTap: () async {
-                                // 1. Determinar la fecha inicial para el calendario
-                                DateTime initialDate;
-                                try {
-                                  // Intentar parsear el valor actual (asumiendo formato 'es')
-                                  initialDate = DateFormat.yMMMMd('es')
-                                      .parse(_exitController.text);
-                                } catch (_) {
-                                  initialDate = DateTime
-                                      .now(); // Usar la fecha actual si falla
-                                }
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Scaffold(
+                        appBar: AppBar(
+                          automaticallyImplyLeading: false,
+                          toolbarHeight: 70,
+                          centerTitle: true,
+                          title: Text(
+                            'FINIQUITO ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                            maxLines: 3,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        body: Form(
+                          key: _formKey,
+                          child: ResponsiveGridList(
+                            minItemsPerRow: 1,
+                            maxItemsPerRow: 3,
+                            horizontalGridMargin: 25,
+                            verticalGridMargin: 25,
+                            minItemWidth: 250,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: InputTextField(
+                                  teclado: TextInputType.none,
+                                  textController: _exitController,
+                                  hint: 'Fecha de Egreso',
+                                  formater: RutFormatter(),
+                                  onTap: () async {
+                                    DateTime initialDate;
+                                    try {
+                                      initialDate = DateFormat.yMMMMd('es')
+                                          .parse(_exitController.text);
+                                    } catch (_) {
+                                      initialDate = DateTime.now();
+                                    }
 
-                                // 2. 🚀 Usar showCalendarDatePicker2Dialog 🚀
-                                final datePicked =
-                                    await showCalendarDatePicker2Dialog(
-                                  context: context,
-                                  config:
-                                      CalendarDatePicker2WithActionButtonsConfig(
-                                    calendarType:
-                                        CalendarDatePicker2Type.single,
-                                    selectedDayHighlightColor: primario,
-                                    firstDate: DateTime(1950),
-                                    lastDate: DateTime
-                                        .now(), // No permitir fechas futuras
-                                    currentDate: DateTime.now(),
-                                  ),
-                                  dialogSize: const Size(325, 400),
-                                  value: _exitController.text.isNotEmpty
-                                      ? [
-                                          DateFormat.yMMMMd('es')
-                                              .parse(_exitController.text)
-                                        ]
-                                      : [DateTime.now()],
-                                );
-                                // ----------------------------------------------------
+                                    final datePicked =
+                                        await showCalendarDatePicker2Dialog(
+                                      context: context,
+                                      config:
+                                          CalendarDatePicker2WithActionButtonsConfig(
+                                        calendarType:
+                                            CalendarDatePicker2Type.single,
+                                        selectedDayHighlightColor: primario,
+                                        firstDate: DateTime(1950),
+                                        lastDate: DateTime.now(),
+                                        currentDate: DateTime.now(),
+                                      ),
+                                      dialogSize: const Size(325, 400),
+                                      value: _exitController.text.isNotEmpty
+                                          ? [
+                                              DateFormat.yMMMMd('es')
+                                                  .parse(_exitController.text)
+                                            ]
+                                          : [DateTime.now()],
+                                    );
 
-                                if (datePicked != null &&
-                                    datePicked.isNotEmpty &&
-                                    datePicked.first != null) {
-                                  // 3. Actualizar el controlador con el formato español
-                                  setState(() {
-                                    _exitController.text =
-                                        DateFormat.yMMMMd('es')
-                                            .format(datePicked.first!)
-                                            .toString();
-                                  });
-                                }
-                              },
-                              validator: (value) {
-                                if (value == '') {
-                                  return 'Por favor ingrese fecha de ingreso';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 0),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: InputTextField(
-                                teclado: TextInputType.number,
-                                textController:
-                                    _vacationsController, // Asumiendo que es accesible
-                                formater:
-                                    FilteringTextInputFormatter.digitsOnly,
-                                hint: 'Vacaciones proporcionales',
-                                money: true,
-                                prefix: '\$',
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Por favor ingrese un monto';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 0),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: InputTextField(
-                                teclado: TextInputType.number,
-                                textController:
-                                    _totalController, // Asumiendo que es accesible
-                                formater:
-                                    FilteringTextInputFormatter.digitsOnly,
-                                hint: 'Total',
-                                money: true,
-                                prefix: '\$',
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Por favor ingrese un monto';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 5.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                CustomButton(
-                                  funcion: () {
-                                    Get.back();
-                                  },
-                                  texto: 'Cancelar',
-                                  cancelar: true,
-                                ),
-                                CustomButton(
-                                  funcion: () {
-                                    if (_formKey.currentState!.validate()) {
-                                      _formKey.currentState!.save();
-                                      printingEnd(); // Asumiendo que printingEnd es accesible y existe
-                                      Get.back();
+                                    if (datePicked != null &&
+                                        datePicked.isNotEmpty &&
+                                        datePicked.first != null) {
+                                      setState(() {
+                                        _exitController.text =
+                                            DateFormat.yMMMMd('es')
+                                                .format(datePicked.first!)
+                                                .toString();
+                                      });
                                     }
                                   },
-                                  texto: 'Imprimir',
-                                  cancelar: false,
+                                  validator: (value) {
+                                    if (value == '') {
+                                      return 'Por favor ingrese fecha de ingreso';
+                                    }
+                                    return null;
+                                  },
                                 ),
-                              ],
-                            ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 0),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: InputTextField(
+                                    teclado: TextInputType.number,
+                                    textController: _vacationsController,
+                                    formater:
+                                        FilteringTextInputFormatter.digitsOnly,
+                                    hint: 'Vacaciones proporcionales',
+                                    money: true,
+                                    prefix: '\$',
+                                    validator: (value) {
+                                      if (value!.isEmpty) {
+                                        return 'Por favor ingrese un monto';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 0),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: InputTextField(
+                                    teclado: TextInputType.number,
+                                    textController: _totalController,
+                                    formater:
+                                        FilteringTextInputFormatter.digitsOnly,
+                                    hint: 'Total',
+                                    money: true,
+                                    prefix: '\$',
+                                    validator: (value) {
+                                      if (value!.isEmpty) {
+                                        return 'Por favor ingrese un monto';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 5.0),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    CustomButton(
+                                      funcion: () {
+                                        Get.back();
+                                      },
+                                      texto: 'Cancelar',
+                                      cancelar: true,
+                                    ),
+                                    CustomButton(
+                                      funcion: () {
+                                        if (_formKey.currentState!.validate()) {
+                                          _formKey.currentState!.save();
+                                          printingEnd();
+                                          Get.back();
+                                        }
+                                      },
+                                      texto: 'Imprimir',
+                                      cancelar: false,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -223,26 +222,25 @@ class _WorkerDetailsState extends State<WorkerDetails> {
             heroTag: null,
             onPressed: () {
               List<String> seleccionados = [];
-              showCupertinoModalBottomSheet(
+              showModalBottomSheet(
                 context: context,
-                builder: (context) => Container(
-                  constraints: const BoxConstraints(maxHeight: 300),
-                  child: Scaffold(
-                    appBar: AppBar(
-                      automaticallyImplyLeading: false,
-                      toolbarHeight: 70,
-                      centerTitle: true,
-                      title: Text(
-                        'DOCUMENTOS ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-                        maxLines: 3,
-                        textAlign: TextAlign.center,
-                      ),
+                isScrollControlled: true,
+                builder: (context) => SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    body: Padding(
-                      padding: const EdgeInsets.only(top: 5.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Text(
+                            'DOCUMENTOS ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                            maxLines: 3,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
                           GroupButton(
                             options: const GroupButtonOptions(
                                 borderRadius:
@@ -263,6 +261,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                               if (widget.worker.imageFront != '') "Carnet",
                             ],
                           ),
+                          const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
@@ -299,13 +298,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
           FloatingActionButton.extended(
             heroTag: null,
             onPressed: () {
-              showCupertinoModalBottomSheet(
+              showModalBottomSheet(
                 context: context,
-                builder: (context) => Container(
-                  constraints: const BoxConstraints(maxHeight: 600),
-                  child: PicturesPage(
-                    worker: widget.worker,
-                  ),
+                isScrollControlled: true,
+                builder: (context) => PicturesPage(
+                  worker: widget.worker,
                 ),
               );
             },
@@ -323,64 +320,68 @@ class _WorkerDetailsState extends State<WorkerDetails> {
         ),
         leading: IconButton(
             onPressed: () {
-              showCupertinoModalBottomSheet(
+              showModalBottomSheet(
                 context: context,
-                builder: (context) => Container(
-                  constraints: const BoxConstraints(maxHeight: 150),
-                  child: Scaffold(
-                    appBar: AppBar(
-                      automaticallyImplyLeading: false,
-                      toolbarHeight: 70,
-                      centerTitle: true,
-                      title: Text(
-                        '¿Eliminar ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}?',
-                        maxLines: 3,
-                        textAlign: TextAlign.center,
-                      ),
+                isScrollControlled: true,
+                builder: (context) => SingleChildScrollView(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    body: Padding(
-                      padding: const EdgeInsets.only(top: 5.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    child: Container(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          CustomButton(
-                            funcion: () {
-                              Get.back();
-                            },
-                            texto: 'Cancelar',
-                            cancelar: true,
+                          Text(
+                            '¿Eliminar ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}?',
+                            maxLines: 3,
+                            textAlign: TextAlign.center,
                           ),
-                          CustomButton(
-                              funcion: () {
-                                const path = 'WorkersIdImages/';
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              CustomButton(
+                                funcion: () {
+                                  Get.back();
+                                },
+                                texto: 'Cancelar',
+                                cancelar: true,
+                              ),
+                              CustomButton(
+                                  funcion: () {
+                                    const path = 'WorkersIdImages/';
 
-                                try {
-                                  FirebaseStorage.instance
-                                      .ref(path)
-                                      .child('${widget.worker.rut}_front')
-                                      .delete();
-                                  FirebaseStorage.instance
-                                      .ref(path)
-                                      .child('${widget.worker.rut}_back')
-                                      .delete();
-                                  FirebaseFirestore.instance
-                                      .collection('Trabajadores')
-                                      .doc(widget.worker.id)
-                                      .delete();
-                                  Get.back();
-                                  Get.back();
-                                  AnimatedSnackBar.material(
-                                    'Trabajador eliminado con éxito',
-                                    mobileSnackBarPosition:
-                                        MobileSnackBarPosition.top,
-                                    desktopSnackBarPosition:
-                                        DesktopSnackBarPosition.bottomRight,
-                                    type: AnimatedSnackBarType.success,
-                                  ).show(context);
-                                } catch (e) {}
-                              },
-                              texto: 'Confirmar',
-                              cancelar: false)
+                                    try {
+                                      FirebaseStorage.instance
+                                          .ref(path)
+                                          .child('${widget.worker.rut}_front')
+                                          .delete();
+                                      FirebaseStorage.instance
+                                          .ref(path)
+                                          .child('${widget.worker.rut}_back')
+                                          .delete();
+                                      FirebaseFirestore.instance
+                                          .collection('Trabajadores')
+                                          .doc(widget.worker.id)
+                                          .delete();
+                                      Get.back();
+                                      Get.back();
+                                      AnimatedSnackBar.material(
+                                        'Trabajador eliminado con éxito',
+                                        mobileSnackBarPosition:
+                                            MobileSnackBarPosition.top,
+                                        desktopSnackBarPosition:
+                                            DesktopSnackBarPosition.bottomRight,
+                                        type: AnimatedSnackBarType.success,
+                                      ).show(context);
+                                    } catch (e) {}
+                                  },
+                                  texto: 'Confirmar',
+                                  cancelar: false)
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -395,14 +396,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
         actions: [
           IconButton(
               onPressed: () {
-                showCupertinoModalBottomSheet(
+                showModalBottomSheet(
                   context: context,
-                  builder: (context) => Container(
-                    constraints: BoxConstraints(
-                        maxHeight: MediaQuery.of(context).size.height - 100),
-                    child: EditWorker(
-                      worker: widget.worker,
-                    ),
+                  isScrollControlled: true,
+                  builder: (context) => EditWorker(
+                    worker: widget.worker,
                   ),
                 );
               },
