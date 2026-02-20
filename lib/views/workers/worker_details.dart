@@ -491,12 +491,21 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       fontWeight: FontWeight.bold,
                       fontSize: 18),
                 ),
-                Text(
-                  widget.worker.email?.toUpperCase() ?? "",
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  // El Expanded sigue siendo estrictamente obligatorio
+                  child: Text(
+                    widget.worker.email?.toUpperCase() ?? "",
+                    textAlign: TextAlign.end,
+                    maxLines: 1, // Mantenemos el texto en una sola línea
+                    softWrap:
+                        false, // Evita que intente bajar de línea antes de hacer el fade
+                    overflow: TextOverflow.ellipsis, // Aquí aplicas el fade
+                    style: const TextStyle(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18),
+                  ),
                 )
               ],
             ),
@@ -557,12 +566,20 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       fontWeight: FontWeight.bold,
                       fontSize: 18),
                 ),
-                Text(
-                  widget.worker.birth!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
+                const SizedBox(
+                    width: 10), // Separación para que los textos no choquen
+                Expanded(
+                  child: Text(
+                    widget.worker.birth!.toUpperCase(),
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis, // Aplicando el fade
+                    style: const TextStyle(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18),
+                  ),
                 )
               ],
             ),
@@ -651,12 +668,19 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                       fontWeight: FontWeight.bold,
                       fontSize: 18),
                 ),
-                Text(
-                  widget.worker.place!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
+                const SizedBox(width: 10), // Separación visual
+                Expanded(
+                  child: Text(
+                    widget.worker.place!.toUpperCase(),
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade, // El efecto fade
+                    style: const TextStyle(
+                        color: Colors.black54,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18),
+                  ),
                 )
               ],
             ),

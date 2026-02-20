@@ -81,6 +81,10 @@ class _WorkersPageState extends State<WorkersPage> {
           showModalBottomSheet(
             context: context,
             isScrollControlled: true,
+            // Permite que el bottom sheet ocupe hasta el 90% de la pantalla
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
             builder: (context) => const NewWorker(),
           );
         },
@@ -163,9 +167,22 @@ class _WorkersPageState extends State<WorkersPage> {
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
-                        builder: (context) => WorkerDetails(
-                          worker:
-                              worker, // Pasa el objeto WorkerModel directamente
+                        // Permite que el bottom sheet ocupe hasta el 90% de la pantalla
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.9,
+                        ),
+                        // ClipRRect para bordes redondeados superiores
+                        shape: const RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (context) => ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(20)),
+                          child: WorkerDetails(
+                            worker:
+                                worker, // Pasa el objeto WorkerModel directamente
+                          ),
                         ),
                       );
                     },
