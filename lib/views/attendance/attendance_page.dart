@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:async';
 
+import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -273,11 +274,77 @@ class _AttendancePageState extends State<AttendancePage> {
     if (name.isEmpty) return;
     await AttendanceService.addListType(name);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Tipo creado. Ya puedes activarlo en el día.')),
-    );
+    AnimatedSnackBar.material(
+      'Tipo creado. Ya puedes activarlo en el día.',
+      type: AnimatedSnackBarType.success,
+      mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+    ).show(context);
     Get.back();
+  }
+
+  Future<bool> _confirmDeleteListType(String listName) async {
+    final r = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                      color: Colors.black12,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+                Text('Eliminar tipo de lista',
+                    style: Theme.of(ctx)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(
+                    '¿Estás seguro de eliminar el tipo de lista:\n${listName.toUpperCase()}?',
+                    textAlign: TextAlign.center),
+                 const SizedBox(height: 8),
+                 Text('Esto no eliminará la asistencia histórica asociada.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancelar'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style:
+                            ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Sí, eliminar',
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return r == true;
   }
 
   Future<void> _showActivateListsSheet() async {
@@ -346,37 +413,48 @@ class _AttendancePageState extends State<AttendancePage> {
 
                             return Container(
                               constraints: const BoxConstraints(minHeight: 180),
-                              child: GroupButton(
-                                buttons: candidates,
-                                isRadio: false,
-                                options: GroupButtonOptions(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  direction: Axis.horizontal,
-                                  unselectedColor: Colors.grey.shade200,
-                                  unselectedBorderColor: Colors.transparent,
-                                  selectedColor: primario,
-                                  selectedTextStyle: Theme.of(ctx)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                alignment: WrapAlignment.center,
+                                children: candidates.map((text) {
+                                  final isSelected = picked.contains(text);
+                                  return GestureDetector(
+                                    onLongPress: () async {
+                                      final confirm = await _confirmDeleteListType(text);
+                                      if(confirm) {
+                                        await AttendanceService.removeListType(text);
+                                        // Force refresh is handled by stream builder
+                                        if (mounted) {
+                                          AnimatedSnackBar.material(
+                                            'Lista "$text" eliminada correctamente.',
+                                            type: AnimatedSnackBarType.success,
+                                            mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+                                          ).show(context);
+                                        }
+                                      }
+                                    },
+                                    child: ChoiceChip(
+                                      label: Text(text),
+                                      selected: isSelected,
+                                      selectedColor: primario,
+                                      labelStyle: TextStyle(
+                                        color: isSelected ? Colors.white : Colors.black,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                       ),
-                                  borderRadius: const BorderRadius.all(
-                                      Radius.circular(8)),
-                                  selectedBorderColor:
-                                      primario.withOpacity(0.3),
-                                ),
-                                onSelected: (text, index, isSelected) =>
-                                    setSt(() {
-                                  final val = text.toString().toUpperCase();
-                                  if (isSelected) {
-                                    picked.add(val);
-                                  } else {
-                                    picked.remove(val);
-                                  }
-                                }),
+                                      backgroundColor: Colors.grey.shade200,
+                                      onSelected: (selected) {
+                                        setSt(() {
+                                          if (selected) {
+                                            picked.add(text);
+                                          } else {
+                                            picked.remove(text);
+                                          }
+                                        });
+                                      },
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             );
                           },

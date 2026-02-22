@@ -53,6 +53,16 @@ class AttendanceService {
     }
   }
 
+  static Future<void> removeListType(String rawName) async {
+    final name = rawName.trim().toUpperCase();
+    if (name.isEmpty) return;
+    final ref = _typesRef();
+    await ref.update({
+      'tipos': FieldValue.arrayRemove([name]),
+      'lastUpdate': FieldValue.serverTimestamp(),
+    });
+  }
+
   // Día
   static Future<void> _ensureDayDoc(DateTime day) async {
     final ref = _dayRef(day);
