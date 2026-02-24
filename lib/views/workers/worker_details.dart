@@ -1,4 +1,4 @@
-// ignore_for_file: empty_catches, unrelated_type_equality_checks
+﻿// ignore_for_file: empty_catches, unrelated_type_equality_checks
 
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
@@ -40,8 +40,9 @@ class _WorkerDetailsState extends State<WorkerDetails> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FloatingActionButton.extended(
             heroTag: null,
@@ -49,159 +50,151 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
                 builder: (context) => SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.only(
                       bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Scaffold(
-                        appBar: AppBar(
-                          automaticallyImplyLeading: false,
-                          toolbarHeight: 70,
-                          centerTitle: true,
-                          title: Text(
-                            'FINIQUITO ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-                            maxLines: 3,
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        body: Form(
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                        child: Form(
                           key: _formKey,
-                          child: ResponsiveGridList(
-                            minItemsPerRow: 1,
-                            maxItemsPerRow: 3,
-                            horizontalGridMargin: 25,
-                            verticalGridMargin: 25,
-                            minItemWidth: 250,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: InputTextField(
-                                  teclado: TextInputType.none,
-                                  textController: _exitController,
-                                  hint: 'Fecha de Egreso',
-                                  formater: RutFormatter(),
-                                  onTap: () async {
-                                    DateTime initialDate;
-                                    try {
-                                      initialDate = DateFormat.yMMMMd('es')
-                                          .parse(_exitController.text);
-                                    } catch (_) {
-                                      initialDate = DateTime.now();
-                                    }
+                              Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.black12,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'FINIQUITO ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                                maxLines: 3,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              InputTextField(
+                                teclado: TextInputType.none,
+                                textController: _exitController,
+                                hint: 'Fecha de Egreso',
+                                formater: RutFormatter(),
+                                onTap: () async {
+                                  DateTime initialDate;
+                                  try {
+                                    initialDate = DateFormat.yMMMMd('es')
+                                        .parse(_exitController.text);
+                                  } catch (_) {
+                                    initialDate = DateTime.now();
+                                  }
 
-                                    final datePicked =
-                                        await showCalendarDatePicker2Dialog(
-                                      context: context,
-                                      config:
-                                          CalendarDatePicker2WithActionButtonsConfig(
-                                        calendarType:
-                                            CalendarDatePicker2Type.single,
-                                        selectedDayHighlightColor: primario,
-                                        firstDate: DateTime(1950),
-                                        lastDate: DateTime.now(),
-                                        currentDate: DateTime.now(),
-                                      ),
-                                      dialogSize: const Size(325, 400),
-                                      value: _exitController.text.isNotEmpty
-                                          ? [
-                                              DateFormat.yMMMMd('es')
-                                                  .parse(_exitController.text)
-                                            ]
-                                          : [DateTime.now()],
-                                    );
-
-                                    if (datePicked != null &&
-                                        datePicked.isNotEmpty &&
-                                        datePicked.first != null) {
-                                      setState(() {
-                                        _exitController.text =
+                                  final datePicked =
+                                      await showCalendarDatePicker2Dialog(
+                                    context: context,
+                                    config:
+                                        CalendarDatePicker2WithActionButtonsConfig(
+                                      calendarType:
+                                          CalendarDatePicker2Type.single,
+                                      selectedDayHighlightColor: primario,
+                                      firstDate: DateTime(1950),
+                                      lastDate: DateTime.now(),
+                                      currentDate: DateTime.now(),
+                                    ),
+                                    dialogSize: const Size(325, 400),
+                                    value: _exitController.text.isNotEmpty
+                                        ? [
                                             DateFormat.yMMMMd('es')
-                                                .format(datePicked.first!)
-                                                .toString();
-                                      });
-                                    }
-                                  },
-                                  validator: (value) {
-                                    if (value == '') {
-                                      return 'Por favor ingrese fecha de ingreso';
-                                    }
-                                    return null;
-                                  },
-                                ),
+                                                .parse(_exitController.text)
+                                          ]
+                                        : [DateTime.now()],
+                                  );
+
+                                  if (datePicked != null &&
+                                      datePicked.isNotEmpty &&
+                                      datePicked.first != null) {
+                                    setState(() {
+                                      _exitController.text =
+                                          DateFormat.yMMMMd('es')
+                                              .format(datePicked.first!)
+                                              .toString();
+                                    });
+                                  }
+                                },
+                                validator: (value) {
+                                  if (value == '') {
+                                    return 'Por favor ingrese fecha de ingreso';
+                                  }
+                                  return null;
+                                },
                               ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 0),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: InputTextField(
-                                    teclado: TextInputType.number,
-                                    textController: _vacationsController,
-                                    formater:
-                                        FilteringTextInputFormatter.digitsOnly,
-                                    hint: 'Vacaciones proporcionales',
-                                    money: true,
-                                    prefix: '\$',
-                                    validator: (value) {
-                                      if (value!.isEmpty) {
-                                        return 'Por favor ingrese un monto';
-                                      }
-                                      return null;
+                              const SizedBox(height: 8),
+                              InputTextField(
+                                teclado: TextInputType.number,
+                                textController: _vacationsController,
+                                formater:
+                                    FilteringTextInputFormatter.digitsOnly,
+                                hint: 'Vacaciones proporcionales',
+                                money: true,
+                                prefix: '\$',
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'Por favor ingrese un monto';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 8),
+                              InputTextField(
+                                teclado: TextInputType.number,
+                                textController: _totalController,
+                                formater:
+                                    FilteringTextInputFormatter.digitsOnly,
+                                hint: 'Total',
+                                money: true,
+                                prefix: '\$',
+                                validator: (value) {
+                                  if (value!.isEmpty) {
+                                    return 'Por favor ingrese un monto';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  CustomButton(
+                                    funcion: () {
+                                      Get.back();
                                     },
+                                    texto: 'Cancelar',
+                                    cancelar: true,
                                   ),
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 0),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: InputTextField(
-                                    teclado: TextInputType.number,
-                                    textController: _totalController,
-                                    formater:
-                                        FilteringTextInputFormatter.digitsOnly,
-                                    hint: 'Total',
-                                    money: true,
-                                    prefix: '\$',
-                                    validator: (value) {
-                                      if (value!.isEmpty) {
-                                        return 'Por favor ingrese un monto';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(top: 5.0),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceEvenly,
-                                  children: [
-                                    CustomButton(
-                                      funcion: () {
+                                  CustomButton(
+                                    funcion: () {
+                                      if (_formKey.currentState!.validate()) {
+                                        _formKey.currentState!.save();
+                                        printingEnd();
                                         Get.back();
-                                      },
-                                      texto: 'Cancelar',
-                                      cancelar: true,
-                                    ),
-                                    CustomButton(
-                                      funcion: () {
-                                        if (_formKey.currentState!.validate()) {
-                                          _formKey.currentState!.save();
-                                          printingEnd();
-                                          Get.back();
-                                        }
-                                      },
-                                      texto: 'Imprimir',
-                                      cancelar: false,
-                                    ),
-                                  ],
-                                ),
+                                      }
+                                    },
+                                    texto: 'Imprimir',
+                                    cancelar: false,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -225,64 +218,83 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
                 builder: (context) => SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.only(
                       bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'DOCUMENTOS ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-                            maxLines: 3,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          GroupButton(
-                            options: const GroupButtonOptions(
-                                borderRadius:
-                                    BorderRadius.all(Radius.circular(10))),
-                            isRadio: false,
-                            onSelected: (buttons, index, isSelected) => {
-                              if (isSelected)
-                                {seleccionados.add(buttons)}
-                              else
-                                {seleccionados.remove(buttons)},
-                            },
-                            buttons: [
-                              "Contrato",
-                              "Derecho a saber",
-                              "EPP",
-                              "Registro",
-                              "EPP + Registro",
-                              if (widget.worker.imageFront != '') "Carnet",
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              CustomButton(
-                                funcion: () {
-                                  Get.back();
-                                },
-                                texto: 'Cancelar',
-                                cancelar: true,
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              CustomButton(
-                                funcion: () {
-                                  Get.back();
-                                  printing(seleccionados);
-                                },
-                                texto: 'Imprimir',
-                                cancelar: false,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'DOCUMENTOS ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
-                            ],
-                          ),
-                        ],
+                              maxLines: 3,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            GroupButton(
+                              options: const GroupButtonOptions(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(10))),
+                              isRadio: false,
+                              onSelected: (buttons, index, isSelected) => {
+                                if (isSelected)
+                                  {seleccionados.add(buttons)}
+                                else
+                                  {seleccionados.remove(buttons)},
+                              },
+                              buttons: [
+                                "Contrato",
+                                "Derecho a saber",
+                                "EPP",
+                                "Registro",
+                                "EPP + Registro",
+                                if (widget.worker.imageFront != '') "Carnet",
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                CustomButton(
+                                  funcion: () {
+                                    Get.back();
+                                  },
+                                  texto: 'Cancelar',
+                                  cancelar: true,
+                                ),
+                                CustomButton(
+                                  funcion: () {
+                                    Get.back();
+                                    printing(seleccionados);
+                                  },
+                                  texto: 'Imprimir',
+                                  cancelar: false,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -301,8 +313,35 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
-                builder: (context) => PicturesPage(
-                  worker: widget.worker,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
+                builder: (context) => SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.75,
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16)),
+                          child: PicturesPage(
+                            worker: widget.worker,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -316,73 +355,94 @@ class _WorkerDetailsState extends State<WorkerDetails> {
         backgroundColor: Colors.white,
         title: Text(
           '${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-          style: const TextStyle(color: Colors.black),
+          style: const TextStyle(
+              color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
             onPressed: () {
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                ),
                 builder: (context) => SingleChildScrollView(
                   child: Padding(
                     padding: EdgeInsets.only(
                       bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    child: Container(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '¿Eliminar ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}?',
-                            maxLines: 3,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              CustomButton(
-                                funcion: () {
-                                  Get.back();
-                                },
-                                texto: 'Cancelar',
-                                cancelar: true,
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.black12,
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              CustomButton(
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              '¿Eliminar ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}?',
+                              maxLines: 3,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                CustomButton(
                                   funcion: () {
-                                    const path = 'WorkersIdImages/';
-
-                                    try {
-                                      FirebaseStorage.instance
-                                          .ref(path)
-                                          .child('${widget.worker.rut}_front')
-                                          .delete();
-                                      FirebaseStorage.instance
-                                          .ref(path)
-                                          .child('${widget.worker.rut}_back')
-                                          .delete();
-                                      FirebaseFirestore.instance
-                                          .collection('Trabajadores')
-                                          .doc(widget.worker.id)
-                                          .delete();
-                                      Get.back();
-                                      Get.back();
-                                      AnimatedSnackBar.material(
-                                        'Trabajador eliminado con éxito',
-                                        mobileSnackBarPosition:
-                                            MobileSnackBarPosition.top,
-                                        desktopSnackBarPosition:
-                                            DesktopSnackBarPosition.bottomRight,
-                                        type: AnimatedSnackBarType.success,
-                                      ).show(context);
-                                    } catch (e) {}
+                                    Get.back();
                                   },
-                                  texto: 'Confirmar',
-                                  cancelar: false)
-                            ],
-                          ),
-                        ],
+                                  texto: 'Cancelar',
+                                  cancelar: true,
+                                ),
+                                CustomButton(
+                                    funcion: () {
+                                      const path = 'WorkersIdImages/';
+
+                                      try {
+                                        FirebaseStorage.instance
+                                            .ref(path)
+                                            .child('${widget.worker.rut}_front')
+                                            .delete();
+                                        FirebaseStorage.instance
+                                            .ref(path)
+                                            .child('${widget.worker.rut}_back')
+                                            .delete();
+                                        FirebaseFirestore.instance
+                                            .collection('Trabajadores')
+                                            .doc(widget.worker.id)
+                                            .delete();
+                                        Get.back();
+                                        Get.back();
+                                        AnimatedSnackBar.material(
+                                          'Trabajador eliminado con éxito',
+                                          mobileSnackBarPosition:
+                                              MobileSnackBarPosition.top,
+                                          desktopSnackBarPosition:
+                                              DesktopSnackBarPosition
+                                                  .bottomRight,
+                                          type: AnimatedSnackBarType.success,
+                                        ).show(context);
+                                      } catch (e) {}
+                                    },
+                                    texto: 'Confirmar',
+                                    cancelar: false)
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -399,8 +459,36 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (context) => EditWorker(
-                    worker: widget.worker,
+                  backgroundColor: Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(16)),
+                  ),
+                  builder: (context) => SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.9,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16)),
+                            child: EditWorker(
+                              worker: widget.worker,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -412,348 +500,93 @@ class _WorkerDetailsState extends State<WorkerDetails> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(25.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Nombres :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.name!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Apellidos :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.lastName!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Rut :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.rut!,
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Correo :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  // El Expanded sigue siendo estrictamente obligatorio
-                  child: Text(
-                    widget.worker.email?.toUpperCase() ?? "",
-                    textAlign: TextAlign.end,
-                    maxLines: 1, // Mantenemos el texto en una sola línea
-                    softWrap:
-                        false, // Evita que intente bajar de línea antes de hacer el fade
-                    overflow: TextOverflow.ellipsis, // Aquí aplicas el fade
-                    style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18),
-                  ),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Nacionalidad :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.nacionality!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Estado civil :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.civilState!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Fecha de nacimiento :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                const SizedBox(
-                    width: 10), // Separación para que los textos no choquen
-                Expanded(
-                  child: Text(
-                    widget.worker.birth!.toUpperCase(),
-                    textAlign: TextAlign.end,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis, // Aplicando el fade
-                    style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18),
-                  ),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Dirección :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width - 130,
-                  child: Text(
-                    widget.worker.adress!.toUpperCase(),
-                    textAlign: TextAlign.end,
-                    style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.bold,
-                        overflow: TextOverflow.fade,
-                        fontSize: 18),
-                  ),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Comuna :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.commune!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Labor :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.labor!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Establecimiento :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                const SizedBox(width: 10), // Separación visual
-                Expanded(
-                  child: Text(
-                    widget.worker.place!.toUpperCase(),
-                    textAlign: TextAlign.end,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.fade, // El efecto fade
-                    style: const TextStyle(
-                        color: Colors.black54,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18),
-                  ),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'AFP :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.afp!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Prevision :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.prevision!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Fecha de ingreso :',
-                  style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                ),
-                Text(
-                  widget.worker.ingress!.toUpperCase(),
-                  style: const TextStyle(
-                      color: Colors.black54,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18),
-                )
-              ],
-            ),
-            const SizedBox(
-              height: 5,
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ...[
+                {
+                  'label': 'Nombres :',
+                  'value': widget.worker.name!.toUpperCase()
+                },
+                {
+                  'label': 'Apellidos :',
+                  'value': widget.worker.lastName!.toUpperCase()
+                },
+                {'label': 'Rut :', 'value': widget.worker.rut!},
+                {
+                  'label': 'Correo :',
+                  'value': widget.worker.email?.toUpperCase() ?? ""
+                },
+                {
+                  'label': 'Nacionalidad :',
+                  'value': widget.worker.nacionality!.toUpperCase()
+                },
+                {
+                  'label': 'Estado civil :',
+                  'value': widget.worker.civilState!.toUpperCase()
+                },
+                {
+                  'label': 'Fecha de nacimiento :',
+                  'value': widget.worker.birth!.toUpperCase()
+                },
+                {
+                  'label': 'Dirección :',
+                  'value': widget.worker.adress!.toUpperCase()
+                },
+                {
+                  'label': 'Comuna :',
+                  'value': widget.worker.commune!.toUpperCase()
+                },
+                {
+                  'label': 'Labor :',
+                  'value': widget.worker.labor!.toUpperCase()
+                },
+                {
+                  'label': 'Establecimiento :',
+                  'value': widget.worker.place!.toUpperCase()
+                },
+                {'label': 'AFP :', 'value': widget.worker.afp!.toUpperCase()},
+                {
+                  'label': 'Prevision :',
+                  'value': widget.worker.prevision!.toUpperCase()
+                },
+                {
+                  'label': 'Fecha de ingreso :',
+                  'value': widget.worker.ingress!.toUpperCase()
+                },
+              ].map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 5.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item['label']!,
+                          style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            item['value']!,
+                            textAlign: TextAlign.end,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.black54,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18),
+                          ),
+                        )
+                      ],
+                    ),
+                  )),
+            ],
+          ),
         ),
       ),
     );

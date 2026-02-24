@@ -76,8 +76,8 @@ class _NewWorkerState extends State<NewWorker> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        toolbarHeight: 70,
         automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
         title: const Center(
           child: SubTitleWidget(text: 'Nuevo Trabajador'),
         ),
@@ -153,6 +153,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -196,7 +197,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewNacionality(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewNacionality(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -254,6 +284,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -297,7 +328,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewCivilState(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewCivilState(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -367,8 +427,9 @@ class _NewWorkerState extends State<NewWorker> {
 
                 if (datePicked != null && datePicked.isNotEmpty) {
                   setState(() {
-                    _birhtController.text =
-                        DateFormat.yMMMMd('es').format(datePicked.first!).toString();
+                    _birhtController.text = DateFormat.yMMMMd('es')
+                        .format(datePicked.first!)
+                        .toString();
                   });
                 }
               },
@@ -401,6 +462,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -444,7 +506,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewCommune(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewCommune(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -502,6 +593,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -545,7 +637,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewLabor(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewLabor(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -603,6 +724,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -646,7 +768,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewPlace(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewPlace(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -704,6 +855,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -747,7 +899,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewAfp(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewAfp(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -805,6 +986,7 @@ class _NewWorkerState extends State<NewWorker> {
                   if (!snapshot.hasData) return const Center();
 
                   return DropdownButtonFormField2<String>(
+                    isExpanded: true,
                     decoration: InputDecoration(
                       focusedErrorBorder: OutlineInputBorder(
                         borderSide: BorderSide(color: primario),
@@ -848,7 +1030,36 @@ class _NewWorkerState extends State<NewWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewPrevision(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewPrevision(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -918,8 +1129,9 @@ class _NewWorkerState extends State<NewWorker> {
 
                 if (datePicked != null && datePicked.isNotEmpty) {
                   setState(() {
-                    _ingressController.text =
-                        DateFormat.yMMMMd('es').format(datePicked.first!).toString();
+                    _ingressController.text = DateFormat.yMMMMd('es')
+                        .format(datePicked.first!)
+                        .toString();
                   });
                 }
               },

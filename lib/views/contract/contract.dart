@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:rut_utils/rut_utils.dart';
 import 'package:spelling_number/spelling_number.dart';
 
@@ -39,10 +38,8 @@ class _ContractPageState extends State<ContractPage> {
       ), */
       body: SingleChildScrollView(
         child: StreamBuilder(
-          stream: FirebaseFirestore.instance
-                .collection('Otros')
-                .where('nombre', whereIn: ['contratosmont', 'empresadata'])
-              .snapshots(),
+          stream: FirebaseFirestore.instance.collection('Otros').where('nombre',
+              whereIn: ['contratosmont', 'empresadata']).snapshots(),
           builder:
               (BuildContext context, AsyncSnapshot<QuerySnapshot> snapshot) {
             if (!snapshot.hasData) {
@@ -62,27 +59,63 @@ class _ContractPageState extends State<ContractPage> {
                     minLeadingWidth: 60,
                     title: Text(doc['nombreempresa']),
                     subtitle: Text(doc['rut']),
-                    trailing: IconButton(onPressed: (){
-                      showCupertinoModalBottomSheet(
-                        context: context,
-                        builder: (context) => const NewEnterpriseData(),
-                      );
-                    }, icon: const Icon(Icons.edit_document,color: Colors.blueGrey,)),
+                    trailing: IconButton(
+                        onPressed: () {
+                          showModalBottomSheet(
+                            isScrollControlled: true,
+                            backgroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16)),
+                            ),
+                            context: context,
+                            builder: (context) => Padding(
+                              padding: EdgeInsets.only(
+                                  bottom:
+                                      MediaQuery.of(context).viewInsets.bottom),
+                              child: const NewEnterpriseData(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.edit_document,
+                          color: Colors.blueGrey,
+                        )),
                   );
                 } else if (doc['nombre'] == 'contratosmont') {
                   return ListTile(
                     leading: const Text('Monto diario'),
                     minLeadingWidth: 60,
                     title: Text(
-                      numfor.format(snapshot.data!.docs.first['montonum'],),
+                      numfor.format(
+                        snapshot.data!.docs.first['montonum'],
+                      ),
                     ),
-                    subtitle: Text(snapshot.data!.docs.first['montotext'],),
-                    trailing: IconButton(onPressed: (){
-                      showCupertinoModalBottomSheet(
-                        context: context,
-                        builder: (context) => const NewAmount(),
-                      );
-                    }, icon: const Icon(Icons.edit_document,color: Colors.blueGrey,)),
+                    subtitle: Text(
+                      snapshot.data!.docs.first['montotext'],
+                    ),
+                    trailing: IconButton(
+                        onPressed: () {
+                          showModalBottomSheet(
+                            isScrollControlled: true,
+                            backgroundColor: Colors.white,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16)),
+                            ),
+                            context: context,
+                            builder: (context) => Padding(
+                              padding: EdgeInsets.only(
+                                  bottom:
+                                      MediaQuery.of(context).viewInsets.bottom),
+                              child: const NewAmount(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.edit_document,
+                          color: Colors.blueGrey,
+                        )),
                   );
                 }
                 return const SizedBox.shrink();
@@ -126,84 +159,101 @@ class _NewEnterpriseDataState extends State<NewEnterpriseData> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      appBar: AppBar(
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text('Datos de la empresa'),
-      ),
-      body: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: InputTextField(
-                    textController: _empresaController,
-                    hint: 'Nombre de la empresa',
-                    validator: (value) {
-                      if (value!.isEmpty) {
-                        return 'Por favor ingrese el nombre de la empresa';
-                      }
-                      return null;
-                    },
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: InputTextField(
-                    teclado: TextInputType.text,
-                    textController: _rutController,
-                    hint: 'Rut',
-                    formater: RutFormatter(),
-                    validator: (value) {
-                      if (value == '') {
-                        return 'Por favor ingrese un rut';
-                      }
-                      if (value!.length < 11) {
-                        return 'Por favor ingrese un rut válido';
-                      }
-                      if (isRutValid(value.toString()) == false) {
-                        return 'Por favor ingrese un rut válido';
-                      }
-                      return null;
-                    },
+                const SizedBox(height: 12),
+                const Center(
+                  child: Text(
+                    'Datos de la empresa',
+                    style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16),
                   ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 15.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    CustomButton(
-                      funcion: () {
-                        Get.back();
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: InputTextField(
+                      textController: _empresaController,
+                      hint: 'Nombre de la empresa',
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return 'Por favor ingrese el nombre de la empresa';
+                        }
+                        return null;
                       },
-                      texto: 'Cancelar',
-                      cancelar: true,
                     ),
-                    CustomButton(
-                        funcion: () {
-                          if (_formKey.currentState!.validate() &&
-                              _formKey.currentState!.validate()) {
-                            _formKey.currentState!.save();
-                            saveNewEnterpriseData();
-                          }
-                        },
-                        texto: 'Agregar',
-                        cancelar: false)
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 25),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: InputTextField(
+                      teclado: TextInputType.text,
+                      textController: _rutController,
+                      hint: 'Rut',
+                      formater: RutFormatter(),
+                      validator: (value) {
+                        if (value == '') {
+                          return 'Por favor ingrese un rut';
+                        }
+                        if (value!.length < 11) {
+                          return 'Por favor ingrese un rut válido';
+                        }
+                        if (isRutValid(value.toString()) == false) {
+                          return 'Por favor ingrese un rut válido';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 15.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      CustomButton(
+                        funcion: () {
+                          Get.back();
+                        },
+                        texto: 'Cancelar',
+                        cancelar: true,
+                      ),
+                      CustomButton(
+                          funcion: () {
+                            if (_formKey.currentState!.validate() &&
+                                _formKey.currentState!.validate()) {
+                              _formKey.currentState!.save();
+                              saveNewEnterpriseData();
+                            }
+                          },
+                          texto: 'Agregar',
+                          cancelar: false),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -243,62 +293,80 @@ class _NewAmountState extends State<NewAmount> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        automaticallyImplyLeading: false,
-        title: const Text('Nuevo monto diario'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: InputTextField(
-                  teclado: TextInputType.number,
-                  textController: _montoController,
-                  formater: FilteringTextInputFormatter.digitsOnly,
-                  hint: 'Monto diario',
-                  money: true,
-                  prefix: '\$',
-                  validator: (value) {
-                    if (value!.isEmpty) {
-                      return 'Por favor ingrese un precio';
-                    }
-                    return null;
-                  },
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 15.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomButton(
-                    funcion: () {
-                      Get.back();
-                    },
-                    texto: 'Cancelar',
-                    cancelar: true,
-                  ),
-                  CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate() &&
-                            _formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          saveNewAmount();
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false)
-                ],
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'Nuevo monto diario',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 25),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: InputTextField(
+                    teclado: TextInputType.number,
+                    textController: _montoController,
+                    formater: FilteringTextInputFormatter.digitsOnly,
+                    hint: 'Monto diario',
+                    money: true,
+                    prefix: '\$',
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Por favor ingrese un precio';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 15.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    CustomButton(
+                      funcion: () {
+                        Get.back();
+                      },
+                      texto: 'Cancelar',
+                      cancelar: true,
+                    ),
+                    CustomButton(
+                        funcion: () {
+                          if (_formKey.currentState!.validate() &&
+                              _formKey.currentState!.validate()) {
+                            _formKey.currentState!.save();
+                            saveNewAmount();
+                          }
+                        },
+                        texto: 'Agregar',
+                        cancelar: false),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

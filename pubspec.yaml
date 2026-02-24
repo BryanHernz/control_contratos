@@ -32,7 +32,7 @@ dependencies:
   google_fonts: ^6.2.1
   image_picker: ^1.1.2
   image_editor_plus: ^1.0.4
-  image_cropper: ^5.0.0
+  image_cropper: ^9.1.0
   google_mlkit_document_scanner: ^0.4.0
   date_picker_timeline: ^1.2.3
   share_plus: ^10.0.2
@@ -43,6 +43,8 @@ dependencies:
   # Dependencia oficial de localizaciones (del SDK)
   flutter_localizations:
     sdk: flutter
+  scrollable_positioned_list: ^0.3.8
+  csv: ^6.0.0
 
 dev_dependencies:
   flutter_test:

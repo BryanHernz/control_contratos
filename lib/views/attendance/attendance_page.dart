@@ -10,8 +10,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:group_button/group_button.dart';
 import 'package:intl/intl.dart';
 import 'package:myapp/customs/constants_values.dart';
 import 'package:open_filex/open_filex.dart';
@@ -32,10 +32,10 @@ class AttendancePage extends StatefulWidget {
   const AttendancePage({super.key});
 
   @override
-  State<AttendancePage> createState() => _AttendancePageState();
+  State<AttendancePage> createState() => AttendancePageState();
 }
 
-class _AttendancePageState extends State<AttendancePage> {
+class AttendancePageState extends State<AttendancePage> {
   DateTime _selectedDate = normalizeDay(DateTime.now());
   final _search = TextEditingController();
   final _dpCtrl = DatePickerController();
@@ -313,10 +313,11 @@ class _AttendancePageState extends State<AttendancePage> {
                 Text(
                     '¿Estás seguro de eliminar el tipo de lista:\n${listName.toUpperCase()}?',
                     textAlign: TextAlign.center),
-                 const SizedBox(height: 8),
-                 Text('Esto no eliminará la asistencia histórica asociada.',
+                const SizedBox(height: 8),
+                const Text(
+                    'Esto no eliminará la asistencia histórica asociada.',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    style: TextStyle(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -329,8 +330,8 @@ class _AttendancePageState extends State<AttendancePage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        style:
-                            ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red),
                         onPressed: () => Navigator.pop(ctx, true),
                         child: const Text('Sí, eliminar',
                             style: TextStyle(color: Colors.white)),
@@ -372,12 +373,23 @@ class _AttendancePageState extends State<AttendancePage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Center(
+                          child: Container(
+                            width: 40,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.black12,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        const Center(
                           child: Text(
                             'Agregar listas al día',
-                            style: Theme.of(ctx)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -421,15 +433,18 @@ class _AttendancePageState extends State<AttendancePage> {
                                   final isSelected = picked.contains(text);
                                   return GestureDetector(
                                     onLongPress: () async {
-                                      final confirm = await _confirmDeleteListType(text);
-                                      if(confirm) {
-                                        await AttendanceService.removeListType(text);
+                                      final confirm =
+                                          await _confirmDeleteListType(text);
+                                      if (confirm) {
+                                        await AttendanceService.removeListType(
+                                            text);
                                         // Force refresh is handled by stream builder
                                         if (mounted) {
                                           AnimatedSnackBar.material(
                                             'Lista "$text" eliminada correctamente.',
                                             type: AnimatedSnackBarType.success,
-                                            mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+                                            mobileSnackBarPosition:
+                                                MobileSnackBarPosition.bottom,
                                           ).show(context);
                                         }
                                       }
@@ -439,8 +454,12 @@ class _AttendancePageState extends State<AttendancePage> {
                                       selected: isSelected,
                                       selectedColor: primario,
                                       labelStyle: TextStyle(
-                                        color: isSelected ? Colors.white : Colors.black,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.black,
+                                        fontWeight: isSelected
+                                            ? FontWeight.bold
+                                            : FontWeight.normal,
                                       ),
                                       backgroundColor: Colors.grey.shade200,
                                       onSelected: (selected) {
@@ -528,8 +547,8 @@ class _AttendancePageState extends State<AttendancePage> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
                 child: StatefulBuilder(
                   builder: (ctx, setSt) {
-                    final actives = [..._activeLists]
-                      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+                    final actives = [..._activeLists]..sort(
+                        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
                     return Column(
                       mainAxisSize: MainAxisSize.min,
@@ -545,10 +564,10 @@ class _AttendancePageState extends State<AttendancePage> {
                         const SizedBox(height: 12),
                         Text(
                           'Selecciona lista',
-                          style: Theme.of(ctx)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
                         ),
                         const SizedBox(height: 12),
                         if (actives.isEmpty)
@@ -631,16 +650,33 @@ class _AttendancePageState extends State<AttendancePage> {
                 padding: const EdgeInsets.all(16.0),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(16.0)),
                 ),
                 child: Form(
                   key: formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Nuevo tipo de lista',
-                        style: Theme.of(context).textTheme.headlineSmall,
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.black12,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Center(
+                        child: Text(
+                          'Nuevo tipo de lista',
+                          style: TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       InputTextField(
@@ -699,8 +735,9 @@ class _AttendancePageState extends State<AttendancePage> {
           child: pw.Text(
             text,
             style: pw.TextStyle(
-              fontSize: header ? 12 : 11,
+              fontSize: header ? 10 : 9,
               fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal,
+              color: header ? PdfColors.white : PdfColors.black,
             ),
           ),
         );
@@ -737,14 +774,23 @@ class _AttendancePageState extends State<AttendancePage> {
         margin: const pw.EdgeInsets.all(24),
         header: (ctx) => pw.Column(
           mainAxisSize: pw.MainAxisSize.min,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Center(
-              child: pw.Text(
-                'ASISTENCIA - DÍA $fecha - $listTitle',
-                style:
-                    pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+            pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.center, children: [
+              pw.Container(
+                width: 5,
+                height: 30,
+                color: PdfColor.fromHex('#455A64'),
+                margin: const pw.EdgeInsets.only(right: 15),
               ),
-            ),
+              pw.Text(
+                'REPORTE DIARIO DE ASISTENCIA: $fecha - $listTitle',
+                style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColor.fromHex('#455A64')),
+              ),
+            ]),
             pw.SizedBox(height: 16),
           ],
         ),
@@ -762,7 +808,7 @@ class _AttendancePageState extends State<AttendancePage> {
         build: (ctx) => [
           for (final part in parts) ...[
             pw.Table(
-              border: pw.TableBorder.all(width: 0.5),
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
               columnWidths: _group == 'GENERAL'
                   ? {
                       0: const pw.FixedColumnWidth(30),
@@ -777,6 +823,8 @@ class _AttendancePageState extends State<AttendancePage> {
                     },
               children: [
                 pw.TableRow(
+                    decoration:
+                        pw.BoxDecoration(color: PdfColor.fromHex('#455A64')),
                     children: _group == 'GENERAL'
                         ? [
                             cell('Nº', header: true),
@@ -867,13 +915,210 @@ class _AttendancePageState extends State<AttendancePage> {
 
     final dir = await getTemporaryDirectory();
     final path = '${dir.path}/$fileName';
-    await File(path).writeAsBytes(bytes, flush: true);
     await Share.shareXFiles(
       [XFile(path, mimeType: 'application/pdf')],
       text:
           'Asistencia $_group del ${DateFormat('dd/MM/yyyy', 'es_CL').format(_selectedDate)}',
       subject: 'Asistencia $_group',
     );
+  }
+
+  // --- EXPORTAR ASISTENCIA MENSUAL A PDF ---
+  Future<void> exportMonthlyAttendanceToPDF() async {
+    if (_all.isEmpty) return; // Validación de seguridad
+
+    // Mostrar modal decarga porque esto tomará unos segundos consultando 30/31 días
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Colors.white),
+            SizedBox(height: 16),
+            Text(
+              "Generando Libro de Asistencia...",
+              style:
+                  TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            )
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final selectedMonth = _selectedDate.month;
+      final selectedYear = _selectedDate.year;
+      final daysInMonth = DateUtils.getDaysInMonth(selectedYear, selectedMonth);
+
+      Map<String, List<dynamic>> monthlyData = {};
+
+      for (var w in _all) {
+        List<dynamic> row = [
+          '${w.nombres} ${w.apellidos}'.toUpperCase(),
+          w.rut.toUpperCase()
+        ];
+        // 31 dias vacios
+        for (int i = 0; i < daysInMonth; i++) {
+          row.add('');
+        }
+        row.add(0); // Total final
+        monthlyData[w.id] = row;
+      }
+
+      for (int i = 1; i <= daysInMonth; i++) {
+        final currentDayDate = DateTime(selectedYear, selectedMonth, i);
+        final dayKey = AttendanceService.dateKeyFrom(currentDayDate);
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('Asistencias')
+            .doc(dayKey)
+            .get();
+
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data();
+          final presentes =
+              (data?['presentes'] as Map?)?.cast<String, dynamic>() ?? {};
+
+          for (var entry in presentes.values) {
+            final workerId = (entry['workerId'] ?? '').toString();
+            if (monthlyData.containsKey(workerId)) {
+              monthlyData[workerId]![1 + i] = 'X'; // Indice Nombre, Rut, + dia
+              monthlyData[workerId]!.last =
+                  (monthlyData[workerId]!.last as int) + 1;
+            }
+          }
+        }
+      }
+
+      // Preparar PDF
+      final pdf = pw.Document();
+      var cambria = await rootBundle.load("lib/images/Cambria.ttf");
+      var calibri = await rootBundle.load("lib/images/Calibri Regular.ttf");
+      var calibriBold = await rootBundle.load("lib/images/Calibri Bold.ttf");
+
+      List<String> headers = ["Trabajador", "RUT"];
+      for (int i = 1; i <= daysInMonth; i++) {
+        headers.add(i.toString());
+      }
+      headers.add("T");
+
+      // Filtrar y preparar data array
+      List<List<String>> tableData = [];
+      for (var row in monthlyData.values) {
+        if ((row.last as int) > 0) {
+          tableData.add(row.map((e) => e.toString()).toList());
+        }
+      }
+
+      final String monthName =
+          DateFormat('MMMM yyyy', 'es_CL').format(_selectedDate);
+
+      // Calcular KPIs
+      int totalAsistencias = 0;
+      for (var row in tableData) {
+        totalAsistencias += int.parse(row.last);
+      }
+      double prom = daysInMonth > 0 ? totalAsistencias / daysInMonth : 0;
+      String promedioAsistencias = prom.toStringAsFixed(1);
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4.landscape,
+          maxPages: 1000,
+          margin: const pw.EdgeInsets.all(20),
+          build: (context) => [
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    pw.Container(
+                      width: 5,
+                      height: 35,
+                      color: PdfColor.fromHex('#455A64'),
+                      margin: const pw.EdgeInsets.only(right: 15),
+                    ),
+                    pw.Header(
+                      level: 0,
+                      child: pw.Text(
+                        'LIBRO DE ASISTENCIA: ${monthName.toUpperCase()}',
+                        style: pw.TextStyle(
+                          font: pw.Font.ttf(cambria),
+                          fontWeight: pw.FontWeight.bold,
+                          fontSize: 14,
+                          color: PdfColor.fromHex('#455A64'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('Trabajadores Activos: ${tableData.length}',
+                        style: pw.TextStyle(
+                            font: pw.Font.ttf(calibri),
+                            fontSize: 10,
+                            color: PdfColors.grey700)),
+                    pw.Text('Total Asistencias: $totalAsistencias',
+                        style: pw.TextStyle(
+                            font: pw.Font.ttf(calibri),
+                            fontSize: 10,
+                            color: PdfColors.grey700)),
+                    pw.Text('Promedio Diario: $promedioAsistencias',
+                        style: pw.TextStyle(
+                            font: pw.Font.ttf(calibri),
+                            fontSize: 10,
+                            color: PdfColors.grey700)),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 15),
+            pw.TableHelper.fromTextArray(
+                headers: headers,
+                data: tableData,
+                border: pw.TableBorder.all(color: PdfColors.grey300),
+                headerStyle: pw.TextStyle(
+                  font: pw.Font.ttf(calibriBold),
+                  color: PdfColors.white,
+                  fontSize: 8,
+                ),
+                headerDecoration:
+                    pw.BoxDecoration(color: PdfColor.fromHex('#455A64')),
+                cellStyle: pw.TextStyle(
+                  font: pw.Font.ttf(calibri),
+                  fontSize: 7,
+                ),
+                cellAlignment: pw.Alignment.center,
+                // Forzar alineacion a la izquierda solo para el nombre y el rut
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.centerLeft,
+                }),
+          ],
+        ),
+      );
+
+      if (mounted) Navigator.pop(context); // Cerrar loader
+
+      await Printing.layoutPdf(
+        onLayout: (PdfPageFormat format) async => pdf.save(),
+        name: 'Asistencia_$monthName.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        AnimatedSnackBar.material(
+          'Error generando reporte: $e',
+          type: AnimatedSnackBarType.error,
+          mobileSnackBarPosition: MobileSnackBarPosition.bottom,
+        ).show(context);
+      }
+    }
   }
 
   Widget _groupDropdown() {
@@ -993,7 +1238,6 @@ class _AttendancePageState extends State<AttendancePage> {
                       stream: AttendanceService.listenPresents(
                           _selectedDate, _group),
                       builder: (context, snap) {
-                        final list = snap.data ?? const [];
                         return PopupMenuButton<String>(
                           tooltip: 'Exportar',
                           icon: const Icon(CupertinoIcons.arrow_down_doc,
@@ -1059,8 +1303,8 @@ class _AttendancePageState extends State<AttendancePage> {
                             hoverColor: Colors.white.withOpacity(0.08),
                             textColor: Colors.white,
                             dense: true,
-                            visualDensity:
-                                const VisualDensity(horizontal: -2, vertical: -2),
+                            visualDensity: const VisualDensity(
+                                horizontal: -2, vertical: -2),
                             contentPadding:
                                 const EdgeInsets.symmetric(horizontal: 12),
                             title: Text(

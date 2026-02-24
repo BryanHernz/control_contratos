@@ -122,8 +122,15 @@ class _EditWorkerState extends State<EditWorker> {
       appBar: AppBar(
         toolbarHeight: 70,
         automaticallyImplyLeading: false,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
         title: const Center(
-          child: SubTitleWidget(text: 'Editar Trabajador'),
+          //child: SubTitleWidget(text: 'Editar Trabajador'),
+          child: Text(
+            'Editar Trabajador',
+            style: TextStyle(
+                color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+          ),
         ),
       ),
       body: Form(
@@ -242,7 +249,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewNacionality(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewNacionality(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -339,7 +375,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewCivilState(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewCivilState(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -502,7 +567,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewCommune(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewCommune(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -599,7 +693,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewLabor(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewLabor(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -696,7 +819,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewPlace(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewPlace(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -793,7 +945,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewAfp(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewAfp(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(
@@ -890,7 +1071,36 @@ class _EditWorkerState extends State<EditWorker> {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
-                              builder: (context) => const NewPrevision(),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              builder: (context) => SizedBox(
+                                height:
+                                    MediaQuery.of(context).size.height * 0.9,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 40,
+                                      height: 4,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black12,
+                                        borderRadius: BorderRadius.circular(2),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.vertical(
+                                            top: Radius.circular(16)),
+                                        child: NewPrevision(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
                           },
                           child: const Row(

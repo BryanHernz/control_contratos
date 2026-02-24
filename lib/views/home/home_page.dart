@@ -8,6 +8,9 @@ import '../attendance/attendance_page.dart';
 import '../contract/contract.dart';
 import '../workers/workers_page.dart';
 
+final GlobalKey<AttendancePageState> attendanceKey =
+    GlobalKey<AttendancePageState>();
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -49,12 +52,24 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: primario,
         foregroundColor: Colors.white,
         leading: IconButton(
-        icon: const Icon(CupertinoIcons.line_horizontal_3_decrease), // <-- ¡Cambie este icono!
+          icon: const Icon(CupertinoIcons
+              .line_horizontal_3_decrease), // <-- ¡Cambie este icono!
           onPressed: () {
             // Usa el GlobalKey para abrir el Drawer
             _scaffoldKey.currentState!.openDrawer();
           },
         ),
+        actions: [
+          if (_selectedTab == 1) // Mostrar solo en Asistencia
+            IconButton(
+              icon: const Icon(CupertinoIcons.doc_on_clipboard,
+                  color: Colors.white),
+              tooltip: 'Exportar Reporte Mensual (PDF)',
+              onPressed: () =>
+                  attendanceKey.currentState?.exportMonthlyAttendanceToPDF(),
+            ),
+          const SizedBox(width: 8.0),
+        ],
       ),
       body: SafeArea(
         child: PageView(
@@ -65,7 +80,11 @@ class _HomePageState extends State<HomePage> {
               _selectedTab = num;
             });
           },
-          children: const [WorkersPage(), AttendancePage(), ContractPage()],
+          children: [
+            const WorkersPage(),
+            AttendancePage(key: attendanceKey),
+            const ContractPage()
+          ],
         ),
       ),
     );
