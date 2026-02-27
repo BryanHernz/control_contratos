@@ -32,47 +32,87 @@ class _PicturesPageState extends State<PicturesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: widget.worker.imageFront == ''
-          ? null
-          : FloatingActionButton.extended(
-              onPressed: _isUploading ? null : printing,
-              icon: _isUploading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Icon(Icons.print),
-              label: const Text('Imprimir'),
-            ),
-      appBar: AppBar(
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        automaticallyImplyLeading: false,
-        title: const Text(
-          'Imágenes de identificación',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
+    return Padding(
+      // Evita que el teclado tape el contenido si en algún momento agregas inputs
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 20),
-          child: Center(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildImageSection(
-                  imageUrl: widget.worker.imageFront,
-                  position: 1,
-                  label: 'frontal',
+      child: Container(
+        width: double.infinity, // Ocupa todo el ancho de la pantalla
+        constraints: BoxConstraints(
+          minHeight:
+              MediaQuery.of(context).size.height * 0.5, // Alto mínimo del 50%
+        ),
+        child: Column(
+          mainAxisSize:
+              MainAxisSize.min, // Abraza el contenido sin estirarse al infinito
+          children: [
+            // Título (Reemplazo visual de tu antiguo AppBar)
+            const Padding(
+              padding: EdgeInsets.only(top: 20.0, bottom: 10.0),
+              child: Text(
+                'Imágenes de identificación',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
-                const SizedBox(height: 10),
-                _buildImageSection(
-                  imageUrl: widget.worker.imageBack,
-                  position: 2,
-                  label: 'trasera',
-                ),
-              ],
+              ),
             ),
-          ),
+
+            // Área scrolleable para las imágenes
+            Flexible(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 30.0, vertical: 10),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildImageSection(
+                        imageUrl: widget.worker.imageFront,
+                        position: 1,
+                        label: 'frontal',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildImageSection(
+                        imageUrl: widget.worker.imageBack,
+                        position: 2,
+                        label: 'trasera',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Botón alineado a la derecha
+            if (widget.worker.imageFront != null &&
+                widget.worker.imageFront != '')
+              Align(
+                alignment:
+                    Alignment.centerRight, // Empuja el botón a la derecha
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                      top: 10.0, bottom: 20.0, right: 30.0),
+                  child: FloatingActionButton.extended(
+                    heroTag: 'print_fab', // Previene errores de hero animations
+                    onPressed: _isUploading ? null : printing,
+                    icon: _isUploading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.print),
+                    label: const Text('Imprimir'),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

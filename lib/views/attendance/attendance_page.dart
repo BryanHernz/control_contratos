@@ -353,6 +353,11 @@ class AttendancePageState extends State<AttendancePage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width > 800
+              ? 900
+              : MediaQuery.of(context).size.width * 0.95),
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
@@ -424,7 +429,6 @@ class AttendancePageState extends State<AttendancePage> {
                             }
 
                             return Container(
-                              constraints: const BoxConstraints(minHeight: 180),
                               child: Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
@@ -532,6 +536,11 @@ class AttendancePageState extends State<AttendancePage> {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width > 800
+              ? 900
+              : MediaQuery.of(context).size.width * 0.95),
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -639,6 +648,11 @@ class AttendancePageState extends State<AttendancePage> {
     await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
+        useSafeArea: true,
+        constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width > 800
+                ? 900
+                : MediaQuery.of(context).size.width * 0.95),
         backgroundColor: Colors.transparent,
         builder: (context) {
           return SingleChildScrollView(
@@ -1122,29 +1136,31 @@ class AttendancePageState extends State<AttendancePage> {
   }
 
   Widget _groupDropdown() {
+    bool isDesktop = MediaQuery.of(context).size.width >= 800;
     final items = <String>['GENERAL', ..._activeLists];
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
         value: _group.toUpperCase(),
-        dropdownColor: primario,
-        icon: const Icon(
+        dropdownColor: isDesktop ? Colors.white : primario,
+        icon: Icon(
           CupertinoIcons.chevron_down,
           size: 18,
-          color: Colors.white,
+          color: isDesktop ? primario : Colors.white,
         ),
-        iconEnabledColor: Colors.white,
+        iconEnabledColor: isDesktop ? primario : Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(10)),
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: isDesktop ? primario : Colors.white),
         items: [
           for (final g in items)
             DropdownMenuItem(
               value: g.toUpperCase(),
               child: Text(g.toUpperCase(),
-                  style: const TextStyle(color: Colors.white)),
+                  style: TextStyle(color: isDesktop ? primario : Colors.white)),
             ),
-          const DropdownMenuItem(
+          DropdownMenuItem(
             value: '__add__',
-            child: Text('+ Agregar', style: TextStyle(color: Colors.white)),
+            child: Text('+ Agregar',
+                style: TextStyle(color: isDesktop ? primario : Colors.white)),
           ),
         ],
         onChanged: (v) async {
@@ -1161,12 +1177,13 @@ class AttendancePageState extends State<AttendancePage> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         toolbarHeight: 224,
         flexibleSpace: Container(
-          color: primario,
+          color: isDesktop ? Colors.white : primario,
           padding: const EdgeInsets.only(top: 8, bottom: 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1187,18 +1204,21 @@ class AttendancePageState extends State<AttendancePage> {
                     DateTime.now().subtract(const Duration(days: 10)),
                     controller: _dpCtrl,
                     initialSelectedDate: _selectedDate,
-                    selectionColor: Colors.white,
-                    selectedTextColor: primario,
+                    selectionColor: isDesktop ? primario : Colors.white,
+                    selectedTextColor: isDesktop ? Colors.white : primario,
                     locale: "es_CL",
                     daysCount: 365 * 2,
                     onDateChange: (d) {
                       setState(() => _selectedDate = normalizeDay(d));
                       _subscribeDayActiveLists();
                     },
-                    dayTextStyle: const TextStyle(color: Colors.white),
-                    monthTextStyle: const TextStyle(color: Colors.white),
-                    dateTextStyle:
-                        const TextStyle(color: Colors.white, fontSize: 18),
+                    dayTextStyle:
+                        TextStyle(color: isDesktop ? primario : Colors.white),
+                    monthTextStyle:
+                        TextStyle(color: isDesktop ? primario : Colors.white),
+                    dateTextStyle: TextStyle(
+                        color: isDesktop ? primario : Colors.white,
+                        fontSize: 18),
                   ),
                 ),
               ),
@@ -1209,8 +1229,10 @@ class AttendancePageState extends State<AttendancePage> {
                     horizontal: 8.0,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white
-                        .withOpacity(0.2), // Color de fondo para la barra
+                    color: isDesktop
+                        ? primario.withOpacity(0.7)
+                        : Colors.white
+                            .withOpacity(0.2), // Color de fondo para la barra
                     borderRadius: BorderRadius.circular(10.0),
                   ),
                   child: TextField(
@@ -1230,8 +1252,8 @@ class AttendancePageState extends State<AttendancePage> {
                 child: Row(
                   children: [
                     const SizedBox(width: 8),
-                    const Icon(CupertinoIcons.list_bullet_below_rectangle,
-                        color: Colors.white, size: 18),
+                    Icon(CupertinoIcons.list_bullet_below_rectangle,
+                        color: isDesktop ? primario : Colors.white, size: 18),
                     const SizedBox(width: 8),
                     Expanded(child: _groupDropdown()),
                     StreamBuilder<List<Map<String, dynamic>>>(
@@ -1240,8 +1262,8 @@ class AttendancePageState extends State<AttendancePage> {
                       builder: (context, snap) {
                         return PopupMenuButton<String>(
                           tooltip: 'Exportar',
-                          icon: const Icon(CupertinoIcons.arrow_down_doc,
-                              color: Colors.white),
+                          icon: Icon(CupertinoIcons.arrow_down_doc,
+                              color: isDesktop ? primario : Colors.white),
                           onSelected: (v) async {
                             final data = snap.data ?? const [];
                             if (data.isEmpty) return;
@@ -1277,7 +1299,8 @@ class AttendancePageState extends State<AttendancePage> {
               SizedBox(
                 height: _suggestionsHeight(context),
                 child: DecoratedBox(
-                  decoration: BoxDecoration(color: primario),
+                  decoration:
+                      BoxDecoration(color: isDesktop ? Colors.white : primario),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
                     child: Material(
@@ -1300,8 +1323,10 @@ class AttendancePageState extends State<AttendancePage> {
                             onTap: () async {
                               await _add(w);
                             },
-                            hoverColor: Colors.white.withOpacity(0.08),
-                            textColor: Colors.white,
+                            hoverColor: isDesktop
+                                ? primario.withOpacity(0.08)
+                                : Colors.white.withOpacity(0.08),
+                            textColor: isDesktop ? primario : Colors.white,
                             dense: true,
                             visualDensity: const VisualDensity(
                                 horizontal: -2, vertical: -2),
@@ -1326,8 +1351,8 @@ class AttendancePageState extends State<AttendancePage> {
                                 _search.clear();
                                 if (mounted) setState(() {});
                               },
-                              icon: const Icon(Icons.add_outlined,
-                                  color: Colors.white),
+                              icon: Icon(Icons.add_outlined,
+                                  color: isDesktop ? primario : Colors.white),
                             ),
                           );
                         },

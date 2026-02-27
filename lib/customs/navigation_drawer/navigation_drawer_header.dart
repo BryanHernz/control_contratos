@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 import '../widgets_custom.dart';
@@ -8,14 +7,15 @@ class NavigationDrawerHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width >= 800;
     return Container(
       height: 190,
       alignment: Alignment.center,
-      child: const Column(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Padding(
-            padding: EdgeInsets.only(top: 50.0),
+            padding: EdgeInsets.only(top: isDesktop ? 0 : 50.0),
             child: SizedBox(height: 140, width: 140, child: LogoImage()),
           ),
         ],

@@ -47,6 +47,7 @@ class InputTextField extends StatelessWidget {
       this.teclado,
       this.help,
       this.helper,
+      this.readOnly,
       this.decimal});
 
   final TextEditingController textController;
@@ -61,6 +62,7 @@ class InputTextField extends StatelessWidget {
   String? Function(String?)? validator;
   String? prefix;
   TextInputType? teclado;
+  bool? readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +81,7 @@ class InputTextField extends StatelessWidget {
         onTap: onTap,
         obscureText: passwordField ?? false,
         onChanged: onChanged,
+        readOnly: readOnly ?? false,
         controller: textController,
         validator: validator,
         decoration: InputDecoration(

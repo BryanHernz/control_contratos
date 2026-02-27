@@ -19,10 +19,57 @@ class PdfContractService {
           .doc('empresadata')
           .get();
 
+      // Fetch the places array to find the index
+      var lugaresParam = await FirebaseFirestore.instance
+          .collection('Otros')
+          .doc('lugares')
+          .get();
+      List<String> lugaresTipos = [];
+      if (lugaresParam.exists && lugaresParam.data() != null) {
+        var data = lugaresParam.data()!;
+        if (data.containsKey('tipos')) {
+          lugaresTipos = List<String>.from(data['tipos'] ?? []);
+        }
+      }
+
+      // Fetch the hours configuration array (created by user as prueba_horas)
+      var horasParam = await FirebaseFirestore.instance
+          .collection('Otros')
+          .doc('lugares_horas')
+          .get();
+      List<String> pruebaHoras = [];
+      if (horasParam.exists && horasParam.data() != null) {
+        var data = horasParam.data()!;
+        if (data.containsKey('prueba_horas')) {
+          pruebaHoras = List<String>.from(data['prueba_horas'] ?? []);
+        }
+      }
+
       double baselina = 4;
       double letterSize = 12;
 
       for (var worker in workers) {
+        // Determine the hours for this specific worker's place, fallback to 44
+        String place = worker.place ?? '';
+        int horasSemanales = 44; // Fallback
+
+        int placeIndex = lugaresTipos.indexWhere((element) =>
+            element.trim().toLowerCase() == place.trim().toLowerCase());
+        if (kDebugMode) {
+          print("DEBUG PDF: worker.place='${place.trim()}'");
+          print("DEBUG PDF: lugaresTipos=$lugaresTipos");
+          print("DEBUG PDF: pruebaHoras=$pruebaHoras");
+          print("DEBUG PDF: placeIndex=$placeIndex");
+        }
+
+        if (placeIndex != -1 && placeIndex < pruebaHoras.length) {
+          horasSemanales =
+              int.tryParse(pruebaHoras[placeIndex].toString().trim()) ?? 44;
+        }
+        if (kDebugMode) {
+          print("DEBUG PDF: Final horasSemanales=$horasSemanales");
+        }
+
         pdf.addPage(
           pw.Page(
             pageFormat: PdfPageFormat.letter,
@@ -416,7 +463,7 @@ class PdfContractService {
                           pw.TextSpan(
                             baseline: baselina,
                             text:
-                                'La jornada ordinaria de trabajo será de 44 Horas Semanales, pudiendo ser distribuida de la siguiente manera: a) Jornada De Lunes a Sábado, en horarios comprendido desde las 08:30 hasta las 18:30 con 1 hora de colación. b) En sistema de turnos de mañana o de tarde según sea requerido por él supervisor.',
+                                'La jornada ordinaria de trabajo será de $horasSemanales Horas Semanales, pudiendo ser distribuida de la siguiente manera: a) Jornada De Lunes a Sábado, en horarios comprendido desde las 08:30 hasta las 18:30 con 1 hora de colación. b) En sistema de turnos de mañana o de tarde según sea requerido por él supervisor.',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,

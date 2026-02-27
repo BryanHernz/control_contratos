@@ -19,10 +19,10 @@ class WorkersPage extends StatefulWidget {
   const WorkersPage({super.key});
 
   @override
-  State<WorkersPage> createState() => _WorkersPageState();
+  State<WorkersPage> createState() => WorkersPageState();
 }
 
-class _WorkersPageState extends State<WorkersPage> {
+class WorkersPageState extends State<WorkersPage> {
   // Lista completa de trabajadores cargados desde Firestore
   List<WorkerModel> _allWorkers = [];
   // Lista de trabajadores que se muestra (filtrada o completa)
@@ -204,7 +204,7 @@ class _WorkersPageState extends State<WorkersPage> {
   }
 
   // --- FUNCIÓN PARA EXPORTAR TRABAJADORES MOSTRADOS A PDF ---
-  Future<void> _exportToPDF() async {
+  Future<void> exportToPDF() async {
     if (_displayedWorkers.isEmpty) return;
 
     final pdf = pw.Document();
@@ -333,6 +333,7 @@ class _WorkersPageState extends State<WorkersPage> {
 
   @override
   Widget build(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
       resizeToAvoidBottomInset: false,
       floatingActionButton: _isSelectionMode
@@ -349,30 +350,7 @@ class _WorkersPageState extends State<WorkersPage> {
                     borderRadius:
                         BorderRadius.vertical(top: Radius.circular(16)),
                   ),
-                  builder: (context) => SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.9,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 12),
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Expanded(
-                          child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.vertical(top: Radius.circular(16)),
-                            child: NewWorker(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  builder: (context) => NewWorker(),
                 );
               },
               child: const Icon(Icons.person_add_outlined),
@@ -380,7 +358,7 @@ class _WorkersPageState extends State<WorkersPage> {
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: _isSelectionMode
           ? AppBar(
-              backgroundColor: primario,
+              backgroundColor: isDesktop ? Colors.white : primario,
               leading: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () {
@@ -405,7 +383,7 @@ class _WorkersPageState extends State<WorkersPage> {
             )
           : AppBar(
               title: _buildSearchBar(), // Barra de búsqueda en el AppBar
-              backgroundColor: primario,
+              backgroundColor: isDesktop ? Colors.white : primario,
               centerTitle: true,
               toolbarHeight: 80,
               actions: [
@@ -413,8 +391,8 @@ class _WorkersPageState extends State<WorkersPage> {
                   alignment: Alignment.center,
                   children: [
                     IconButton(
-                      icon: const Icon(CupertinoIcons.slider_horizontal_3,
-                          color: Colors.white),
+                      icon: Icon(CupertinoIcons.slider_horizontal_3,
+                          color: isDesktop ? primario : Colors.white),
                       tooltip: 'Filtros Avanzados',
                       onPressed: () => _showFilterSheet(),
                     ),
@@ -548,7 +526,7 @@ class _WorkersPageState extends State<WorkersPage> {
                           icon: Icon(CupertinoIcons.doc_on_clipboard,
                               color: primario),
                           tooltip: 'Exportar a PDF',
-                          onPressed: () => _exportToPDF(),
+                          onPressed: () => exportToPDF(),
                         ),
                       ],
                     ),
@@ -582,7 +560,16 @@ class _WorkersPageState extends State<WorkersPage> {
                           // ===== LISTA DE TRABAJADORES =====
                           Padding(
                             padding: EdgeInsets.only(
-                                left: _searchController.text.isEmpty &&
+                                left: !isDesktop &&
+                                        _searchController.text.isEmpty &&
+                                        MediaQuery.of(context)
+                                                .viewInsets
+                                                .bottom ==
+                                            0
+                                    ? 20.0
+                                    : 0.0,
+                                right: isDesktop &&
+                                        _searchController.text.isEmpty &&
                                         MediaQuery.of(context)
                                                 .viewInsets
                                                 .bottom ==
@@ -632,17 +619,32 @@ class _WorkersPageState extends State<WorkersPage> {
                                         showModalBottomSheet(
                                           context: context,
                                           isScrollControlled: true,
+                                          useSafeArea: true,
+                                          constraints: BoxConstraints(
+                                            maxWidth: MediaQuery.of(context)
+                                                        .size
+                                                        .width >
+                                                    800
+                                                ? 900
+                                                : MediaQuery.of(context)
+                                                        .size
+                                                        .width *
+                                                    0.95,
+                                          ),
                                           backgroundColor: Colors.white,
                                           shape: const RoundedRectangleBorder(
                                             borderRadius: BorderRadius.vertical(
                                                 top: Radius.circular(16)),
                                           ),
-                                          builder: (context) => SizedBox(
-                                            height: MediaQuery.of(context)
-                                                    .size
-                                                    .height *
-                                                0.9,
+                                          builder: (context) => Container(
+                                            constraints: BoxConstraints(
+                                              maxHeight: MediaQuery.of(context)
+                                                      .size
+                                                      .height *
+                                                  0.85,
+                                            ),
                                             child: Column(
+                                              mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 const SizedBox(height: 12),
                                                 Container(
@@ -656,7 +658,7 @@ class _WorkersPageState extends State<WorkersPage> {
                                                   ),
                                                 ),
                                                 const SizedBox(height: 12),
-                                                Expanded(
+                                                Flexible(
                                                   child: ClipRRect(
                                                     borderRadius:
                                                         const BorderRadius
@@ -781,7 +783,9 @@ class _WorkersPageState extends State<WorkersPage> {
                               MediaQuery.of(context).viewInsets.bottom ==
                                   0) // Ocultar si hay búsqueda o si el teclado está abierto
                             Align(
-                              alignment: Alignment.centerLeft,
+                              alignment: isDesktop
+                                  ? Alignment.centerRight
+                                  : Alignment.centerLeft,
                               child: GestureDetector(
                                 onVerticalDragUpdate:
                                     (DragUpdateDetails details) {
@@ -865,12 +869,15 @@ class _WorkersPageState extends State<WorkersPage> {
 
   // Widget para la barra de búsqueda
   Widget _buildSearchBar() {
+    bool isDesktop = MediaQuery.of(context).size.width >= 800;
     return Container(
       padding: const EdgeInsets.only(
         left: 8.0,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2), // Color de fondo para la barra
+        color: isDesktop
+            ? primario.withOpacity(0.6)
+            : Colors.white.withOpacity(0.2), // Color de fondo para la barra
         borderRadius: BorderRadius.circular(10.0),
       ),
       child: TextField(
@@ -930,6 +937,12 @@ class _WorkersPageState extends State<WorkersPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width > 800
+            ? 900
+            : MediaQuery.of(context).size.width * 0.95,
+      ),
       backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(

@@ -21,7 +21,9 @@ class DrawerItem extends StatelessWidget {
         onTap: onPressed,
         child: Padding(
           padding: const EdgeInsets.only(top: 15.0),
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             height: 35,
             decoration: BoxDecoration(
               border: Border(

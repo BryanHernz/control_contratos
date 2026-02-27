@@ -15,6 +15,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:responsive_grid_list/responsive_grid_list.dart';
 import 'package:rut_utils/rut_utils.dart';
+import 'package:spelling_number/spelling_number.dart';
 
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
@@ -39,552 +40,631 @@ class _WorkerDetailsState extends State<WorkerDetails> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          FloatingActionButton.extended(
-            heroTag: null,
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.white,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (context) => SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom,
-                    ),
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 4,
-                                decoration: BoxDecoration(
-                                  color: Colors.black12,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                'FINIQUITO ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-                                maxLines: 3,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              InputTextField(
-                                teclado: TextInputType.none,
-                                textController: _exitController,
-                                hint: 'Fecha de Egreso',
-                                formater: RutFormatter(),
-                                onTap: () async {
-                                  DateTime initialDate;
-                                  try {
-                                    initialDate = DateFormat.yMMMMd('es')
-                                        .parse(_exitController.text);
-                                  } catch (_) {
-                                    initialDate = DateTime.now();
-                                  }
-
-                                  final datePicked =
-                                      await showCalendarDatePicker2Dialog(
-                                    context: context,
-                                    config:
-                                        CalendarDatePicker2WithActionButtonsConfig(
-                                      calendarType:
-                                          CalendarDatePicker2Type.single,
-                                      selectedDayHighlightColor: primario,
-                                      firstDate: DateTime(1950),
-                                      lastDate: DateTime.now(),
-                                      currentDate: DateTime.now(),
-                                    ),
-                                    dialogSize: const Size(325, 400),
-                                    value: _exitController.text.isNotEmpty
-                                        ? [
-                                            DateFormat.yMMMMd('es')
-                                                .parse(_exitController.text)
-                                          ]
-                                        : [DateTime.now()],
-                                  );
-
-                                  if (datePicked != null &&
-                                      datePicked.isNotEmpty &&
-                                      datePicked.first != null) {
-                                    setState(() {
-                                      _exitController.text =
-                                          DateFormat.yMMMMd('es')
-                                              .format(datePicked.first!)
-                                              .toString();
-                                    });
-                                  }
-                                },
-                                validator: (value) {
-                                  if (value == '') {
-                                    return 'Por favor ingrese fecha de ingreso';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              InputTextField(
-                                teclado: TextInputType.number,
-                                textController: _vacationsController,
-                                formater:
-                                    FilteringTextInputFormatter.digitsOnly,
-                                hint: 'Vacaciones proporcionales',
-                                money: true,
-                                prefix: '\$',
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Por favor ingrese un monto';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              InputTextField(
-                                teclado: TextInputType.number,
-                                textController: _totalController,
-                                formater:
-                                    FilteringTextInputFormatter.digitsOnly,
-                                hint: 'Total',
-                                money: true,
-                                prefix: '\$',
-                                validator: (value) {
-                                  if (value!.isEmpty) {
-                                    return 'Por favor ingrese un monto';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  CustomButton(
-                                    funcion: () {
-                                      Get.back();
-                                    },
-                                    texto: 'Cancelar',
-                                    cancelar: true,
-                                  ),
-                                  CustomButton(
-                                    funcion: () {
-                                      if (_formKey.currentState!.validate()) {
-                                        _formKey.currentState!.save();
-                                        printingEnd();
-                                        Get.back();
-                                      }
-                                    },
-                                    texto: 'Imprimir',
-                                    cancelar: false,
-                                  ),
-                                ],
-                              ),
-                            ],
+    // Envolvemos todo en Material para que los estilos de texto no se rompan
+    // al no tener un Scaffold padre.
+    return Material(
+      color: Colors.transparent,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min, // Abraza el contenido
+            children: [
+              // ----------------------------------------------------
+              // 1. REEMPLAZO DEL APPBAR (Header personalizado)
+              // ----------------------------------------------------
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 8.0, right: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Botón de Eliminar (Antes en el leading)
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.black),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(16)),
                           ),
-                        ),
+                          builder: (context) => SingleChildScrollView(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: SafeArea(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.black12,
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        '¿Eliminar ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}?',
+                                        maxLines: 3,
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          CustomButton(
+                                            funcion: () {
+                                              Get.back();
+                                            },
+                                            texto: 'Cancelar',
+                                            cancelar: true,
+                                          ),
+                                          CustomButton(
+                                              funcion: () {
+                                                const path = 'WorkersIdImages/';
+                                                try {
+                                                  FirebaseStorage.instance
+                                                      .ref(path)
+                                                      .child(
+                                                          '${widget.worker.rut}_front')
+                                                      .delete();
+                                                  FirebaseStorage.instance
+                                                      .ref(path)
+                                                      .child(
+                                                          '${widget.worker.rut}_back')
+                                                      .delete();
+                                                  FirebaseFirestore.instance
+                                                      .collection(
+                                                          'Trabajadores')
+                                                      .doc(widget.worker.id)
+                                                      .delete();
+                                                  Get.back();
+                                                  Get.back();
+                                                  AnimatedSnackBar.material(
+                                                    'Trabajador eliminado con éxito',
+                                                    mobileSnackBarPosition:
+                                                        MobileSnackBarPosition
+                                                            .top,
+                                                    desktopSnackBarPosition:
+                                                        DesktopSnackBarPosition
+                                                            .bottomRight,
+                                                    type: AnimatedSnackBarType
+                                                        .success,
+                                                  ).show(context);
+                                                } catch (e) {}
+                                              },
+                                              texto: 'Confirmar',
+                                              cancelar: false)
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // Título
+                    Expanded(
+                      child: Text(
+                        '${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
-                  ),
-                ),
-              );
-            },
-            label: const Text('Finiquito'),
-            icon: const Icon(Icons.file_copy, size: 10),
-          ),
-          const SizedBox(
-            width: 10,
-          ),
-          FloatingActionButton.extended(
-            heroTag: null,
-            onPressed: () {
-              List<String> seleccionados = [];
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.white,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (context) => SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom,
-                    ),
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
+                    // Botón de Editar (Antes en el actions)
+                    IconButton(
+                      icon:
+                          const Icon(Icons.edit_document, color: Colors.black),
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          builder: (context) => Padding(
+                            // <-- Corrección aplicada
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.of(context).viewInsets.bottom,
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'DOCUMENTOS ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 3,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            GroupButton(
-                              options: const GroupButtonOptions(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(10))),
-                              isRadio: false,
-                              onSelected: (buttons, index, isSelected) => {
-                                if (isSelected)
-                                  {seleccionados.add(buttons)}
-                                else
-                                  {seleccionados.remove(buttons)},
-                              },
-                              buttons: [
-                                "Contrato",
-                                "Derecho a saber",
-                                "EPP",
-                                "Registro",
-                                "EPP + Registro",
-                                if (widget.worker.imageFront != '') "Carnet",
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                CustomButton(
-                                  funcion: () {
-                                    Get.back();
-                                  },
-                                  texto: 'Cancelar',
-                                  cancelar: true,
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black12,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
                                 ),
-                                CustomButton(
-                                  funcion: () {
-                                    Get.back();
-                                    printing(seleccionados);
-                                  },
-                                  texto: 'Imprimir',
-                                  cancelar: false,
+                                const SizedBox(height: 12),
+                                Flexible(
+                                  // <-- Cambiado de Expanded a Flexible
+                                  child: EditWorker(
+                                    worker: widget.worker,
+                                  ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-            label: const Text('Documentos'),
-            icon: const Icon(Icons.local_print_shop, size: 10),
-          ),
-          const SizedBox(
-            width: 10,
-          ),
-          FloatingActionButton.extended(
-            heroTag: null,
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.white,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (context) => SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.75,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.black12,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16)),
-                          child: PicturesPage(
-                            worker: widget.worker,
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              // ----------------------------------------------------
+              // 2. CUERPO DEL DETALLE (Scrollable)
+              // ----------------------------------------------------
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 25.0, vertical: 10.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ...[
+                        {
+                          'label': 'Nombres :',
+                          'value': widget.worker.name!.toUpperCase()
+                        },
+                        {
+                          'label': 'Apellidos :',
+                          'value': widget.worker.lastName!.toUpperCase()
+                        },
+                        {'label': 'Rut :', 'value': widget.worker.rut!},
+                        {
+                          'label': 'Correo :',
+                          'value': widget.worker.email?.toUpperCase() ?? ""
+                        },
+                        {
+                          'label': 'Nacionalidad :',
+                          'value': widget.worker.nacionality!.toUpperCase()
+                        },
+                        {
+                          'label': 'Estado civil :',
+                          'value': widget.worker.civilState!.toUpperCase()
+                        },
+                        {
+                          'label': 'Fecha de nacimiento :',
+                          'value': widget.worker.birth!.toUpperCase()
+                        },
+                        {
+                          'label': 'Dirección :',
+                          'value': widget.worker.adress!.toUpperCase()
+                        },
+                        {
+                          'label': 'Comuna :',
+                          'value': widget.worker.commune!.toUpperCase()
+                        },
+                        {
+                          'label': 'Labor :',
+                          'value': widget.worker.labor!.toUpperCase()
+                        },
+                        {
+                          'label': 'Establecimiento :',
+                          'value': widget.worker.place!.toUpperCase()
+                        },
+                        {
+                          'label': 'AFP :',
+                          'value': widget.worker.afp!.toUpperCase()
+                        },
+                        {
+                          'label': 'Prevision :',
+                          'value': widget.worker.prevision!.toUpperCase()
+                        },
+                        {
+                          'label': 'Fecha de ingreso :',
+                          'value': widget.worker.ingress!.toUpperCase()
+                        },
+                      ].map((item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 5.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item['label']!,
+                                  style: const TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    item['value']!,
+                                    textAlign: TextAlign.end,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18),
+                                  ),
+                                )
+                              ],
+                            ),
+                          )),
                     ],
                   ),
                 ),
-              );
-            },
-            label: const Text('Carnet'),
-            icon: const Icon(Icons.picture_in_picture, size: 10),
-          ),
-        ],
-      ),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-        title: Text(
-          '${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
-          style: const TextStyle(
-              color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.white,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                builder: (context) => SingleChildScrollView(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom,
-                    ),
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.black12,
-                                borderRadius: BorderRadius.circular(2),
+              ),
+
+              // ----------------------------------------------------
+              // 3. REEMPLAZO DE LOS FLOATING ACTION BUTTONS
+              // ----------------------------------------------------
+              Padding(
+                padding: const EdgeInsets.only(
+                    top: 15.0, bottom: 25.0, left: 10.0, right: 10.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Botón Finiquito
+                    FloatingActionButton.extended(
+                      heroTag: null,
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          builder: (context) => SingleChildScrollView(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: SafeArea(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 4,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black12,
+                                            borderRadius:
+                                                BorderRadius.circular(2),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'FINIQUITO ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                                          maxLines: 3,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        InputTextField(
+                                          teclado: TextInputType.none,
+                                          textController: _exitController,
+                                          hint: 'Fecha de Egreso',
+                                          formater: RutFormatter(),
+                                          onTap: () async {
+                                            DateTime initialDate;
+                                            try {
+                                              initialDate =
+                                                  DateFormat.yMMMMd('es').parse(
+                                                      _exitController.text);
+                                            } catch (_) {
+                                              initialDate = DateTime.now();
+                                            }
+
+                                            final datePicked =
+                                                await showCalendarDatePicker2Dialog(
+                                              context: context,
+                                              config:
+                                                  CalendarDatePicker2WithActionButtonsConfig(
+                                                calendarType:
+                                                    CalendarDatePicker2Type
+                                                        .single,
+                                                selectedDayHighlightColor:
+                                                    primario,
+                                                firstDate: DateTime(1950),
+                                                lastDate: DateTime.now(),
+                                                currentDate: DateTime.now(),
+                                              ),
+                                              dialogSize: const Size(325, 400),
+                                              value: _exitController
+                                                      .text.isNotEmpty
+                                                  ? [
+                                                      DateFormat.yMMMMd('es')
+                                                          .parse(_exitController
+                                                              .text)
+                                                    ]
+                                                  : [DateTime.now()],
+                                            );
+
+                                            if (datePicked != null &&
+                                                datePicked.isNotEmpty &&
+                                                datePicked.first != null) {
+                                              setState(() {
+                                                _exitController.text =
+                                                    DateFormat.yMMMMd('es')
+                                                        .format(
+                                                            datePicked.first!)
+                                                        .toString();
+                                              });
+                                            }
+                                          },
+                                          validator: (value) {
+                                            if (value == '') {
+                                              return 'Por favor ingrese fecha de ingreso';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 8),
+                                        InputTextField(
+                                          teclado: TextInputType.number,
+                                          textController: _vacationsController,
+                                          formater: FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          hint: 'Vacaciones proporcionales',
+                                          money: true,
+                                          prefix: '\$',
+                                          validator: (value) {
+                                            if (value!.isEmpty) {
+                                              return 'Por favor ingrese un monto';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 8),
+                                        InputTextField(
+                                          teclado: TextInputType.number,
+                                          textController: _totalController,
+                                          formater: FilteringTextInputFormatter
+                                              .digitsOnly,
+                                          hint: 'Total',
+                                          money: true,
+                                          prefix: '\$',
+                                          validator: (value) {
+                                            if (value!.isEmpty) {
+                                              return 'Por favor ingrese un monto';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceEvenly,
+                                          children: [
+                                            CustomButton(
+                                              funcion: () {
+                                                Get.back();
+                                              },
+                                              texto: 'Cancelar',
+                                              cancelar: true,
+                                            ),
+                                            CustomButton(
+                                              funcion: () {
+                                                if (_formKey.currentState!
+                                                    .validate()) {
+                                                  _formKey.currentState!.save();
+                                                  printingEnd();
+                                                  Get.back();
+                                                }
+                                              },
+                                              texto: 'Imprimir',
+                                              cancelar: false,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              '¿Eliminar ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}?',
-                              maxLines: 3,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                CustomButton(
-                                  funcion: () {
-                                    Get.back();
-                                  },
-                                  texto: 'Cancelar',
-                                  cancelar: true,
-                                ),
-                                CustomButton(
-                                    funcion: () {
-                                      const path = 'WorkersIdImages/';
+                          ),
+                        );
+                      },
+                      label: const Text('Finiquito'),
+                      icon: const Icon(Icons.file_copy, size: 10),
+                    ),
+                    const SizedBox(width: 10),
 
-                                      try {
-                                        FirebaseStorage.instance
-                                            .ref(path)
-                                            .child('${widget.worker.rut}_front')
-                                            .delete();
-                                        FirebaseStorage.instance
-                                            .ref(path)
-                                            .child('${widget.worker.rut}_back')
-                                            .delete();
-                                        FirebaseFirestore.instance
-                                            .collection('Trabajadores')
-                                            .doc(widget.worker.id)
-                                            .delete();
-                                        Get.back();
-                                        Get.back();
-                                        AnimatedSnackBar.material(
-                                          'Trabajador eliminado con éxito',
-                                          mobileSnackBarPosition:
-                                              MobileSnackBarPosition.top,
-                                          desktopSnackBarPosition:
-                                              DesktopSnackBarPosition
-                                                  .bottomRight,
-                                          type: AnimatedSnackBarType.success,
-                                        ).show(context);
-                                      } catch (e) {}
-                                    },
-                                    texto: 'Confirmar',
-                                    cancelar: false)
+                    // Botón Documentos
+                    FloatingActionButton.extended(
+                      heroTag: null,
+                      onPressed: () {
+                        List<String> seleccionados = [];
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          builder: (context) => SingleChildScrollView(
+                            child: Padding(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: SafeArea(
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.black12,
+                                          borderRadius:
+                                              BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'DOCUMENTOS ${widget.worker.name!.toUpperCase()} ${widget.worker.lastName!.toUpperCase()}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        maxLines: 3,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      GroupButton(
+                                        options: const GroupButtonOptions(
+                                            borderRadius: BorderRadius.all(
+                                                Radius.circular(10))),
+                                        isRadio: false,
+                                        onSelected:
+                                            (buttons, index, isSelected) => {
+                                          if (isSelected)
+                                            {seleccionados.add(buttons)}
+                                          else
+                                            {seleccionados.remove(buttons)},
+                                        },
+                                        buttons: [
+                                          "Contrato",
+                                          "Derecho a saber",
+                                          "EPP",
+                                          "Registro",
+                                          "EPP + Registro",
+                                          if (widget.worker.imageFront != '')
+                                            "Carnet",
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceEvenly,
+                                        children: [
+                                          CustomButton(
+                                            funcion: () {
+                                              Get.back();
+                                            },
+                                            texto: 'Cancelar',
+                                            cancelar: true,
+                                          ),
+                                          CustomButton(
+                                            funcion: () {
+                                              Get.back();
+                                              printing(seleccionados);
+                                            },
+                                            texto: 'Imprimir',
+                                            cancelar: false,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      label: const Text('Documentos'),
+                      icon: const Icon(Icons.local_print_shop, size: 10),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Botón Carnet
+                    FloatingActionButton.extended(
+                      heroTag: null,
+                      onPressed: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.white,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(16)),
+                          ),
+                          builder: (context) => Padding(
+                            // <-- Corrección aplicada
+                            padding: EdgeInsets.only(
+                              bottom: MediaQuery.of(context).viewInsets.bottom,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black12,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Flexible(
+                                  // <-- Cambiado de Expanded a Flexible
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(16)),
+                                    child: PicturesPage(
+                                      worker: widget.worker,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
+                      label: const Text('Carnet'),
+                      icon: const Icon(Icons.picture_in_picture, size: 10),
                     ),
-                  ),
+                  ],
                 ),
-              );
-            },
-            icon: const Icon(
-              Icons.delete,
-              color: Colors.black,
-            )),
-        actions: [
-          IconButton(
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.white,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(16)),
-                  ),
-                  builder: (context) => SizedBox(
-                    height: MediaQuery.of(context).size.height * 0.9,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 12),
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16)),
-                            child: EditWorker(
-                              worker: widget.worker,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(
-                Icons.edit_document,
-                color: Colors.black,
-              ))
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(25.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ...[
-                {
-                  'label': 'Nombres :',
-                  'value': widget.worker.name!.toUpperCase()
-                },
-                {
-                  'label': 'Apellidos :',
-                  'value': widget.worker.lastName!.toUpperCase()
-                },
-                {'label': 'Rut :', 'value': widget.worker.rut!},
-                {
-                  'label': 'Correo :',
-                  'value': widget.worker.email?.toUpperCase() ?? ""
-                },
-                {
-                  'label': 'Nacionalidad :',
-                  'value': widget.worker.nacionality!.toUpperCase()
-                },
-                {
-                  'label': 'Estado civil :',
-                  'value': widget.worker.civilState!.toUpperCase()
-                },
-                {
-                  'label': 'Fecha de nacimiento :',
-                  'value': widget.worker.birth!.toUpperCase()
-                },
-                {
-                  'label': 'Dirección :',
-                  'value': widget.worker.adress!.toUpperCase()
-                },
-                {
-                  'label': 'Comuna :',
-                  'value': widget.worker.commune!.toUpperCase()
-                },
-                {
-                  'label': 'Labor :',
-                  'value': widget.worker.labor!.toUpperCase()
-                },
-                {
-                  'label': 'Establecimiento :',
-                  'value': widget.worker.place!.toUpperCase()
-                },
-                {'label': 'AFP :', 'value': widget.worker.afp!.toUpperCase()},
-                {
-                  'label': 'Prevision :',
-                  'value': widget.worker.prevision!.toUpperCase()
-                },
-                {
-                  'label': 'Fecha de ingreso :',
-                  'value': widget.worker.ingress!.toUpperCase()
-                },
-              ].map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 5.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item['label']!,
-                          style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            item['value']!,
-                            textAlign: TextAlign.end,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.black54,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18),
-                          ),
-                        )
-                      ],
-                    ),
-                  )),
+              ),
             ],
           ),
         ),
@@ -619,6 +699,96 @@ class _WorkerDetailsState extends State<WorkerDetails> {
           .collection('Otros')
           .doc('empresadata')
           .get();
+
+      // Fetch the places array to find the index
+      var lugaresParam = await FirebaseFirestore.instance
+          .collection('Otros')
+          .doc('lugares')
+          .get();
+      List<String> lugaresTipos = [];
+      if (lugaresParam.exists && lugaresParam.data() != null) {
+        var data = lugaresParam.data()!;
+        if (data.containsKey('tipos')) {
+          lugaresTipos = List<String>.from(data['tipos'] ?? []);
+        }
+      }
+
+      // Fetch the hours configuration array
+      var horasParam = await FirebaseFirestore.instance
+          .collection('Otros')
+          .doc('lugares_horas')
+          .get();
+      List<String> pruebaHoras = [];
+      List<String> lunesJuevesList = [];
+      List<String> viernesList = [];
+      List<String> sabadosList = [];
+      List<String> colacionList = [];
+      if (horasParam.exists && horasParam.data() != null) {
+        var data = horasParam.data()!;
+        if (data.containsKey('prueba_horas')) {
+          pruebaHoras = List<String>.from(data['prueba_horas'] ?? []);
+        }
+        if (data.containsKey('lunes_jueves')) {
+          lunesJuevesList = List<String>.from(data['lunes_jueves'] ?? []);
+        }
+        if (data.containsKey('viernes')) {
+          viernesList = List<String>.from(data['viernes'] ?? []);
+        }
+        if (data.containsKey('sabados')) {
+          sabadosList = List<String>.from(data['sabados'] ?? []);
+        }
+        if (data.containsKey('colacion')) {
+          colacionList = List<String>.from(data['colacion'] ?? []);
+        }
+      }
+
+      String place = widget.worker.place ?? '';
+      int horasSemanales = 44; // Fallback
+      String txtLunesJueves = "Lunes a Jueves de 8:00 a 18:00 hrs";
+      String txtViernes = "Viernes de 8:00 a 17:00 hrs";
+      String txtSabado = "";
+      String txtColacion = "una hora";
+
+      int placeIndex = lugaresTipos.indexWhere((element) =>
+          element.trim().toLowerCase() == place.trim().toLowerCase());
+
+      if (placeIndex != -1) {
+        if (placeIndex < pruebaHoras.length) {
+          horasSemanales =
+              int.tryParse(pruebaHoras[placeIndex].toString().trim()) ?? 44;
+        }
+
+        String formatSchedule(String raw, String defaultPrefix) {
+          if (raw.contains('/')) {
+            final parts = raw.split('/');
+            if (parts.length == 2) {
+              return '$defaultPrefix de ${parts[0]} a ${parts[1]} hrs';
+            }
+          }
+          return raw;
+        }
+
+        if (placeIndex < lunesJuevesList.length) {
+          txtLunesJueves = formatSchedule(
+              lunesJuevesList[placeIndex].toString().trim(), "Lunes a Jueves");
+        }
+        if (placeIndex < viernesList.length) {
+          txtViernes = formatSchedule(
+              viernesList[placeIndex].toString().trim(), "Viernes");
+        }
+        if (placeIndex < sabadosList.length) {
+          String sabVal = sabadosList[placeIndex].toString().trim();
+          if (sabVal != "N/A" && sabVal != "") {
+            txtSabado = formatSchedule(sabVal, "Sábado");
+          }
+        }
+        if (placeIndex < colacionList.length) {
+          String colVal = colacionList[placeIndex].toString().trim();
+          if (colVal != "") {
+            txtColacion = _minutesToWords(colVal);
+          }
+        }
+      }
 
       double baselina = 4;
       double letterSize = 12;
@@ -1070,7 +1240,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           ),
                           pw.TextSpan(
                             baseline: baselina,
-                            text: '44 horas semanales.',
+                            text: '$horasSemanales horas semanales.',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibriBold),
                               fontSize: letterSize,
@@ -1079,7 +1249,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           pw.TextSpan(
                             baseline: baselina,
                             text:
-                                ' Lunes a Jueves de 8:00 a 18:00 hrs, Viernes de 8:00 a 17:00 hrs, con una hora de colación.',
+                                ' $txtLunesJueves, $txtViernes,${txtSabado != "" ? " $txtSabado," : ""} con $txtColacion de colación.',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,
@@ -3701,5 +3871,38 @@ class _WorkerDetailsState extends State<WorkerDetails> {
 
     await Printing.layoutPdf(
         onLayout: (formato) async => pdf.save(), format: PdfPageFormat.letter);
+  }
+
+  String _minutesToWords(String val) {
+    int? mins = int.tryParse(val);
+    if (mins == null) return "una hora";
+
+    if (mins == 60) return "una hora";
+    if (mins == 30) return "media hora";
+    if (mins == 90) return "una hora y media";
+    if (mins == 120) return "dos horas";
+
+    // Use spelling_number for values not in the common natural expressions
+    if (mins < 60) {
+      String wordMins = SpellingNumber(lang: 'es').convert(mins);
+      // SpellingNumber might return "uno" instead of "un" for minutes in some contexts
+      if (wordMins == "uno") wordMins = "un";
+      return "$wordMins minutos";
+    }
+
+    int hours = mins ~/ 60;
+    int remainingMins = mins % 60;
+
+    String hourText = hours == 1
+        ? "una hora"
+        : "${SpellingNumber(lang: 'es').convert(hours)} horas";
+    if (remainingMins == 0) return hourText;
+
+    if (remainingMins == 30) return "$hourText y media";
+
+    String minText = SpellingNumber(lang: 'es').convert(remainingMins);
+    if (minText == "uno") minText = "un";
+
+    return "$hourText y $minText minutos";
   }
 }
