@@ -38,10 +38,26 @@ class PdfContractService {
           .doc('lugares_horas')
           .get();
       List<String> pruebaHoras = [];
+      List<String> lunesJuevesList = [];
+      List<String> viernesList = [];
+      List<String> sabadosList = [];
+      List<String> colacionList = [];
       if (horasParam.exists && horasParam.data() != null) {
         var data = horasParam.data()!;
         if (data.containsKey('prueba_horas')) {
           pruebaHoras = List<String>.from(data['prueba_horas'] ?? []);
+        }
+        if (data.containsKey('lunes_jueves')) {
+          lunesJuevesList = List<String>.from(data['lunes_jueves'] ?? []);
+        }
+        if (data.containsKey('viernes')) {
+          viernesList = List<String>.from(data['viernes'] ?? []);
+        }
+        if (data.containsKey('sabados')) {
+          sabadosList = List<String>.from(data['sabados'] ?? []);
+        }
+        if (data.containsKey('colacion')) {
+          colacionList = List<String>.from(data['colacion'] ?? []);
         }
       }
 
@@ -65,6 +81,39 @@ class PdfContractService {
         if (placeIndex != -1 && placeIndex < pruebaHoras.length) {
           horasSemanales =
               int.tryParse(pruebaHoras[placeIndex].toString().trim()) ?? 44;
+        }
+
+        // Build schedule strings for Clause 2
+        String ljSchedule =
+            (placeIndex != -1 && placeIndex < lunesJuevesList.length)
+                ? lunesJuevesList[placeIndex].replaceAll('/', ' a ')
+                : '08:00 a 18:00';
+        String vSchedule = (placeIndex != -1 && placeIndex < viernesList.length)
+            ? viernesList[placeIndex].replaceAll('/', ' a ')
+            : '08:00 a 17:00';
+        String sabadoRaw = (placeIndex != -1 && placeIndex < sabadosList.length)
+            ? sabadosList[placeIndex]
+            : 'N/A';
+        bool trabajaSabado = sabadoRaw != 'N/A' && sabadoRaw.isNotEmpty;
+        String sSchedule =
+            trabajaSabado ? sabadoRaw.replaceAll('/', ' a ') : '';
+        String colacion = (placeIndex != -1 && placeIndex < colacionList.length)
+            ? colacionList[placeIndex]
+            : '60';
+        bool mismoHorarioLunesViernes = (placeIndex != -1 &&
+            placeIndex < lunesJuevesList.length &&
+            placeIndex < viernesList.length &&
+            lunesJuevesList[placeIndex] == viernesList[placeIndex]);
+
+        // Build the schedule description text
+        String scheduleText;
+        if (mismoHorarioLunesViernes) {
+          scheduleText = 'Lunes a Viernes de $ljSchedule';
+        } else {
+          scheduleText = 'Lunes a Jueves de $ljSchedule, Viernes de $vSchedule';
+        }
+        if (trabajaSabado) {
+          scheduleText += ', Sábados de $sSchedule';
         }
         if (kDebugMode) {
           print("DEBUG PDF: Final horasSemanales=$horasSemanales");
@@ -463,7 +512,7 @@ class PdfContractService {
                           pw.TextSpan(
                             baseline: baselina,
                             text:
-                                'La jornada ordinaria de trabajo será de $horasSemanales Horas Semanales, pudiendo ser distribuida de la siguiente manera: a) Jornada De Lunes a Sábado, en horarios comprendido desde las 08:30 hasta las 18:30 con 1 hora de colación. b) En sistema de turnos de mañana o de tarde según sea requerido por él supervisor.',
+                                'La jornada ordinaria de trabajo será de $horasSemanales Horas Semanales, distribuida de la siguiente manera: $scheduleText, con $colacion minutos de colación.',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,

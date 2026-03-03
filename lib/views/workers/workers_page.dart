@@ -54,7 +54,7 @@ class WorkersPageState extends State<WorkersPage> {
 
   // --- SELECCIÓN MÚLTIPLE ---
   bool _isSelectionMode = false;
-  Set<String> _selectedWorkerIds = {};
+  final Set<String> _selectedWorkerIds = {};
 
   // Para evitar que el listener de scroll sobreescriba la letra al hacer tap
   bool _isManualScrolling = false;
@@ -350,7 +350,7 @@ class WorkersPageState extends State<WorkersPage> {
                     borderRadius:
                         BorderRadius.vertical(top: Radius.circular(16)),
                   ),
-                  builder: (context) => NewWorker(),
+                  builder: (context) => const NewWorker(),
                 );
               },
               child: const Icon(Icons.person_add_outlined),

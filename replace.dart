@@ -5,7 +5,7 @@ void main() {
   // Match the exact pattern split across lines as it often is
   final pattern = RegExp(
       r'maxWidth:\s*MediaQuery\.of\(context\)\s*\.size\s*\.width\s*\*\s*0\.95');
-  final replacement =
+  const replacement =
       'maxWidth: MediaQuery.of(context).size.width > 800 ? 600 : MediaQuery.of(context).size.width * 0.95';
 
   int totalReplaced = 0;

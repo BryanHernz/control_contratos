@@ -25,8 +25,8 @@ android {
         applicationId = "cl.controlcontratos.app"
         minSdk = 23 // Increased to 23 for Firebase Auth compatibility
         targetSdk = 36
-        versionCode = 1 // Hardcoded to bypass flutter.versionCode issue
-        versionName = "1.0.0" // Hardcoded to bypass flutter.versionName issue
+        versionCode = 2 // Hardcoded to bypass flutter.versionCode issue
+        versionName = "1.0.1" // Hardcoded to bypass flutter.versionName issue
     }
 
     compileOptions {

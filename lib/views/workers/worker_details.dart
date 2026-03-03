@@ -13,7 +13,6 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:responsive_grid_list/responsive_grid_list.dart';
 import 'package:rut_utils/rut_utils.dart';
 import 'package:spelling_number/spelling_number.dart';
 
@@ -773,8 +772,18 @@ class _WorkerDetailsState extends State<WorkerDetails> {
               lunesJuevesList[placeIndex].toString().trim(), "Lunes a Jueves");
         }
         if (placeIndex < viernesList.length) {
-          txtViernes = formatSchedule(
-              viernesList[placeIndex].toString().trim(), "Viernes");
+          final ljRaw = placeIndex < lunesJuevesList.length
+              ? lunesJuevesList[placeIndex].toString().trim()
+              : '';
+          final vRaw = viernesList[placeIndex].toString().trim();
+          // Si el horario del viernes es igual al de lunes-jueves,
+          // unificar en "Lunes a Viernes" y dejar txtViernes vacío
+          if (ljRaw == vRaw && ljRaw.isNotEmpty) {
+            txtLunesJueves = formatSchedule(ljRaw, "Lunes a Viernes");
+            txtViernes = '';
+          } else {
+            txtViernes = formatSchedule(vRaw, "Viernes");
+          }
         }
         if (placeIndex < sabadosList.length) {
           String sabVal = sabadosList[placeIndex].toString().trim();
@@ -1249,7 +1258,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           pw.TextSpan(
                             baseline: baselina,
                             text:
-                                ' $txtLunesJueves, $txtViernes,${txtSabado != "" ? " $txtSabado," : ""} con $txtColacion de colación.',
+                                ' $txtLunesJueves,${txtViernes != "" ? " $txtViernes," : ""}${txtSabado != "" ? " $txtSabado," : ""} con $txtColacion de colación.',
                             style: pw.TextStyle(
                               font: pw.Font.ttf(calibri),
                               fontSize: letterSize,

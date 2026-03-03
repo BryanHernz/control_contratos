@@ -11,7 +11,7 @@ import 'package:spelling_number/spelling_number.dart';
 
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
-import '../workers/new_worker_page.dart';
+import '../widgets/settings_dialogs.dart';
 
 class ContractPage extends StatefulWidget {
   const ContractPage({super.key});
@@ -76,310 +76,383 @@ class _ContractPageState extends State<ContractPage> {
               itemBuilder: (context, index) {
                 final doc = snapshot.data!.docs[index];
                 if (doc['nombre'] == 'empresadata') {
-                  return ListTile(
-                    leading: const Text('Empresa'),
-                    minLeadingWidth: 80,
-                    title: Text(doc['nombreempresa']),
-                    subtitle: Text(doc['rut']),
-                    trailing: IconButton(
-                        onPressed: () {
-                          showModalBottomSheet(
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width >
-                                        800
-                                    ? 900
-                                    : MediaQuery.of(context).size.width * 0.95),
-                            backgroundColor: Colors.white,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16)),
-                            ),
-                            context: context,
-                            builder: (context) => Padding(
-                              padding: EdgeInsets.only(
-                                  bottom:
-                                      MediaQuery.of(context).viewInsets.bottom),
-                              child: const NewEnterpriseData(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.edit_document,
-                          color: Colors.blueGrey,
-                        )),
+                  return InkWell(
+                    onTap: () {},
+                    child: ListTile(
+                      // hoverColor: Colors.grey[100], // ListTile hover is limited
+                      leading: const Text('Empresa'),
+                      minLeadingWidth: 80,
+                      title: Text(doc['nombreempresa']),
+                      subtitle: Text(doc['rut']),
+                      trailing: IconButton(
+                          onPressed: () {
+                            showModalBottomSheet(
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width > 800
+                                          ? 900
+                                          : MediaQuery.of(context).size.width *
+                                              0.95),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              context: context,
+                              builder: (context) => Padding(
+                                padding: EdgeInsets.only(
+                                    bottom: MediaQuery.of(context)
+                                        .viewInsets
+                                        .bottom),
+                                child: const NewEnterpriseData(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.edit_document,
+                            color: Colors.blueGrey,
+                          )),
+                    ),
                   );
                 } else if (doc['nombre'] == 'contratosmont') {
-                  return ListTile(
-                    leading: const Text('Monto diario'),
-                    minLeadingWidth: 80,
-                    title: Text(
-                      numfor.format(
-                        doc['montonum'],
+                  return InkWell(
+                    onTap: () {},
+                    child: ListTile(
+                      // hoverColor: Colors.grey[100],
+                      leading: const Text('Monto diario'),
+                      minLeadingWidth: 80,
+                      title: Text(
+                        numfor.format(
+                          doc['montonum'],
+                        ),
                       ),
+                      subtitle: Text(
+                        doc['montotext'],
+                      ),
+                      trailing: IconButton(
+                          onPressed: () {
+                            showModalBottomSheet(
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width > 800
+                                          ? 900
+                                          : MediaQuery.of(context).size.width *
+                                              0.95),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              context: context,
+                              builder: (context) => Padding(
+                                padding: EdgeInsets.only(
+                                    bottom: MediaQuery.of(context)
+                                        .viewInsets
+                                        .bottom),
+                                child: const NewAmount(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.edit_document,
+                            color: Colors.blueGrey,
+                          )),
                     ),
-                    subtitle: Text(
-                      doc['montotext'],
-                    ),
-                    trailing: IconButton(
-                        onPressed: () {
-                          showModalBottomSheet(
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width >
-                                        800
-                                    ? 900
-                                    : MediaQuery.of(context).size.width * 0.95),
-                            backgroundColor: Colors.white,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16)),
-                            ),
-                            context: context,
-                            builder: (context) => Padding(
-                              padding: EdgeInsets.only(
-                                  bottom:
-                                      MediaQuery.of(context).viewInsets.bottom),
-                              child: const NewAmount(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.edit_document,
-                          color: Colors.blueGrey,
-                        )),
                   );
                 } else if (doc['nombre'] == 'labores') {
                   final labores = doc['tipos'] as List<dynamic>;
-                  return ListTile(
-                    leading: const Text('Labores'),
-                    minLeadingWidth: 80,
-                    title: Text(
-                      labores.length.toString(),
+                  return InkWell(
+                    onTap: () {},
+                    child: ListTile(
+                      // hoverColor: Colors.grey[100],
+                      leading: const Text('Labores'),
+                      minLeadingWidth: 80,
+                      title: Text(
+                        labores.length.toString(),
+                      ),
+                      subtitle: const Text(
+                        'Labores disponibles',
+                      ),
+                      trailing: IconButton(
+                          onPressed: () {
+                            _manageGenericCategory(
+                                context, 'labores', 'Labores');
+                          },
+                          icon: const Icon(
+                            Icons.edit_document,
+                            color: Colors.blueGrey,
+                          )),
                     ),
-                    subtitle: const Text(
-                      'Labores disponibles',
-                    ),
-                    trailing: IconButton(
-                        onPressed: () {
-                          _manageGenericCategory(context, 'labores', 'Labores');
-                        },
-                        icon: const Icon(
-                          Icons.edit_document,
-                          color: Colors.blueGrey,
-                        )),
                   );
                 } else if (doc['nombre'] == 'lugares') {
                   final lugares = doc['tipos'];
-                  return ListTile(
-                    leading: const Text('Lugares'),
-                    minLeadingWidth: 80,
-                    title: Text(
-                      lugares.length.toString(),
-                    ),
-                    subtitle: const Text(
-                      'Lugares disponibles',
-                    ),
-                    trailing: IconButton(
-                        onPressed: () {
-                          showModalBottomSheet(
-                            isScrollControlled: true,
-                            useSafeArea: true,
-                            constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width > 800
-                                        ? 900
-                                        : MediaQuery.of(context).size.width),
-                            backgroundColor: Colors.white,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16)),
-                            ),
-                            context: context,
-                            builder: (context) => StreamBuilder<QuerySnapshot>(
-                              stream: FirebaseFirestore.instance
-                                  .collection('Otros')
-                                  .where('nombre', whereIn: [
-                                'lugares',
-                                'lugaresHoras'
-                              ]).snapshots(),
-                              builder: (context, modalSnapshot) {
-                                if (!modalSnapshot.hasData) {
-                                  return const Center(
-                                      child: CircularProgressIndicator());
-                                }
+                  return InkWell(
+                    onTap: () {},
+                    child: ListTile(
+                      // hoverColor: Colors.grey[100],
+                      leading: const Text('Lugares'),
+                      minLeadingWidth: 80,
+                      title: Text(
+                        lugares.length.toString(),
+                      ),
+                      subtitle: const Text(
+                        'Lugares disponibles',
+                      ),
+                      trailing: IconButton(
+                          onPressed: () {
+                            showModalBottomSheet(
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              constraints: BoxConstraints(
+                                  maxWidth:
+                                      MediaQuery.of(context).size.width > 800
+                                          ? 900
+                                          : MediaQuery.of(context).size.width),
+                              backgroundColor: Colors.white,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(16)),
+                              ),
+                              context: context,
+                              builder: (context) =>
+                                  StreamBuilder<QuerySnapshot>(
+                                stream: FirebaseFirestore.instance
+                                    .collection('Otros')
+                                    .where('nombre', whereIn: [
+                                  'lugares',
+                                  'lugaresHoras'
+                                ]).snapshots(),
+                                builder: (context, modalSnapshot) {
+                                  if (!modalSnapshot.hasData) {
+                                    return const Center(
+                                        child: CircularProgressIndicator());
+                                  }
 
-                                final localDocLugares = modalSnapshot.data!.docs
-                                    .firstWhere((element) =>
-                                        element['nombre'] == 'lugares');
-                                final localDocHoras = modalSnapshot.data!.docs
-                                    .firstWhere((element) =>
-                                        element['nombre'] == 'lugaresHoras');
+                                  final localDocLugares = modalSnapshot
+                                      .data!.docs
+                                      .firstWhere((element) =>
+                                          element['nombre'] == 'lugares');
+                                  final localDocHoras = modalSnapshot.data!.docs
+                                      .firstWhere((element) =>
+                                          element['nombre'] == 'lugaresHoras');
 
-                                final localLugares = localDocLugares['tipos'];
-                                final localHorariosLunesAJueves =
-                                    localDocHoras['lunes_jueves'];
-                                final localHorariosViernes =
-                                    localDocHoras['viernes'];
-                                final localHoras =
-                                    localDocHoras['prueba_horas'];
+                                  final localLugares = localDocLugares['tipos'];
+                                  final localHorariosLunesAJueves =
+                                      localDocHoras['lunes_jueves'];
+                                  final localHorariosViernes =
+                                      localDocHoras['viernes'];
+                                  final localHoras =
+                                      localDocHoras['prueba_horas'];
 
-                                return Padding(
-                                  padding: EdgeInsets.only(
-                                      bottom: MediaQuery.of(context)
-                                          .viewInsets
-                                          .bottom),
-                                  child: SafeArea(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const SizedBox(height: 12),
-                                          Text(
-                                            'Lugares disponibles',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleLarge
-                                                ?.copyWith(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Flexible(
-                                            child: ListView.builder(
-                                              shrinkWrap: true,
-                                              itemCount: localLugares.length,
-                                              itemBuilder: (context, i) {
-                                                return ListTile(
-                                                  title: Text(localLugares[i]),
-                                                  leading: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Text(localHoras[i],
-                                                          style: const TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold)),
-                                                      const Text('Horas',
-                                                          style: TextStyle(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold)),
-                                                    ],
-                                                  ),
-                                                  subtitle: Text(
-                                                      'Horario: Lunes a Jueves de ${localHorariosLunesAJueves[i].toString().replaceAll('/', ' a ')} - Viernes de ${localHorariosViernes[i].toString().replaceAll('/', ' a ')}'),
-                                                  trailing: IconButton(
-                                                    icon: const Icon(Icons.edit,
-                                                        color: Colors.blueGrey),
-                                                    onPressed: () {
-                                                      showModalBottomSheet(
-                                                        context: context,
-                                                        isScrollControlled:
-                                                            true,
-                                                        useSafeArea: true,
-                                                        constraints: BoxConstraints(
-                                                            maxWidth: MediaQuery.of(
-                                                                            context)
-                                                                        .size
-                                                                        .width >
-                                                                    800
-                                                                ? 900
-                                                                : MediaQuery.of(
-                                                                        context)
-                                                                    .size
-                                                                    .width),
-                                                        backgroundColor:
-                                                            Colors.white,
-                                                        shape:
-                                                            const RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.vertical(
-                                                                  top: Radius
-                                                                      .circular(
-                                                                          16)),
-                                                        ),
-                                                        builder: (context) =>
-                                                            Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .all(16),
+                                  return Padding(
+                                    padding: EdgeInsets.only(
+                                        bottom: MediaQuery.of(context)
+                                            .viewInsets
+                                            .bottom),
+                                    child: SafeArea(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              'Lugares disponibles',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleLarge
+                                                  ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Flexible(
+                                              child: ListView.builder(
+                                                shrinkWrap: true,
+                                                itemCount: localLugares.length,
+                                                itemBuilder: (context, i) {
+                                                  return ListTile(
+                                                    title:
+                                                        Text(localLugares[i]),
+                                                    leading: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Text(localHoras[i],
+                                                            style: const TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                        const Text('Horas',
+                                                            style: TextStyle(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold)),
+                                                      ],
+                                                    ),
+                                                    subtitle: Builder(
+                                                      builder: (ctx) {
+                                                        final lj =
+                                                            localHorariosLunesAJueves[
+                                                                    i]
+                                                                .toString()
+                                                                .replaceAll(
+                                                                    '/', ' a ');
+                                                        final v =
+                                                            localHorariosViernes[
+                                                                    i]
+                                                                .toString()
+                                                                .replaceAll(
+                                                                    '/', ' a ');
+                                                        final mismoHorario =
+                                                            localHorariosLunesAJueves[
+                                                                    i] ==
+                                                                localHorariosViernes[
+                                                                    i];
+                                                        return Text(
+                                                          mismoHorario
+                                                              ? 'Horario: Lunes a Viernes de $lj'
+                                                              : 'Horario: Lunes a Jueves de $lj - Viernes de $v',
+                                                        );
+                                                      },
+                                                    ),
+                                                    trailing: IconButton(
+                                                      icon: const Icon(
+                                                          Icons.edit,
+                                                          color:
+                                                              Colors.blueGrey),
+                                                      onPressed: () {
+                                                        showModalBottomSheet(
+                                                          context: context,
+                                                          isScrollControlled:
+                                                              true,
+                                                          useSafeArea: true,
                                                           constraints: BoxConstraints(
-                                                              maxHeight: MediaQuery.of(
+                                                              maxWidth: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .width >
+                                                                      800
+                                                                  ? 900
+                                                                  : MediaQuery.of(
                                                                           context)
                                                                       .size
-                                                                      .height *
-                                                                  0.85),
-                                                          child: Column(
-                                                            mainAxisSize:
-                                                                MainAxisSize
-                                                                    .min,
-                                                            children: [
-                                                              const SizedBox(
-                                                                  height: 12),
+                                                                      .width),
+                                                          backgroundColor:
+                                                              Colors.white,
+                                                          shape:
+                                                              const RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius.vertical(
+                                                                    top: Radius
+                                                                        .circular(
+                                                                            16)),
+                                                          ),
+                                                          builder: (context) =>
                                                               Container(
-                                                                width: 40,
-                                                                height: 4,
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  color: Colors
-                                                                      .black12,
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              2),
-                                                                ),
-                                                              ),
-                                                              const SizedBox(
-                                                                  height: 12),
-                                                              Flexible(
-                                                                child:
-                                                                    ClipRRect(
-                                                                  borderRadius: const BorderRadius
-                                                                      .vertical(
-                                                                      top: Radius
-                                                                          .circular(
-                                                                              16)),
-                                                                  child:
-                                                                      EditPlace(
-                                                                    existingPlace:
-                                                                        localLugares[i]
-                                                                            .toString(),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(16),
+                                                            constraints: BoxConstraints(
+                                                                maxHeight: MediaQuery.of(
+                                                                            context)
+                                                                        .size
+                                                                        .height *
+                                                                    0.85),
+                                                            child: Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                const SizedBox(
+                                                                    height: 12),
+                                                                Container(
+                                                                  width: 40,
+                                                                  height: 4,
+                                                                  decoration:
+                                                                      BoxDecoration(
+                                                                    color: Colors
+                                                                        .black12,
+                                                                    borderRadius:
+                                                                        BorderRadius
+                                                                            .circular(2),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                            ],
+                                                                const SizedBox(
+                                                                    height: 12),
+                                                                Flexible(
+                                                                  child:
+                                                                      ClipRRect(
+                                                                    borderRadius: const BorderRadius
+                                                                        .vertical(
+                                                                        top: Radius.circular(
+                                                                            16)),
+                                                                    child:
+                                                                        EditPlace(
+                                                                      existingPlace:
+                                                                          localLugares[i]
+                                                                              .toString(),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
-                                                        ),
-                                                      );
-                                                    },
+                                                        );
+                                                      },
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            TextButton.icon(
+                                              onPressed: () {
+                                                showModalBottomSheet(
+                                                  context: context,
+                                                  isScrollControlled: true,
+                                                  useSafeArea: true,
+                                                  backgroundColor: Colors.white,
+                                                  shape:
+                                                      const RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.vertical(
+                                                            top:
+                                                                Radius.circular(
+                                                                    16)),
                                                   ),
+                                                  builder: (context) =>
+                                                      const NewPlace(),
                                                 );
                                               },
+                                              icon: const Icon(Icons.add,
+                                                  size: 18),
+                                              label: const Text(
+                                                  'Agregar nuevo establecimiento'),
                                             ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                        ],
+                                            const SizedBox(height: 12),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.edit_document,
-                          color: Colors.blueGrey,
-                        )),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.edit_document,
+                            color: Colors.blueGrey,
+                          )),
+                    ),
                   );
                 } else if ([
                   'afps',
@@ -397,19 +470,24 @@ class _ContractPageState extends State<ContractPage> {
                     'nacionalidades': 'Nacionalidades'
                   };
                   final label = nombreMap[doc['nombre']] ?? 'Otros';
-                  return ListTile(
-                    leading: Text(label),
-                    minLeadingWidth: 80,
-                    title: Text(tipos.length.toString()),
-                    subtitle: Text('$label disponibles'),
-                    trailing: IconButton(
-                        onPressed: () {
-                          _manageGenericCategory(context, doc['nombre'], label);
-                        },
-                        icon: const Icon(
-                          Icons.edit_document,
-                          color: Colors.blueGrey,
-                        )),
+                  return InkWell(
+                    onTap: () {},
+                    child: ListTile(
+                      // hoverColor: Colors.grey[100],
+                      leading: Text(label),
+                      minLeadingWidth: 80,
+                      title: Text(tipos.length.toString()),
+                      subtitle: Text('$label disponibles'),
+                      trailing: IconButton(
+                          onPressed: () {
+                            _manageGenericCategory(
+                                context, doc['nombre'], label);
+                          },
+                          icon: const Icon(
+                            Icons.edit_document,
+                            color: Colors.blueGrey,
+                          )),
+                    ),
                   );
                 }
                 return const SizedBox.shrink();
@@ -926,9 +1004,11 @@ class _NewAmountState extends State<NewAmount> {
   void saveNewAmount() {
     try {
       FirebaseFirestore.instance.collection('Otros').doc('contrato').update({
-        'montonum': int.parse(_montoController.text.replaceAll(',', '')),
+        'montonum': int.parse(
+            _montoController.text.replaceAll(',', '').replaceAll('.', '')),
         'montotext': SpellingNumber(lang: 'es')
-            .convert(int.parse(_montoController.text.replaceAll(',', '')))
+            .convert(int.parse(
+                _montoController.text.replaceAll(',', '').replaceAll('.', '')))
             .capitalizeFirst,
       });
       Get.back();
@@ -1022,469 +1102,3 @@ class _NewAmountState extends State<NewAmount> {
     );
   }
 }
-
-class EditPlace extends StatefulWidget {
-  final String existingPlace;
-  const EditPlace({super.key, required this.existingPlace});
-
-  @override
-  State<EditPlace> createState() => _EditPlaceState();
-}
-
-class _EditPlaceState extends State<EditPlace> {
-  final TextEditingController _tipoController = TextEditingController();
-  final TextEditingController _horasController = TextEditingController();
-
-  TimeOfDay? _ljDesde;
-  TimeOfDay? _ljHasta;
-  TimeOfDay? _vDesde;
-  TimeOfDay? _vHasta;
-  TimeOfDay? _sDesde;
-  TimeOfDay? _sHasta;
-  bool _trabajaSabado = false;
-  final TextEditingController _colacionController =
-      TextEditingController(text: "60");
-
-  final _formKey = GlobalKey<FormState>();
-
-  Future<void> _selectTime(BuildContext context, TimeOfDay? initialTime,
-      Function(TimeOfDay) onTimeSelected) async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: initialTime ?? const TimeOfDay(hour: 8, minute: 0),
-    );
-    if (picked != null) {
-      onTimeSelected(picked);
-    }
-  }
-
-  String _formatTime(TimeOfDay? time) {
-    if (time == null) return '--:--';
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
-  }
-
-  TimeOfDay? _parseTime(String timeString) {
-    try {
-      final parts = timeString.split(':');
-      if (parts.length == 2) {
-        return TimeOfDay(
-            hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-      }
-    } catch (e) {}
-    return null;
-  }
-
-  void _parseSchedule(String schedule, Function(TimeOfDay?) onDesde,
-      Function(TimeOfDay?) onHasta, bool isFriday) {
-    if (schedule.contains('/')) {
-      final parts = schedule.split('/');
-      if (parts.length == 2) {
-        onDesde(_parseTime(parts[0]));
-        onHasta(_parseTime(parts[1]));
-        return;
-      }
-    }
-    // Fallback if it's the old text format or empty
-    onDesde(const TimeOfDay(hour: 8, minute: 0));
-    if (isFriday) {
-      onHasta(const TimeOfDay(hour: 17, minute: 0));
-    } else {
-      onHasta(const TimeOfDay(hour: 18, minute: 0));
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _tipoController.text = widget.existingPlace;
-    _fetchExistingHours();
-  }
-
-  Future<void> _fetchExistingHours() async {
-    try {
-      var lugaresDoc = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares')
-          .get();
-      var horasDoc = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares_horas')
-          .get();
-
-      if (lugaresDoc.exists && horasDoc.exists) {
-        List<String> tipos =
-            List<String>.from(lugaresDoc.data()?['tipos'] ?? []);
-        List<String> horas =
-            List<String>.from(horasDoc.data()?['prueba_horas'] ?? []);
-        List<String> lunJueList =
-            List<String>.from(horasDoc.data()?['lunes_jueves'] ?? []);
-        List<String> vieList =
-            List<String>.from(horasDoc.data()?['viernes'] ?? []);
-        List<String> sabList =
-            List<String>.from(horasDoc.data()?['sabados'] ?? []);
-        List<String> colList =
-            List<String>.from(horasDoc.data()?['colacion'] ?? []);
-
-        int index = tipos.indexWhere((t) =>
-            t.trim().toLowerCase() ==
-            widget.existingPlace.trim().toLowerCase());
-
-        setState(() {
-          if (index != -1 && index < horas.length) {
-            _horasController.text = horas[index].toString();
-          } else {
-            _horasController.text = "44";
-          }
-
-          if (index != -1 && index < lunJueList.length) {
-            _parseSchedule(lunJueList[index].toString(), (t) => _ljDesde = t,
-                (t) => _ljHasta = t, false);
-          } else {
-            _ljDesde = const TimeOfDay(hour: 8, minute: 0);
-            _ljHasta = const TimeOfDay(hour: 18, minute: 0);
-          }
-
-          if (index != -1 && index < vieList.length) {
-            _parseSchedule(vieList[index].toString(), (t) => _vDesde = t,
-                (t) => _vHasta = t, true);
-          } else {
-            _vDesde = const TimeOfDay(hour: 8, minute: 0);
-            _vHasta = const TimeOfDay(hour: 17, minute: 0);
-          }
-
-          if (index != -1 && index < sabList.length) {
-            String sabStr = sabList[index].toString();
-            if (sabStr != "N/A") {
-              _trabajaSabado = true;
-              _parseSchedule(
-                  sabStr, (t) => _sDesde = t, (t) => _sHasta = t, false);
-            } else {
-              _trabajaSabado = false;
-            }
-          } else {
-            _trabajaSabado = false;
-          }
-
-          if (index != -1 && index < colList.length) {
-            _colacionController.text = colList[index].toString();
-          } else {
-            _colacionController.text = "60";
-          }
-        });
-      }
-    } catch (e) {}
-  }
-
-  void saveEditPlace() async {
-    try {
-      String editedLugar = _tipoController.text;
-      String horasStr =
-          _horasController.text.isNotEmpty ? _horasController.text : "44";
-
-      String formatOrFallback(TimeOfDay? start, TimeOfDay? end,
-          String fallbackStart, String fallbackEnd) {
-        if (start != null && end != null) {
-          return '${_formatTime(start)}/${_formatTime(end)}';
-        }
-        return '$fallbackStart/$fallbackEnd';
-      }
-
-      String lunesJueves =
-          formatOrFallback(_ljDesde, _ljHasta, '08:00', '18:00');
-      String viernes = formatOrFallback(_vDesde, _vHasta, '08:00', '17:00');
-
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentReference lugaresRef =
-            FirebaseFirestore.instance.collection('Otros').doc('lugares');
-        DocumentReference horasRef =
-            FirebaseFirestore.instance.collection('Otros').doc('lugares_horas');
-
-        DocumentSnapshot lugaresSnapshot = await transaction.get(lugaresRef);
-        DocumentSnapshot horasSnapshot = await transaction.get(horasRef);
-
-        List<dynamic> tipos =
-            lugaresSnapshot.exists && lugaresSnapshot.data() != null
-                ? List.from((lugaresSnapshot.data() as Map)['tipos'] ?? [])
-                : [];
-        List<dynamic> pruebaHoras =
-            horasSnapshot.exists && horasSnapshot.data() != null
-                ? List.from((horasSnapshot.data() as Map)['prueba_horas'] ?? [])
-                : [];
-        List<dynamic> lunesJuevesList =
-            horasSnapshot.exists && horasSnapshot.data() != null
-                ? List.from((horasSnapshot.data() as Map)['lunes_jueves'] ?? [])
-                : [];
-        List<dynamic> viernesList =
-            horasSnapshot.exists && horasSnapshot.data() != null
-                ? List.from((horasSnapshot.data() as Map)['viernes'] ?? [])
-                : [];
-        List<dynamic> sabadosList =
-            horasSnapshot.exists && horasSnapshot.data() != null
-                ? List.from((horasSnapshot.data() as Map)['sabados'] ?? [])
-                : [];
-        List<dynamic> colacionList =
-            horasSnapshot.exists && horasSnapshot.data() != null
-                ? List.from((horasSnapshot.data() as Map)['colacion'] ?? [])
-                : [];
-
-        while (pruebaHoras.length < tipos.length) pruebaHoras.add("44");
-        while (lunesJuevesList.length < tipos.length)
-          lunesJuevesList.add("Lunes a Jueves de 8:00 a 18:00 hrs");
-        while (viernesList.length < tipos.length)
-          viernesList.add("Viernes de 8:00 a 17:00 hrs");
-        while (sabadosList.length < tipos.length) sabadosList.add("N/A");
-        while (colacionList.length < tipos.length) colacionList.add("60");
-
-        int index = tipos.indexWhere((t) =>
-            t.trim().toLowerCase() ==
-            widget.existingPlace.trim().toLowerCase());
-
-        if (index != -1) {
-          tipos[index] = editedLugar;
-          pruebaHoras[index] = horasStr;
-          lunesJuevesList[index] = lunesJueves;
-          viernesList[index] = viernes;
-
-          String sabadoValue = _trabajaSabado
-              ? formatOrFallback(_sDesde, _sHasta, '08:00', '12:00')
-              : "N/A";
-          String colacionValue = _colacionController.text.trim();
-          if (colacionValue.isEmpty) colacionValue = "60";
-
-          sabadosList[index] = sabadoValue;
-          colacionList[index] = colacionValue;
-
-          transaction.update(lugaresRef, {'tipos': tipos});
-          transaction.set(
-              horasRef,
-              {
-                'prueba_horas': pruebaHoras,
-                'lunes_jueves': lunesJuevesList,
-                'viernes': viernesList,
-                'sabados': sabadosList,
-                'colacion': colacionList,
-              },
-              SetOptions(merge: true));
-        }
-      });
-
-      Get.back();
-      AnimatedSnackBar.material(
-        'Establecimiento editado con éxito',
-        mobileSnackBarPosition: MobileSnackBarPosition.top,
-        desktopSnackBarPosition: DesktopSnackBarPosition.bottomRight,
-        type: AnimatedSnackBarType.success,
-      ).show(context);
-    } catch (e) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-        child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(16.0)),
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'Editar Establecimiento',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      InputTextField(
-                        textController: _tipoController,
-                        hint: 'Nombre del establecimiento',
-                        readOnly: true,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor ingrese un establecimiento';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      InputTextField(
-                        textController: _horasController,
-                        hint: 'Horas Semanales (ej: 40, 44, 45)',
-                        teclado: TextInputType.number,
-                        formater: FilteringTextInputFormatter.digitsOnly,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor ingrese las horas manuales';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      InputTextField(
-                        teclado: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        textController: _colacionController,
-                        hint: 'Minutos de Colación (Ej: 60 o 45)',
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor ingrese los minutos de colación';
-                          }
-                          if (int.tryParse(value) == null) {
-                            return 'Debe ser un número válido';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Horario Lunes a Jueves',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _selectTime(context, _ljDesde,
-                                  (time) => setState(() => _ljDesde = time)),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                    labelText: 'Desde',
-                                    border: OutlineInputBorder()),
-                                child: Text(_formatTime(_ljDesde)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _selectTime(context, _ljHasta,
-                                  (time) => setState(() => _ljHasta = time)),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                    labelText: 'Hasta',
-                                    border: OutlineInputBorder()),
-                                child: Text(_formatTime(_ljHasta)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Horario Viernes',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _selectTime(context, _vDesde,
-                                  (time) => setState(() => _vDesde = time)),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                    labelText: 'Desde',
-                                    border: OutlineInputBorder()),
-                                child: Text(_formatTime(_vDesde)),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: InkWell(
-                              onTap: () => _selectTime(context, _vHasta,
-                                  (time) => setState(() => _vHasta = time)),
-                              child: InputDecorator(
-                                decoration: const InputDecoration(
-                                    labelText: 'Hasta',
-                                    border: OutlineInputBorder()),
-                                child: Text(_formatTime(_vHasta)),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      CheckboxListTile(
-                        title: const Text('Trabaja los Sábados'),
-                        value: _trabajaSabado,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            _trabajaSabado = value ?? false;
-                          });
-                        },
-                        controlAffinity: ListTileControlAffinity.leading,
-                      ),
-                      if (_trabajaSabado) ...[
-                        const Text('Horario Sábado',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _selectTime(context, _sDesde,
-                                    (time) => setState(() => _sDesde = time)),
-                                child: InputDecorator(
-                                  decoration: const InputDecoration(
-                                      labelText: 'Desde',
-                                      border: OutlineInputBorder()),
-                                  child: Text(_formatTime(_sDesde)),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: InkWell(
-                                onTap: () => _selectTime(context, _sHasta,
-                                    (time) => setState(() => _sHasta = time)),
-                                child: InputDecorator(
-                                  decoration: const InputDecoration(
-                                      labelText: 'Hasta',
-                                      border: OutlineInputBorder()),
-                                  child: Text(_formatTime(_sHasta)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          CustomButton(
-                            funcion: () {
-                              Get.back();
-                            },
-                            texto: 'Cancelar',
-                            cancelar: true,
-                          ),
-                          CustomButton(
-                              funcion: () {
-                                if (_formKey.currentState!.validate()) {
-                                  _formKey.currentState!.save();
-                                  saveEditPlace();
-                                }
-                              },
-                              texto: 'Guardar',
-                              cancelar: false)
-                        ],
-                      ),
-                    ],
-                  ),
-                ))));
-  }
-}
-
-// La funcionalidad de _confirmDeleteLabor y EditLabor ha sido reemplazada por genéricos

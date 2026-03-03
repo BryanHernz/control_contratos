@@ -16,7 +16,7 @@ class NavigationDrawerHeader extends StatelessWidget {
         children: <Widget>[
           Padding(
             padding: EdgeInsets.only(top: isDesktop ? 0 : 50.0),
-            child: SizedBox(height: 140, width: 140, child: LogoImage()),
+            child: const SizedBox(height: 140, width: 140, child: LogoImage()),
           ),
         ],
       ),

@@ -571,7 +571,7 @@ class AttendancePageState extends State<AttendancePage> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        Text(
+                        const Text(
                           'Selecciona lista',
                           style: TextStyle(
                               color: Colors.black,
