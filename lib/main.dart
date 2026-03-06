@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'auth/auth_pages.dart';
 import 'customs/constants_values.dart'; // aquí tienes `primario = Colors.blueGrey[700]!`
 import 'firebase_options.dart';
+import 'services/update_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,8 +25,22 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Verificar actualizaciones en el primer frame disponible (solo Android)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkForUpdate();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
