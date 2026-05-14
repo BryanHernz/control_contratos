@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:open_filex/open_filex.dart';
@@ -18,7 +19,7 @@ class UpdateService {
   static const String _prefKey = 'ota_installed_version';
 
   static Future<void> checkForUpdate() async {
-    if (!Platform.isAndroid) return;
+    if (kIsWeb || !Platform.isAndroid) return;
     try {
       // 1. Leer version.json desde Firebase Storage
       final ref = FirebaseStorage.instance.ref(_versionJsonPath);

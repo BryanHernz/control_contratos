@@ -6,50 +6,88 @@ class DrawerItem extends StatelessWidget {
   final IconData icon;
   final bool selected;
   final VoidCallback onPressed;
-  const DrawerItem(
-      {super.key,
-      required this.title,
-      required this.icon,
-      required this.selected,
-      required this.onPressed});
+  final bool isExpanded;
+
+  const DrawerItem({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.selected,
+    required this.onPressed,
+    this.isExpanded = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 30, top: 10),
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 15.0),
+      padding:
+          EdgeInsets.symmetric(horizontal: isExpanded ? 12 : 8, vertical: 3),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onPressed,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
-            height: 35,
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  width: 3,
-                  color: selected ? primario : Colors.transparent,
-                ),
-              ),
+            padding: EdgeInsets.symmetric(
+              horizontal: isExpanded ? 14 : 0,
+              vertical: 11,
             ),
-            child: Row(children: <Widget>[
-              const SizedBox(
-                width: 15,
-              ),
-              Icon(
-                icon,
-                size: 25,
-                color: secundario,
-              ),
-              const SizedBox(
-                width: 20,
-              ),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ]),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: selected
+                  ? Colors.white.withOpacity(0.65)
+                  : Colors.transparent,
+              border: selected
+                  ? Border.all(color: Colors.white.withOpacity(0.9))
+                  : null,
+            ),
+            child: Row(
+              mainAxisAlignment: isExpanded
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
+              children: [
+                // Left indicator bar
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  width: 3,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: selected ? primario : Colors.transparent,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                SizedBox(width: isExpanded ? 12 : 5),
+                Icon(
+                  icon,
+                  size: 22,
+                  color: selected ? primario : Colors.black54,
+                ),
+                ClipRect(
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 250),
+                    alignment: Alignment.centerLeft,
+                    widthFactor: isExpanded ? 1.0 : 0.0,
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight:
+                              selected ? FontWeight.w700 : FontWeight.w500,
+                          color: selected ? primario : Colors.black87,
+                        ),
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

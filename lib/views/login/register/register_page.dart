@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import '../../../customs/widgets_custom.dart';
+import '../../../utils/user_access.dart';
 
 class RegisterPage extends StatefulWidget {
   final VoidCallback showLoginPage;
@@ -40,6 +41,7 @@ class _RegisterPageState extends State<RegisterPage> {
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
         );
+        final access = UserAccess.fromUserData(null);
         await FirebaseFirestore.instance
             .collection('Usuarios')
             .doc(FirebaseAuth.instance.currentUser!.uid.toString())
@@ -48,10 +50,12 @@ class _RegisterPageState extends State<RegisterPage> {
           'nombre': _nameController.text.trim(),
           'apellido': _lastnameController.text.trim(),
           'uid': FirebaseAuth.instance.currentUser!.uid.toString(),
-          'tipo': 1,
+          'permissions': access.permissionsPayload(),
+          'activo': true,
           'ocupacion': '--',
           'telefono': '--',
-          'seller': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
         });
       } catch (e) {}
     }

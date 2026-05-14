@@ -18,6 +18,7 @@ class WorkerModel {
       ingress,
       imageFront,
       imageBack;
+  bool? activo;
 
   WorkerModel(
       {this.name,
@@ -36,7 +37,8 @@ class WorkerModel {
       this.prevision,
       this.ingress,
       this.imageFront,
-      this.imageBack});
+      this.imageBack,
+      this.activo});
 
   factory WorkerModel.fromDocumentSnapshot(DocumentSnapshot doc) {
     // Aseguramos que data sea un Map<String, dynamic> y que no sea nulo
@@ -55,10 +57,10 @@ class WorkerModel {
     }
 
     return WorkerModel(
-      name: data['nombres'] ?? '', // Usamos ?? '' para asegurar que sea String si es nulo
+      name: data['nombres'] ?? '',
       lastName: data['apellidos'] ?? '',
       rut: data['rut'] ?? '',
-      email: data['correo'], // Este puede ser nulo, por eso no usamos ?? ''
+      email: data['correo'],
       nacionality: data['nacionalidad'] ?? '',
       civilState: data['estadoCivil'] ?? '',
       birth: data['fechaNacimiento'] ?? '',
@@ -71,7 +73,8 @@ class WorkerModel {
       ingress: data['ingreso'] ?? '',
       imageFront: data['imagenFront'] ?? '',
       imageBack: data['imagenBack'] ?? '',
-      id: doc.id, // El ID del documento se obtiene directamente de snapshot.id
+      activo: data['activo'] as bool?,
+      id: doc.id,
     );
   }
 

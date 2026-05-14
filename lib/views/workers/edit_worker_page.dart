@@ -42,6 +42,557 @@ class _EditWorkerState extends State<EditWorker> {
 
   final _formKey = GlobalKey<FormState>();
 
+  Future<void> _openQuickCreateSheet({
+    required String title,
+    required IconData icon,
+    required String hint,
+    required Widget child,
+  }) async {
+    final media = MediaQuery.of(context);
+    final maxWidth = media.size.width > 820 ? 820.0 : media.size.width * 0.96;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxWidth,
+                maxHeight: media.size.height * 0.9,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF4F7FA),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24)),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blueGrey.shade900,
+                            Colors.blueGrey.shade700,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 42,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.28),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child:
+                                      Icon(icon, color: Colors.white, size: 20),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: primario.withOpacity(0.12),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: primario.withOpacity(0.10),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.tips_and_updates_outlined,
+                                color: primario,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                hint,
+                                style: TextStyle(
+                                  color: Colors.blueGrey.shade600,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Flexible(child: child),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _dropdownDecoration({
+    required String label,
+    String? hintText,
+  }) {
+    return InputDecoration(
+      focusedErrorBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primario),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primario),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.blueGrey.shade100),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: primario),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      labelText: label,
+      floatingLabelBehavior: FloatingLabelBehavior.always,
+      hintText: hintText,
+      hintStyle: _dropdownValueStyle.copyWith(color: Colors.black45),
+      fillColor: const Color(0xFFF2F5F8),
+      filled: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+    );
+  }
+
+  TextStyle get _dropdownValueStyle =>
+      Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Colors.black54,
+            fontWeight: FontWeight.w500,
+          ) ??
+      const TextStyle(
+        color: Colors.black54,
+        fontWeight: FontWeight.w500,
+      );
+
+  IconStyleData _dropdownIconStyleData() => IconStyleData(
+        icon: Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: Colors.blueGrey.shade500,
+        ),
+        iconSize: 22,
+      );
+
+  DropdownStyleData _dropdownStyleData() => DropdownStyleData(
+        maxHeight: 300,
+        elevation: 8,
+        offset: const Offset(0, 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.blueGrey.shade100),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 14,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+      );
+
+  MenuItemStyleData _dropdownMenuItemStyleData() => const MenuItemStyleData(
+        height: 46,
+        padding: EdgeInsets.symmetric(horizontal: 12),
+      );
+
+  Widget _buildDropdownOptionText(String option, {bool ellipsis = false}) {
+    return Text(
+      option.trim().toLowerCase(),
+      style: _dropdownValueStyle,
+      textAlign: TextAlign.left,
+      maxLines: 1,
+      overflow: ellipsis ? TextOverflow.ellipsis : TextOverflow.visible,
+    );
+  }
+
+  static const String _createOptionPrefix = '__create__:';
+  int _dropdownRefreshSeed = 0;
+
+  String _createOptionValue(String type) => '$_createOptionPrefix$type';
+
+  bool _isCreateOption(String? value) =>
+      value?.startsWith(_createOptionPrefix) ?? false;
+
+  List<String> _dropdownOptions(
+    dynamic sourceOptions, {
+    String currentValue = '',
+  }) {
+    if (sourceOptions is! List) return const [];
+    final seen = <String>{};
+    final options = <String>[];
+    for (final raw in sourceOptions) {
+      final option = raw.toString().trim();
+      if (option.isEmpty) continue;
+      final key = option.toLowerCase();
+      if (seen.add(key)) {
+        options.add(option);
+      }
+    }
+
+    final normalizedCurrent = currentValue.trim();
+    if (normalizedCurrent.isNotEmpty) {
+      final exists = options.any(
+        (option) =>
+            option.trim().toLowerCase() == normalizedCurrent.toLowerCase(),
+      );
+      if (!exists) {
+        options.insert(0, normalizedCurrent);
+      }
+    }
+
+    return options;
+  }
+
+  String? _resolvedDropdownValue({
+    required String currentValue,
+    required List<String> sourceOptions,
+  }) {
+    final normalizedCurrent = currentValue.trim();
+    if (normalizedCurrent.isEmpty) return null;
+
+    final exactMatches =
+        sourceOptions.where((option) => option == normalizedCurrent).toList();
+    if (exactMatches.length == 1) {
+      return exactMatches.first;
+    }
+
+    final ciMatches = sourceOptions
+        .where(
+          (option) =>
+              option.trim().toLowerCase() == normalizedCurrent.toLowerCase(),
+        )
+        .toList();
+
+    if (ciMatches.length == 1) {
+      return ciMatches.first;
+    }
+
+    return null;
+  }
+
+  Future<void> _openCreateFromDropdown({
+    required String title,
+    required IconData icon,
+    required String hint,
+    required Widget child,
+  }) async {
+    Get.back();
+    setState(() => _dropdownRefreshSeed++);
+    await _openQuickCreateSheet(
+      title: title,
+      icon: icon,
+      hint: hint,
+      child: child,
+    );
+    if (mounted) {
+      setState(() => _dropdownRefreshSeed++);
+    }
+  }
+
+  Widget _buildCreateDropdownOption({
+    required String text,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 36, maxWidth: 340),
+      decoration: BoxDecoration(
+        color: primario.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primario.withOpacity(0.28)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.add_circle_outline_rounded,
+            size: 17,
+            color: primario,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text.toUpperCase(),
+            style: TextStyle(
+              color: primario,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalendarActionButton({
+    required String text,
+    required bool filled,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 118, minHeight: 40),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: filled ? primario : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: filled ? primario : Colors.blueGrey.shade200,
+        ),
+        boxShadow: filled
+            ? [
+                BoxShadow(
+                  color: primario.withOpacity(0.24),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          color: filled ? Colors.white : Colors.blueGrey.shade700,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  CalendarDatePicker2WithActionButtonsConfig _buildDatePickerConfig({
+    required DateTime firstDate,
+    required DateTime lastDate,
+    required DateTime currentDate,
+  }) {
+    final titleStyle = Theme.of(context).textTheme.titleMedium;
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium;
+    final captionStyle = Theme.of(context).textTheme.bodySmall;
+
+    return CalendarDatePicker2WithActionButtonsConfig(
+      calendarType: CalendarDatePicker2Type.single,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      currentDate: currentDate,
+      modePickerTextHandler: ({required monthDate, isMonthPicker}) {
+        if (isMonthPicker ?? false) {
+          return DateFormat.MMMM('es').format(monthDate).toUpperCase();
+        }
+        return DateFormat.y('es').format(monthDate).toUpperCase();
+      },
+      selectedDayHighlightColor: primario,
+      dayBorderRadius: BorderRadius.circular(999),
+      controlsTextStyle: titleStyle?.copyWith(
+            color: Colors.blueGrey.shade700,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ) ??
+          TextStyle(
+            color: Colors.blueGrey.shade700,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
+      weekdayLabelTextStyle: captionStyle?.copyWith(
+            color: Colors.blueGrey.shade400,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ) ??
+          TextStyle(
+            color: Colors.blueGrey.shade400,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+      dayTextStyle: bodyStyle?.copyWith(
+            color: Colors.blueGrey.shade600,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ) ??
+          TextStyle(
+            color: Colors.blueGrey.shade600,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+      selectedDayTextStyle: bodyStyle?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ) ??
+          const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+      todayTextStyle: bodyStyle?.copyWith(
+            color: primario,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ) ??
+          TextStyle(
+            color: primario,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+      disabledDayTextStyle: bodyStyle?.copyWith(
+            color: Colors.blueGrey.shade200,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ) ??
+          TextStyle(
+            color: Colors.blueGrey.shade200,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+          ),
+      monthTextStyle: bodyStyle?.copyWith(
+            color: Colors.blueGrey.shade700,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ) ??
+          TextStyle(
+            color: Colors.blueGrey.shade700,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+      selectedMonthTextStyle: bodyStyle?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ) ??
+          const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+      yearTextStyle: bodyStyle?.copyWith(
+            color: Colors.blueGrey.shade700,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ) ??
+          TextStyle(
+            color: Colors.blueGrey.shade700,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+      selectedYearTextStyle: bodyStyle?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ) ??
+          const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+          ),
+      nextMonthIcon: Icon(
+        Icons.chevron_right_rounded,
+        color: Colors.blueGrey.shade700,
+        size: 22,
+      ),
+      lastMonthIcon: Icon(
+        Icons.chevron_left_rounded,
+        color: Colors.blueGrey.shade700,
+        size: 22,
+      ),
+      gapBetweenCalendarAndButtons: 12,
+      buttonPadding: const EdgeInsets.fromLTRB(8, 4, 8, 12),
+      cancelButton: _buildCalendarActionButton(
+        text: 'Cancelar',
+        filled: false,
+      ),
+      okButton: _buildCalendarActionButton(
+        text: 'Aceptar',
+        filled: true,
+      ),
+    );
+  }
+
+  void _submitForm() {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      saveWorker(
+        WorkerModel(
+          name: _nombresController.text,
+          lastName: _apellidosController.text,
+          rut: _rutController.text,
+          email: _correoController.text,
+          nacionality: _countryController.text,
+          civilState: _civilStateController.text,
+          birth: _birhtController.text,
+          adress: _adressController.text,
+          commune: _communeController.text,
+          labor: _laborController.text,
+          place: _placeController.text,
+          afp: _afpController.text,
+          prevision: _previsionController.text,
+          ingress: _ingressController.text,
+        ),
+      );
+    }
+  }
+
   void saveWorker(WorkerModel worker) {
     try {
       var user = FirebaseAuth.instance.currentUser!;
@@ -123,19 +674,53 @@ class _EditWorkerState extends State<EditWorker> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        AppBar(
-          toolbarHeight: 70,
-          automaticallyImplyLeading: false,
-          centerTitle: true,
-          backgroundColor: Colors.transparent,
-          title: const Center(
-            //child: SubTitleWidget(text: 'Editar Trabajador'),
-            child: Text(
-              'Editar Trabajador',
-              style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.edit_rounded,
+                          color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    const Text(
+                      'Editar Trabajador',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -155,6 +740,7 @@ class _EditWorkerState extends State<EditWorker> {
                   teclado: TextInputType.name,
                   textController: _nombresController,
                   hint: 'Nombres',
+                  onFieldSubmitted: (_) => _submitForm(),
                   validator: (value) {
                     if (value == '') {
                       return 'Por favor ingrese nombres';
@@ -166,6 +752,7 @@ class _EditWorkerState extends State<EditWorker> {
                   teclado: TextInputType.name,
                   textController: _apellidosController,
                   hint: 'Apellidos',
+                  onFieldSubmitted: (_) => _submitForm(),
                   validator: (value) {
                     if (value == '') {
                       return 'Por favor ingrese apellidos';
@@ -177,6 +764,7 @@ class _EditWorkerState extends State<EditWorker> {
                   teclado: TextInputType.text,
                   textController: _rutController,
                   hint: 'Rut',
+                  onFieldSubmitted: (_) => _submitForm(),
                   formater: RutFormatter(),
                   validator: (value) {
                     if (value == '') {
@@ -195,6 +783,7 @@ class _EditWorkerState extends State<EditWorker> {
                   teclado: TextInputType.emailAddress,
                   textController: _correoController,
                   hint: 'Correo',
+                  onFieldSubmitted: (_) => _submitForm(),
                   validator: (value) {
                     if (!GetUtils.isEmail(value!) && value != '') {
                       return 'Por favor ingrese un correo válido';
@@ -211,132 +800,59 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _countryController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'Nacionalidad',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.nacionality,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('country-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _countryController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'Nacionalidad',
+                          hintText: widget.worker.nacionality,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
+                              alignment: AlignmentDirectional.centerStart,
                               value: child,
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: _buildDropdownOptionText(child),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewNacionality(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nueva nacionalidad'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('country'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nueva nacionalidad',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nueva nacionalidad',
+                              icon: Icons.flag_outlined,
+                              hint:
+                                  'Ingresa la nacionalidad del trabajador para completar su informacion personal.',
+                              child: const NewNacionality(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _countryController.text = value!;
+                            _countryController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -350,132 +866,59 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _civilStateController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'Estado civil',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.civilState,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('civil-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _civilStateController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'Estado civil',
+                          hintText: widget.worker.civilState,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
+                              alignment: AlignmentDirectional.centerStart,
                               value: child,
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: _buildDropdownOptionText(child),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewCivilState(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nuevo estado civil'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('civil'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nuevo estado civil',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nuevo estado civil',
+                              icon: Icons.favorite_border_rounded,
+                              hint:
+                                  'Selecciona o crea el estado civil actual del trabajador.',
+                              child: const NewCivilState(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _civilStateController.text = value!;
+                            _civilStateController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -508,14 +951,14 @@ class _EditWorkerState extends State<EditWorker> {
 
                     final datePicked = await showCalendarDatePicker2Dialog(
                       context: context,
-                      config: CalendarDatePicker2WithActionButtonsConfig(
-                        calendarType: CalendarDatePicker2Type.single,
-                        selectedDayHighlightColor: primario,
+                      config: _buildDatePickerConfig(
                         firstDate: DateTime(1950),
                         lastDate: DateTime.now().add(const Duration(days: 30)),
                         currentDate: initialDate,
                       ),
-                      dialogSize: const Size(325, 400),
+                      dialogSize: const Size(350, 420),
+                      borderRadius: BorderRadius.circular(18),
+                      dialogBackgroundColor: const Color(0xFFF4F7FA),
                       value: [initialDate],
                     );
                     // --------------------------------------------------------
@@ -539,6 +982,7 @@ class _EditWorkerState extends State<EditWorker> {
                   teclado: TextInputType.streetAddress,
                   textController: _adressController,
                   hint: 'Dirección',
+                  onFieldSubmitted: (_) => _submitForm(),
                   validator: (value) {
                     if (value == '') {
                       return 'Por favor ingrese una dirección';
@@ -555,132 +999,59 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _communeController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'Comuna',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.commune,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('commune-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _communeController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'Comuna',
+                          hintText: widget.worker.commune,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
+                              alignment: AlignmentDirectional.centerStart,
                               value: child,
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: _buildDropdownOptionText(child),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewCommune(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nueva comuna'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('commune'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nueva comuna',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nueva comuna',
+                              icon: Icons.location_city_outlined,
+                              hint:
+                                  'Ingresa la comuna de residencia del trabajador.',
+                              child: const NewCommune(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _communeController.text = value!;
+                            _communeController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -694,132 +1065,59 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _laborController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'Labor',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.labor,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('labor-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _laborController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'Labor',
+                          hintText: widget.worker.labor,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
+                              alignment: AlignmentDirectional.centerStart,
                               value: child,
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: _buildDropdownOptionText(child),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewLabor(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nueva labor'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('labor'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nueva labor',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nueva labor',
+                              icon: Icons.construction_outlined,
+                              hint:
+                                  'Define la labor o cargo que desempenara el trabajador.',
+                              child: const NewLabor(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _laborController.text = value!;
+                            _laborController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -833,132 +1131,62 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _placeController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'Establecimiento',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.place,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('place-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _placeController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'Establecimiento',
+                          hintText: widget.worker.place,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
-                              value: child.toString(),
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(fontSize: 14),
-                                overflow: TextOverflow.ellipsis,
+                              alignment: AlignmentDirectional.centerStart,
+                              value: child,
+                              child: _buildDropdownOptionText(
+                                child,
+                                ellipsis: true,
                               ),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewPlace(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nuevo establecimiento'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('place'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nuevo establecimiento',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nuevo establecimiento',
+                              icon: Icons.business_outlined,
+                              hint:
+                                  'Crea el establecimiento donde el trabajador prestara servicios.',
+                              child: const NewPlace(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _placeController.text = value!;
+                            _placeController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -972,132 +1200,59 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _afpController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'AFP',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.afp,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('afp-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _afpController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'AFP',
+                          hintText: widget.worker.afp,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
+                              alignment: AlignmentDirectional.centerStart,
                               value: child,
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: _buildDropdownOptionText(child),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewAfp(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nueva AFP'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('afp'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nueva AFP',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nueva AFP',
+                              icon: Icons.savings_outlined,
+                              hint:
+                                  'Registra la AFP correspondiente a las cotizaciones del trabajador.',
+                              child: const NewAfp(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _afpController.text = value!;
+                            _afpController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -1111,132 +1266,59 @@ class _EditWorkerState extends State<EditWorker> {
                         .snapshots(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) return const Center();
+                      final options = _dropdownOptions(
+                        snapshot.data!.docs.first['tipos'],
+                        currentValue: _previsionController.text,
+                      );
 
                       return DropdownButtonFormField2<String>(
-                        decoration: InputDecoration(
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: primario),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          labelText: 'Prevision',
-                          floatingLabelBehavior: FloatingLabelBehavior.always,
-                          hintText: widget.worker.prevision,
-                          fillColor: Colors.grey[200],
-                          filled: true,
+                        key: ValueKey('prevision-$_dropdownRefreshSeed'),
+                        value: _resolvedDropdownValue(
+                          currentValue: _previsionController.text,
+                          sourceOptions: options,
                         ),
+                        isExpanded: true,
+                        alignment: AlignmentDirectional.centerStart,
+                        decoration: _dropdownDecoration(
+                          label: 'Prevision',
+                          hintText: widget.worker.prevision,
+                        ),
+                        style: _dropdownValueStyle,
                         items: [
-                          for (var child in snapshot.data!.docs.first['tipos'])
+                          for (var child in options)
                             DropdownMenuItem<String>(
-                              alignment: Alignment.center,
+                              alignment: AlignmentDirectional.centerStart,
                               value: child,
-                              child: Text(
-                                child.toString().toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                ),
-                              ),
+                              child: _buildDropdownOptionText(child),
                             ),
-                          DropdownMenuItem(
-                            value: '',
-                            enabled: false,
-                            alignment: Alignment.center,
-                            child: TextButton(
-                              onPressed: () {
-                                Get.back();
-                                showModalBottomSheet(
-                                  context: context,
-                                  isScrollControlled: true,
-                                  useSafeArea: true,
-                                  constraints: BoxConstraints(
-                                      maxWidth: MediaQuery.of(context)
-                                                  .size
-                                                  .width >
-                                              800
-                                          ? 900
-                                          : MediaQuery.of(context).size.width *
-                                              0.95),
-                                  backgroundColor: Colors.white,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(16)),
-                                  ),
-                                  builder: (context) => Container(
-                                    constraints: BoxConstraints(
-                                        maxHeight:
-                                            MediaQuery.of(context).size.height *
-                                                0.85),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const SizedBox(height: 12),
-                                        Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black12,
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Flexible(
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.vertical(
-                                                top: Radius.circular(16)),
-                                            child: NewPrevision(),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.add,
-                                    size: 15,
-                                  ),
-                                  SizedBox(
-                                    width: 20,
-                                  ),
-                                  Text('Agregar nueva prevision'),
-                                ],
-                              ),
+                          DropdownMenuItem<String>(
+                            value: _createOptionValue('prevision'),
+                            alignment: AlignmentDirectional.centerStart,
+                            child: _buildCreateDropdownOption(
+                              text: 'Agregar nueva prevision',
                             ),
                           ),
                         ],
                         onChanged: (value) {
+                          if (_isCreateOption(value)) {
+                            _openCreateFromDropdown(
+                              title: 'Nueva prevision',
+                              icon: Icons.local_hospital_outlined,
+                              hint:
+                                  'Registra la institucion de salud previsional del trabajador.',
+                              child: const NewPrevision(),
+                            );
+                            return;
+                          }
+                          if (value == null) return;
                           setState(() {
-                            _previsionController.text = value!;
+                            _previsionController.text = value;
                           });
                           //Do something when selected item is changed.
                         },
-                        iconStyleData: const IconStyleData(
-                          icon: Icon(
-                            Icons.arrow_drop_down,
-                          ),
-                          iconSize: 24,
-                        ),
-                        dropdownStyleData: DropdownStyleData(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        menuItemStyleData: const MenuItemStyleData(),
+                        iconStyleData: _dropdownIconStyleData(),
+                        dropdownStyleData: _dropdownStyleData(),
+                        menuItemStyleData: _dropdownMenuItemStyleData(),
                       );
                     },
                   ),
@@ -1274,14 +1356,14 @@ class _EditWorkerState extends State<EditWorker> {
 
                     final datePicked = await showCalendarDatePicker2Dialog(
                       context: context,
-                      config: CalendarDatePicker2WithActionButtonsConfig(
-                        calendarType: CalendarDatePicker2Type.single,
-                        selectedDayHighlightColor: primario,
+                      config: _buildDatePickerConfig(
                         firstDate: DateTime(2023),
                         lastDate: DateTime.now().add(const Duration(days: 30)),
                         currentDate: initialDate,
                       ),
-                      dialogSize: const Size(325, 400),
+                      dialogSize: const Size(350, 420),
+                      borderRadius: BorderRadius.circular(18),
+                      dialogBackgroundColor: const Color(0xFFF4F7FA),
                       value: [initialDate],
                     );
 
@@ -1304,42 +1386,26 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.only(top: 5.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      CustomButton(
-                        funcion: () {
-                          Get.back();
-                        },
-                        texto: 'Cancelar',
-                        cancelar: true,
-                      ),
-                      CustomButton(
+                      Expanded(
+                        child: CustomButton(
                           funcion: () {
-                            if (_formKey.currentState!.validate() &&
-                                _formKey.currentState!.validate()) {
-                              _formKey.currentState!.save();
-                              saveWorker(
-                                WorkerModel(
-                                  name: _nombresController.text,
-                                  lastName: _apellidosController.text,
-                                  rut: _rutController.text,
-                                  email: _correoController.text,
-                                  nacionality: _countryController.text,
-                                  civilState: _civilStateController.text,
-                                  birth: _birhtController.text,
-                                  adress: _adressController.text,
-                                  commune: _communeController.text,
-                                  labor: _laborController.text,
-                                  place: _placeController.text,
-                                  afp: _afpController.text,
-                                  prevision: _previsionController.text,
-                                  ingress: _ingressController.text,
-                                ),
-                              );
-                            }
+                            Get.back();
                           },
+                          texto: 'Cancelar',
+                          cancelar: true,
+                          icon: Icons.close_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: CustomButton(
+                          funcion: _submitForm,
                           texto: 'Guardar',
-                          cancelar: false)
+                          cancelar: false,
+                          icon: Icons.check_rounded,
+                        ),
+                      ),
                     ],
                   ),
                 ),

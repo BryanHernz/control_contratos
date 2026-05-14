@@ -23,6 +23,7 @@ import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../customs/widgets_custom.dart';
+import '../../customs/widgets/page_header.dart';
 import '../../services/attendance_service.dart';
 import '../../utils/normalize.dart';
 
@@ -40,7 +41,6 @@ class AttendancePageState extends State<AttendancePage> {
   final _search = TextEditingController();
   final _dpCtrl = DatePickerController();
 
-  StreamSubscription<List<String>>? _typesSub;
   StreamSubscription<List<String>>? _dayActiveListsSub;
 
   List<_Worker> _all = [];
@@ -48,7 +48,6 @@ class AttendancePageState extends State<AttendancePage> {
 
   String _group = 'GENERAL';
   List<String> _activeLists = []; // always UPPERCASE
-  List<String> _allTypes = []; // always UPPERCASE
 
   @override
   void initState() {
@@ -58,11 +57,6 @@ class AttendancePageState extends State<AttendancePage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _dpCtrl.animateToDate(_selectedDate.subtract(const Duration(days: 1)));
-    });
-
-    _typesSub = AttendanceService.listenAllListTypes().listen((tipos) {
-      if (!mounted) return;
-      setState(() => _allTypes = tipos.map((t) => t.toUpperCase()).toList());
     });
 
     _subscribeDayActiveLists();
@@ -89,7 +83,7 @@ class AttendancePageState extends State<AttendancePage> {
   void dispose() {
     _search.removeListener(_onSearch);
     _search.dispose();
-    _typesSub?.cancel();
+
     _dayActiveListsSub?.cancel();
     super.dispose();
   }
@@ -121,6 +115,72 @@ class AttendancePageState extends State<AttendancePage> {
     final needed = tileExtent * math.min(n, maxVisible);
     final halfScreen = MediaQuery.of(ctx).size.height * 0.6;
     return math.min(needed, halfScreen);
+  }
+
+  double _sheetMaxWidth(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width > 980) return 920;
+    return width * 0.96;
+  }
+
+  Future<T?> _openAttendanceSheet<T>({
+    required String title,
+    required IconData icon,
+    required Widget child,
+    String? hint,
+    bool danger = false,
+    double? maxWidth,
+  }) async {
+    final media = MediaQuery.of(context);
+
+    return showModalBottomSheet<T>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => AnimatedPadding(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: SafeArea(
+          top: false,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxWidth ?? _sheetMaxWidth(context),
+                maxHeight: media.size.height * 0.92,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF4F7FA),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _AttendanceSheetHeader(
+                      title: title,
+                      icon: icon,
+                      danger: danger,
+                    ),
+                    if (hint != null && hint.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+                        child: _AttendanceHint(text: hint),
+                      ),
+                    Flexible(child: child),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _listenWorkers() {
@@ -193,7 +253,8 @@ class AttendancePageState extends State<AttendancePage> {
         normalizeDay(_selectedDate), workerId);
   }
 
-  Future<bool> _confirmRemoveSheet(String displayName) async {
+  // ignore: unused_element
+  Future<bool> _confirmRemoveSheetLegacy(String displayName) async {
     final r = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.white,
@@ -254,6 +315,73 @@ class AttendancePageState extends State<AttendancePage> {
     return r == true;
   }
 
+  Future<bool> _confirmRemoveSheet(String displayName) async {
+    final r = await _openAttendanceSheet<bool>(
+      title: 'Quitar asistencia',
+      icon: Icons.person_remove_alt_1_rounded,
+      hint: 'Confirma para quitar al trabajador de la asistencia del dia.',
+      danger: true,
+      maxWidth: 640,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Text(
+                'Se quitara a ${displayName.toUpperCase()} de la lista actual.',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton(
+                    funcion: () => Navigator.pop(context, false),
+                    texto: 'Cancelar',
+                    cancelar: true,
+                    icon: Icons.close_rounded,
+                    width: double.infinity,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context, true),
+                    icon:
+                        const Icon(Icons.person_remove_alt_1_rounded, size: 18),
+                    label: const Text('Quitar'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    return r == true;
+  }
+
   Future<void> _activatePickedLists(Set<String> picked) async {
     for (final t in picked) {
       await AttendanceService.addActiveList(_selectedDate, t.toUpperCase());
@@ -282,7 +410,8 @@ class AttendancePageState extends State<AttendancePage> {
     Get.back();
   }
 
-  Future<bool> _confirmDeleteListType(String listName) async {
+  // ignore: unused_element
+  Future<bool> _confirmDeleteListTypeLegacy(String listName) async {
     final r = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: Colors.white,
@@ -348,7 +477,88 @@ class AttendancePageState extends State<AttendancePage> {
     return r == true;
   }
 
-  Future<void> _showActivateListsSheet() async {
+  Future<bool> _confirmDeleteListType(String listName) async {
+    final r = await _openAttendanceSheet<bool>(
+      title: 'Eliminar tipo de lista',
+      icon: Icons.delete_outline_rounded,
+      hint: 'Esta accion elimina el tipo del catalogo general.',
+      danger: true,
+      maxWidth: 640,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Se eliminara ${listName.toUpperCase()} del listado.',
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'La asistencia historica no se eliminara.',
+                    style: TextStyle(
+                      color: Colors.red.shade600,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: CustomButton(
+                    funcion: () => Navigator.pop(context, false),
+                    texto: 'Cancelar',
+                    cancelar: true,
+                    icon: Icons.close_rounded,
+                    width: double.infinity,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red.shade600,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(context, true),
+                    icon: const Icon(Icons.delete_rounded, size: 18),
+                    label: const Text('Eliminar'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    return r == true;
+  }
+
+  // ignore: unused_element
+  Future<void> _showActivateListsSheetLegacy() async {
     final picked = <String>{};
     await showModalBottomSheet<void>(
       context: context,
@@ -428,57 +638,55 @@ class AttendancePageState extends State<AttendancePage> {
                               );
                             }
 
-                            return Container(
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                alignment: WrapAlignment.center,
-                                children: candidates.map((text) {
-                                  final isSelected = picked.contains(text);
-                                  return GestureDetector(
-                                    onLongPress: () async {
-                                      final confirm =
-                                          await _confirmDeleteListType(text);
-                                      if (confirm) {
-                                        await AttendanceService.removeListType(
-                                            text);
-                                        // Force refresh is handled by stream builder
-                                        if (mounted) {
-                                          AnimatedSnackBar.material(
-                                            'Lista "$text" eliminada correctamente.',
-                                            type: AnimatedSnackBarType.success,
-                                            mobileSnackBarPosition:
-                                                MobileSnackBarPosition.bottom,
-                                          ).show(context);
-                                        }
+                            return Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              alignment: WrapAlignment.center,
+                              children: candidates.map((text) {
+                                final isSelected = picked.contains(text);
+                                return GestureDetector(
+                                  onLongPress: () async {
+                                    final confirm =
+                                        await _confirmDeleteListType(text);
+                                    if (confirm) {
+                                      await AttendanceService.removeListType(
+                                          text);
+                                      // Force refresh is handled by stream builder
+                                      if (context.mounted) {
+                                        AnimatedSnackBar.material(
+                                          'Lista "$text" eliminada correctamente.',
+                                          type: AnimatedSnackBarType.success,
+                                          mobileSnackBarPosition:
+                                              MobileSnackBarPosition.bottom,
+                                        ).show(context);
                                       }
-                                    },
-                                    child: ChoiceChip(
-                                      label: Text(text),
-                                      selected: isSelected,
-                                      selectedColor: primario,
-                                      labelStyle: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : Colors.black,
-                                        fontWeight: isSelected
-                                            ? FontWeight.bold
-                                            : FontWeight.normal,
-                                      ),
-                                      backgroundColor: Colors.grey.shade200,
-                                      onSelected: (selected) {
-                                        setSt(() {
-                                          if (selected) {
-                                            picked.add(text);
-                                          } else {
-                                            picked.remove(text);
-                                          }
-                                        });
-                                      },
+                                    }
+                                  },
+                                  child: ChoiceChip(
+                                    label: Text(text),
+                                    selected: isSelected,
+                                    selectedColor: primario,
+                                    labelStyle: TextStyle(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.black,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
                                     ),
-                                  );
-                                }).toList(),
-                              ),
+                                    backgroundColor: Colors.grey.shade200,
+                                    onSelected: (selected) {
+                                      setSt(() {
+                                        if (selected) {
+                                          picked.add(text);
+                                        } else {
+                                          picked.remove(text);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                );
+                              }).toList(),
                             );
                           },
                         ),
@@ -530,7 +738,8 @@ class AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  Future<String?> _showPickActiveListSheet() async {
+  // ignore: unused_element
+  Future<String?> _showPickActiveListSheetLegacy() async {
     String? picked;
 
     return showModalBottomSheet<String>(
@@ -641,7 +850,8 @@ class AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  Future<void> _showCreateTypeSheet() async {
+  // ignore: unused_element
+  Future<void> _showCreateTypeSheetLegacy() async {
     final ctrl = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
@@ -733,6 +943,339 @@ class AttendancePageState extends State<AttendancePage> {
             ),
           );
         });
+  }
+
+  Future<void> _showActivateListsSheet() async {
+    final picked = <String>{};
+    await _openAttendanceSheet<void>(
+      title: 'Activar listas del dia',
+      icon: Icons.playlist_add_check_circle_outlined,
+      hint: 'Selecciona una o mas listas para dejarlas activas en esta fecha.',
+      child: StatefulBuilder(
+        builder: (context, setSt) {
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  StreamBuilder<List<String>>(
+                    stream: AttendanceService.listenAllListTypes(),
+                    builder: (context, snap) {
+                      final tipos = (snap.data ?? [])
+                          .map((t) => t.toUpperCase())
+                          .toList();
+                      tipos.sort(
+                          (a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+                      final activeSet =
+                          _activeLists.map((e) => e.toUpperCase()).toSet();
+                      final candidates =
+                          tipos.where((t) => !activeSet.contains(t)).toList();
+
+                      if (candidates.isEmpty) {
+                        return Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 18),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.blueGrey.shade100),
+                          ),
+                          child: Text(
+                            'No hay mas tipos disponibles. Crea uno nuevo para continuar.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.blueGrey.shade600,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      }
+
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: candidates.map((text) {
+                          final isSelected = picked.contains(text);
+                          return GestureDetector(
+                            onLongPress: () async {
+                              final confirm =
+                                  await _confirmDeleteListType(text);
+                              if (confirm) {
+                                await AttendanceService.removeListType(text);
+                                if (context.mounted) {
+                                  AnimatedSnackBar.material(
+                                    'Lista "$text" eliminada correctamente.',
+                                    type: AnimatedSnackBarType.success,
+                                    mobileSnackBarPosition:
+                                        MobileSnackBarPosition.bottom,
+                                  ).show(context);
+                                }
+                              }
+                            },
+                            child: ChoiceChip(
+                              label: Text(text),
+                              selected: isSelected,
+                              selectedColor: primario,
+                              backgroundColor: Colors.white,
+                              side: BorderSide(
+                                color: isSelected
+                                    ? primario
+                                    : Colors.blueGrey.shade100,
+                              ),
+                              labelStyle: TextStyle(
+                                color: isSelected
+                                    ? Colors.white
+                                    : Colors.blueGrey.shade700,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              onSelected: (selected) {
+                                setSt(() {
+                                  if (selected) {
+                                    picked.add(text);
+                                  } else {
+                                    picked.remove(text);
+                                  }
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      funcion: () async {
+                        await _showCreateTypeSheet();
+                        setSt(() {});
+                      },
+                      texto: 'Crear nuevo tipo',
+                      cancelar: true,
+                      icon: Icons.add_rounded,
+                      width: double.infinity,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          funcion: () => Navigator.of(context).pop(),
+                          texto: 'Cerrar',
+                          cancelar: true,
+                          icon: Icons.close_rounded,
+                          width: double.infinity,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: CustomButton(
+                          funcion: () {
+                            if (picked.isNotEmpty) {
+                              _activatePickedLists(picked);
+                            } else {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          texto: 'Activar',
+                          cancelar: false,
+                          icon: Icons.check_rounded,
+                          width: double.infinity,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<String?> _showPickActiveListSheet() async {
+    String? picked;
+
+    return _openAttendanceSheet<String>(
+      title: 'Seleccionar lista',
+      icon: Icons.playlist_play_rounded,
+      hint: 'Elige la lista en la que deseas agregar al trabajador.',
+      maxWidth: 760,
+      child: StatefulBuilder(
+        builder: (context, setSt) {
+          final actives = [..._activeLists]
+            ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (actives.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.blueGrey.shade100),
+                      ),
+                      child: Text(
+                        'No hay listas activas para hoy. Agrega al menos una lista.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.blueGrey.shade600,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  if (actives.isNotEmpty)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final t in actives)
+                          ChoiceChip(
+                            label: Text(t.toUpperCase()),
+                            selected: picked == t,
+                            selectedColor: primario,
+                            backgroundColor: Colors.white,
+                            side: BorderSide(
+                              color: picked == t
+                                  ? primario
+                                  : Colors.blueGrey.shade100,
+                            ),
+                            labelStyle: TextStyle(
+                              color: picked == t
+                                  ? Colors.white
+                                  : Colors.blueGrey.shade700,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            onSelected: (sel) =>
+                                setSt(() => picked = sel ? t : null),
+                          ),
+                      ],
+                    ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: CustomButton(
+                      funcion: () async {
+                        await _showActivateListsSheet();
+                        setSt(() {});
+                      },
+                      texto: 'Agregar listas del dia',
+                      cancelar: true,
+                      icon: Icons.add_rounded,
+                      width: double.infinity,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          funcion: () => Navigator.pop(context, null),
+                          texto: 'Cancelar',
+                          cancelar: true,
+                          icon: Icons.close_rounded,
+                          width: double.infinity,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: CustomButton(
+                          funcion: () => Navigator.pop(context, picked),
+                          texto: 'Usar lista',
+                          cancelar: false,
+                          icon: Icons.check_rounded,
+                          width: double.infinity,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showCreateTypeSheet() async {
+    final ctrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await _openAttendanceSheet<bool>(
+      title: 'Nuevo tipo de lista',
+      icon: Icons.add_box_outlined,
+      hint: 'Crea un nuevo tipo para usarlo en la asistencia diaria.',
+      maxWidth: 760,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InputTextField(
+                  textController: ctrl,
+                  hint: 'Nombre (ej: PODA, COSECHA)',
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Ingresa un nombre';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomButton(
+                        funcion: () => Navigator.pop(context),
+                        texto: 'Cancelar',
+                        cancelar: true,
+                        icon: Icons.close_rounded,
+                        width: double.infinity,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        funcion: () {
+                          if (formKey.currentState!.validate()) {
+                            formKey.currentState!.save();
+                            _submitCreateType(formKey, ctrl);
+                          }
+                        },
+                        texto: 'Agregar',
+                        cancelar: false,
+                        icon: Icons.add_rounded,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   // PDF generation helpers (complete)
@@ -1159,7 +1702,7 @@ class AttendancePageState extends State<AttendancePage> {
             ),
           DropdownMenuItem(
             value: '__add__',
-            child: Text('+ Agregar',
+            child: Text('+ AGREGAR NUEVA LISTA',
                 style: TextStyle(color: isDesktop ? primario : Colors.white)),
           ),
         ],
@@ -1175,264 +1718,658 @@ class AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    bool isDesktop = MediaQuery.of(context).size.width >= 800;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        toolbarHeight: 224,
-        flexibleSpace: Container(
-          color: isDesktop ? Colors.white : primario,
-          padding: const EdgeInsets.only(top: 8, bottom: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                height: 90,
-                child: ScrollConfiguration(
-                  behavior: const MaterialScrollBehavior().copyWith(
-                    dragDevices: {
-                      PointerDeviceKind.touch,
-                      PointerDeviceKind.mouse,
-                      PointerDeviceKind.trackpad,
-                      PointerDeviceKind.stylus,
-                      PointerDeviceKind.unknown,
-                    },
-                  ),
-                  child: DatePicker(
-                    DateTime.now().subtract(const Duration(days: 10)),
-                    controller: _dpCtrl,
-                    initialSelectedDate: _selectedDate,
-                    selectionColor: isDesktop ? primario : Colors.white,
-                    selectedTextColor: isDesktop ? Colors.white : primario,
-                    locale: "es_CL",
-                    daysCount: 365 * 2,
-                    onDateChange: (d) {
-                      setState(() => _selectedDate = normalizeDay(d));
-                      _subscribeDayActiveLists();
-                    },
-                    dayTextStyle:
-                        TextStyle(color: isDesktop ? primario : Colors.white),
-                    monthTextStyle:
-                        TextStyle(color: isDesktop ? primario : Colors.white),
-                    dateTextStyle: TextStyle(
-                        color: isDesktop ? primario : Colors.white,
-                        fontSize: 18),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 20, 12, 4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDesktop
-                        ? primario.withOpacity(0.7)
-                        : Colors.white
-                            .withOpacity(0.2), // Color de fondo para la barra
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  child: TextField(
-                    controller: _search,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                    decoration: const InputDecoration(
-                      hintText: 'Buscar por nombre o apellido...',
-                      hintStyle: TextStyle(color: Colors.white70),
-                      border: InputBorder.none,
-                      icon: Icon(CupertinoIcons.search, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 8),
-                    Icon(CupertinoIcons.list_bullet_below_rectangle,
-                        color: isDesktop ? primario : Colors.white, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(child: _groupDropdown()),
-                    StreamBuilder<List<Map<String, dynamic>>>(
-                      stream: AttendanceService.listenPresents(
-                          _selectedDate, _group),
-                      builder: (context, snap) {
-                        return PopupMenuButton<String>(
-                          tooltip: 'Exportar',
-                          icon: Icon(CupertinoIcons.arrow_down_doc,
-                              color: isDesktop ? primario : Colors.white),
-                          onSelected: (v) async {
-                            final data = snap.data ?? const [];
-                            if (data.isEmpty) return;
-                            if (v == 'download') {
-                              await _exportPdf(data, mode: 'download');
-                            } else {
-                              await _exportPdf(data, mode: 'share');
-                            }
-                          },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                                value: 'download',
-                                child: Text('Descargar PDF')),
-                            PopupMenuItem(
-                                value: 'share', child: Text('Compartir PDF')),
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
+  // Extraemos los controles que antes estaban en el AppBar
+  Widget _buildControls(bool isDesktop) {
+    final searchBox = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F7FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blueGrey.shade100),
+      ),
+      child: TextField(
+        controller: _search,
+        style: const TextStyle(color: Colors.black87, fontSize: 16),
+        decoration: InputDecoration(
+          hintText: 'Buscar por nombre o apellido...',
+          hintStyle: TextStyle(color: Colors.grey.shade500),
+          border: InputBorder.none,
+          icon: Icon(CupertinoIcons.search, color: Colors.grey.shade500),
+        ),
+      ),
+    );
+
+    final groupBox = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4F7FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blueGrey.shade100),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            CupertinoIcons.list_bullet_below_rectangle,
+            color: primario,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          _groupDropdown(),
+        ],
+      ),
+    );
+
+    final exportButton = StreamBuilder<List<Map<String, dynamic>>>(
+      stream: AttendanceService.listenPresents(_selectedDate, _group),
+      builder: (context, snap) {
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F7FA),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blueGrey.shade100),
+          ),
+          child: PopupMenuButton<String>(
+            tooltip: 'Exportar',
+            icon: Icon(CupertinoIcons.arrow_down_doc, color: primario),
+            onSelected: (v) async {
+              final data = snap.data ?? const [];
+              if (data.isEmpty) return;
+              if (v == 'download') {
+                await _exportPdf(data, mode: 'download');
+              } else {
+                await _exportPdf(data, mode: 'share');
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'download', child: Text('Descargar PDF')),
+              PopupMenuItem(value: 'share', child: Text('Compartir PDF')),
             ],
           ),
+        );
+      },
+    );
+
+    return Container(
+      color: const Color(0xFFF0F2F5),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.blueGrey.shade50),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
-        backgroundColor: primario,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_search.text.isNotEmpty)
-              SizedBox(
-                height: _suggestionsHeight(context),
-                child: DecoratedBox(
-                  decoration:
-                      BoxDecoration(color: isDesktop ? Colors.white : primario),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: ListView.separated(
-                        padding: EdgeInsets.zero,
-                        physics: _filtered.length <= 8
-                            ? const NeverScrollableScrollPhysics()
-                            : const ClampingScrollPhysics(),
-                        itemCount: _filtered.length,
-                        separatorBuilder: (_, __) => const Divider(
-                            height: 1,
-                            thickness: 0.2,
-                            color: Colors.white24,
-                            indent: 12,
-                            endIndent: 12),
-                        itemBuilder: (_, i) {
-                          final w = _filtered[i];
-                          return ListTile(
-                            onTap: () async {
-                              await _add(w);
-                            },
-                            hoverColor: isDesktop
-                                ? primario.withOpacity(0.08)
-                                : Colors.white.withOpacity(0.08),
-                            textColor: isDesktop ? primario : Colors.white,
-                            dense: true,
-                            visualDensity: const VisualDensity(
-                                horizontal: -2, vertical: -2),
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 12),
-                            title: Text(
-                              '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: false,
-                            ),
-                            subtitle: Text(
-                              w.rut.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              softWrap: false,
-                            ),
-                            trailing: IconButton(
-                              tooltip: 'Agregar a asistencia',
-                              onPressed: () async {
-                                await _add(w);
-                                _search.clear();
-                                if (mounted) setState(() {});
-                              },
-                              icon: Icon(Icons.add_outlined,
-                                  color: isDesktop ? primario : Colors.white),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+            SizedBox(
+              height: 90,
+              child: ScrollConfiguration(
+                behavior: const MaterialScrollBehavior().copyWith(
+                  dragDevices: {
+                    PointerDeviceKind.touch,
+                    PointerDeviceKind.mouse,
+                    PointerDeviceKind.trackpad,
+                    PointerDeviceKind.stylus,
+                    PointerDeviceKind.unknown,
+                  },
+                ),
+                child: DatePicker(
+                  DateTime.now().subtract(const Duration(days: 10)),
+                  controller: _dpCtrl,
+                  initialSelectedDate: _selectedDate,
+                  selectionColor: primario,
+                  selectedTextColor: Colors.white,
+                  locale: "es_CL",
+                  daysCount: 365 * 2,
+                  onDateChange: (d) {
+                    setState(() => _selectedDate = normalizeDay(d));
+                    _subscribeDayActiveLists();
+                  },
+                  dayTextStyle: TextStyle(color: Colors.blueGrey.shade700),
+                  monthTextStyle: TextStyle(color: Colors.blueGrey.shade700),
+                  dateTextStyle:
+                      TextStyle(color: Colors.blueGrey.shade900, fontSize: 18),
                 ),
               ),
-            StreamBuilder<List<Map<String, dynamic>>>(
-              stream: AttendanceService.listenPresents(_selectedDate, _group),
-              builder: (context, snap) {
-                if (snap.hasError) {
-                  return const Center(child: Text('Error cargando asistencia'));
-                }
-                if (!snap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final entries = snap.data!;
-                if (entries.isEmpty) {
-                  return const Center(
-                      child: Text('Aún no hay asistentes para esta lista.'));
-                }
-                entries
-                    .sort((a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)));
+            ),
+            const SizedBox(height: 12),
+            if (isDesktop)
+              Row(
+                children: [
+                  Expanded(child: searchBox),
+                  const SizedBox(width: 12),
+                  groupBox,
+                  const SizedBox(width: 8),
+                  exportButton,
+                ],
+              ),
+            if (!isDesktop)
+              Column(
+                children: [
+                  searchBox,
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: groupBox),
+                      const SizedBox(width: 8),
+                      exportButton,
+                    ],
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                return Material(
-                  color: Colors.white,
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: entries.length,
-                    separatorBuilder: (_, __) => Divider(
-                        height: 1,
-                        indent: 20,
-                        endIndent: 20,
-                        color: primario.withOpacity(0.2),
-                        thickness: 0.2),
-                    itemBuilder: (_, i) {
-                      final e = entries[i];
-                      final name = _displayNameFor(e).toUpperCase();
-                      final rut = (e['rut'] ?? '').toString().toUpperCase();
-                      final lst = (e['list'] ?? '').toString().toUpperCase();
-                      return ListTile(
-                        onTap: () {},
-                        hoverColor: primario.withOpacity(0.06),
-                        dense: true,
-                        visualDensity:
-                            const VisualDensity(horizontal: -2, vertical: -2),
-                        minLeadingWidth: 28,
-                        isThreeLine: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12),
-                        leading: CircleAvatar(child: Text('${i + 1}')),
-                        title: Text(name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false),
-                        subtitle: Text(
-                            _group == 'GENERAL' ? '$rut · $lst' : rut,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false),
-                        trailing: IconButton(
-                          tooltip: 'Quitar',
-                          onPressed: () async {
-                            final ok = await _confirmRemoveSheet(name);
-                            if (ok) {
-                              await _remove((e['workerId'] ?? '').toString());
-                            }
+  // ignore: unused_element
+  Widget _buildLegacyLayout(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width >= 800;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F2F5),
+      body: Column(
+        children: [
+          const PageHeader(
+            title: 'Asistencia',
+            subtitle: 'Registro y control diario de personal',
+            icon: CupertinoIcons.calendar_today,
+          ),
+          _buildControls(isDesktop),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  if (_search.text.isNotEmpty)
+                    SizedBox(
+                      height: _suggestionsHeight(context),
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                            color: isDesktop ? Colors.white : primario),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              physics: _filtered.length <= 8
+                                  ? const NeverScrollableScrollPhysics()
+                                  : const ClampingScrollPhysics(),
+                              itemCount: _filtered.length,
+                              separatorBuilder: (_, __) => const Divider(
+                                  height: 1,
+                                  thickness: 0.2,
+                                  color: Colors.white24,
+                                  indent: 12,
+                                  endIndent: 12),
+                              itemBuilder: (_, i) {
+                                final w = _filtered[i];
+                                return ListTile(
+                                  onTap: () async {
+                                    await _add(w);
+                                  },
+                                  hoverColor: isDesktop
+                                      ? primario.withOpacity(0.08)
+                                      : Colors.white.withOpacity(0.08),
+                                  textColor:
+                                      isDesktop ? primario : Colors.white,
+                                  dense: true,
+                                  visualDensity: const VisualDensity(
+                                      horizontal: -2, vertical: -2),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  title: Text(
+                                    '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
+                                  subtitle: Text(
+                                    w.rut.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
+                                  trailing: IconButton(
+                                    tooltip: 'Agregar a asistencia',
+                                    onPressed: () async {
+                                      await _add(w);
+                                      _search.clear();
+                                      if (mounted) setState(() {});
+                                    },
+                                    icon: Icon(Icons.add_outlined,
+                                        color: isDesktop
+                                            ? primario
+                                            : Colors.white),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  StreamBuilder<List<Map<String, dynamic>>>(
+                    stream:
+                        AttendanceService.listenPresents(_selectedDate, _group),
+                    builder: (context, snap) {
+                      if (snap.hasError) {
+                        return const Center(
+                            child: Text('Error cargando asistencia'));
+                      }
+                      if (!snap.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final entries = snap.data!;
+                      if (entries.isEmpty) {
+                        return const Center(
+                            child:
+                                Text('Aún no hay asistentes para esta lista.'));
+                      }
+                      entries.sort(
+                          (a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)));
+
+                      return Material(
+                        color: Colors.white,
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: entries.length,
+                          separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              indent: 20,
+                              endIndent: 20,
+                              color: primario.withOpacity(0.2),
+                              thickness: 0.2),
+                          itemBuilder: (_, i) {
+                            final e = entries[i];
+                            final name = _displayNameFor(e).toUpperCase();
+                            final rut =
+                                (e['rut'] ?? '').toString().toUpperCase();
+                            final lst =
+                                (e['list'] ?? '').toString().toUpperCase();
+                            return ListTile(
+                              onTap: () {},
+                              hoverColor: primario.withOpacity(0.06),
+                              dense: true,
+                              visualDensity: const VisualDensity(
+                                  horizontal: -2, vertical: -2),
+                              minLeadingWidth: 28,
+                              isThreeLine: true,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
+                              leading: CircleAvatar(child: Text('${i + 1}')),
+                              title: Text(name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false),
+                              subtitle: Text(
+                                  _group == 'GENERAL' ? '$rut · $lst' : rut,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false),
+                              trailing: IconButton(
+                                tooltip: 'Quitar',
+                                onPressed: () async {
+                                  final ok = await _confirmRemoveSheet(name);
+                                  if (ok) {
+                                    await _remove(
+                                        (e['workerId'] ?? '').toString());
+                                  }
+                                },
+                                icon:
+                                    Icon(Icons.delete_outline, color: primario),
+                              ),
+                            );
                           },
-                          icon: Icon(Icons.delete_outline, color: primario),
                         ),
                       );
                     },
                   ),
-                );
-              },
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F2F5),
+      body: Column(
+        children: [
+          const PageHeader(
+            title: 'Asistencia',
+            subtitle: 'Registro y control diario de personal',
+            icon: CupertinoIcons.calendar_today,
+          ),
+          _buildControls(isDesktop),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.blueGrey.shade50),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      if (_search.text.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F7FA),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.blueGrey.shade100),
+                          ),
+                          child: SizedBox(
+                            height: _suggestionsHeight(context),
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              physics: _filtered.length <= 8
+                                  ? const NeverScrollableScrollPhysics()
+                                  : const ClampingScrollPhysics(),
+                              itemCount: _filtered.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                thickness: 0.2,
+                                color: Colors.blueGrey.shade100,
+                                indent: 12,
+                                endIndent: 12,
+                              ),
+                              itemBuilder: (_, i) {
+                                final w = _filtered[i];
+                                return ListTile(
+                                  onTap: () async => _add(w),
+                                  hoverColor: primario.withOpacity(0.08),
+                                  textColor: Colors.blueGrey.shade800,
+                                  dense: true,
+                                  visualDensity: const VisualDensity(
+                                      horizontal: -2, vertical: -2),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  title: Text(
+                                    '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
+                                  subtitle: Text(
+                                    w.rut.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
+                                  trailing: IconButton(
+                                    tooltip: 'Agregar a asistencia',
+                                    onPressed: () async {
+                                      await _add(w);
+                                      _search.clear();
+                                      if (mounted) setState(() {});
+                                    },
+                                    icon: Icon(
+                                      Icons.add_outlined,
+                                      color: primario,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: AttendanceService.listenPresents(
+                            _selectedDate, _group),
+                        builder: (context, snap) {
+                          if (snap.hasError) {
+                            return const SizedBox(
+                              height: 200,
+                              child: Center(
+                                child: Text('Error cargando asistencia'),
+                              ),
+                            );
+                          }
+                          if (!snap.hasData) {
+                            return const SizedBox(
+                              height: 220,
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final entries = snap.data!;
+                          if (entries.isEmpty) {
+                            return SizedBox(
+                              height: 220,
+                              child: Center(
+                                child: Text(
+                                  'Aun no hay asistentes para esta lista.',
+                                  style: TextStyle(
+                                    color: Colors.blueGrey.shade500,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          entries.sort(
+                            (a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)),
+                          );
+
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: entries.length,
+                            separatorBuilder: (_, __) => Divider(
+                              height: 1,
+                              indent: 20,
+                              endIndent: 20,
+                              color: primario.withOpacity(0.16),
+                              thickness: 0.2,
+                            ),
+                            itemBuilder: (_, i) {
+                              final e = entries[i];
+                              final name = _displayNameFor(e).toUpperCase();
+                              final rut =
+                                  (e['rut'] ?? '').toString().toUpperCase();
+                              final lst =
+                                  (e['list'] ?? '').toString().toUpperCase();
+                              return ListTile(
+                                hoverColor: primario.withOpacity(0.05),
+                                dense: true,
+                                visualDensity: const VisualDensity(
+                                    horizontal: -2, vertical: -2),
+                                minLeadingWidth: 28,
+                                isThreeLine: true,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                leading: CircleAvatar(
+                                  backgroundColor: primario.withOpacity(0.12),
+                                  foregroundColor: primario,
+                                  child: Text('${i + 1}'),
+                                ),
+                                title: Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  _group == 'GENERAL' ? '$rut · $lst' : rut,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                  style: TextStyle(
+                                    color: Colors.blueGrey.shade600,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  tooltip: 'Quitar',
+                                  onPressed: () async {
+                                    final ok = await _confirmRemoveSheet(name);
+                                    if (ok) {
+                                      await _remove(
+                                          (e['workerId'] ?? '').toString());
+                                    }
+                                  },
+                                  icon: Icon(Icons.delete_outline,
+                                      color: primario),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttendanceSheetHeader extends StatelessWidget {
+  const _AttendanceSheetHeader({
+    required this.title,
+    required this.icon,
+    this.danger = false,
+  });
+
+  final String title;
+  final IconData icon;
+  final bool danger;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        gradient: LinearGradient(
+          colors: danger
+              ? [Colors.red.shade700, Colors.red.shade500]
+              : [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+        child: Column(
+          children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.28),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AttendanceHint extends StatelessWidget {
+  const _AttendanceHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: primario.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: primario.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.tips_and_updates_outlined,
+              color: primario,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: Colors.blueGrey.shade600,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

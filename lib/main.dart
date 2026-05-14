@@ -70,6 +70,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       useInheritedMediaQuery: true,
       title: 'CONTROL DE CONTRATOS',
+      themeMode: ThemeMode.light,
       theme: ThemeData(
         useMaterial3: true,
         // Alineamos todo con tu primario blueGrey[700] (#455A64)
@@ -92,7 +93,43 @@ class _MyAppState extends State<MyApp> {
           centerTitle: true,
           systemOverlayStyle: overlay, // asegura contraste correcto bajo AppBar
         ),
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFFEFF4F8),
+        cardTheme: CardThemeData(
+          color: Colors.white.withOpacity(0.68),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: Colors.white.withOpacity(0.9)),
+          ),
+        ),
+        dialogTheme: DialogThemeData(
+          backgroundColor: Colors.white.withOpacity(0.78),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+            side: BorderSide(color: Colors.white.withOpacity(0.92)),
+          ),
+        ),
+        bottomSheetTheme: BottomSheetThemeData(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+        ),
+        chipTheme: ChipThemeData(
+          backgroundColor: Colors.white.withOpacity(0.62),
+          side: BorderSide(color: Colors.white.withOpacity(0.9)),
+          labelStyle: TextStyle(
+            color: Colors.blueGrey.shade800,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
         snackBarTheme: SnackBarThemeData(
           backgroundColor: primario,
           contentTextStyle: const TextStyle(color: Colors.white),
