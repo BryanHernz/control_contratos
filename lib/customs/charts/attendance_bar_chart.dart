@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../app_colors.dart';
 import '../../services/attendance_service.dart';
 
 class AttendanceBarChart extends StatelessWidget {
@@ -118,9 +119,9 @@ class AttendanceBarChart extends StatelessWidget {
                                   format.substring(
                                       0, 1), // "L" instead of "LUN"
                                   style: const TextStyle(
-                                      color: Colors.black54,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12),
+                                      color: AppColors.textBody,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13),
                                 ),
                               );
                             }
@@ -138,7 +139,9 @@ class AttendanceBarChart extends StatelessWidget {
                             return Text(
                               value.toInt().toString(),
                               style: const TextStyle(
-                                  color: Colors.black38, fontSize: 11),
+                                  color: AppColors.textBody,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5),
                             );
                           },
                         ),
@@ -165,19 +168,14 @@ class AttendanceBarChart extends StatelessWidget {
                         x: i,
                         barRods: [
                           BarChartRodData(
-                             toY: entries[i].value.toDouble(),
-                             gradient: const LinearGradient(
-                               colors: [
-                                 Color(0xFF5C6BC0),
-                                 Color(0xFF9FA8DA),
-                               ],
-                               begin: Alignment.topCenter,
-                               end: Alignment.bottomCenter,
-                             ),
-                             width: 18,
-                             borderRadius: const BorderRadius.vertical(
-                                 top: Radius.circular(6)),
-                           ),
+                            toY: entries[i].value.toDouble(),
+                            // Color plano: el degradado hacia el claro desdibujaba
+                            // la base de la barra contra el fondo.
+                            color: const Color(0xFF5C6BC0),
+                            width: 18,
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(6)),
+                          ),
                         ],
                       );
                     }),
@@ -194,11 +192,7 @@ class AttendanceBarChart extends StatelessWidget {
   Widget _buildCard({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
-      ),
+      decoration: appCardDecoration(),
       child: child,
     );
   }

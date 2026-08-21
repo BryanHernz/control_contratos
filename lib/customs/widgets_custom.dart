@@ -5,6 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'app_colors.dart';
 import 'constants_values.dart';
 
 // Definición de la clase que reemplaza a ThousandsFormatter
@@ -78,9 +79,10 @@ class InputTextField extends StatelessWidget {
       child: TextFormField(
         keyboardType: teclado,
         style: const TextStyle(
-          color: Colors.black54,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
+          // Lo que el usuario escribe tiene que ser lo mas legible del campo.
+          color: AppColors.textStrong,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
         ),
         inputFormatters: [
           if (formater != null) ...[formater!],
@@ -124,26 +126,28 @@ class InputTextField extends StatelessWidget {
             borderSide: BorderSide(color: primario),
             borderRadius: BorderRadius.circular(14),
           ),
+          // El borde era blanco al 90% sobre fondo blanco: el campo no se veia
+          // hasta hacerle foco. Queda un borde real y gris.
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.white.withOpacity(0.9)),
+            borderSide: const BorderSide(color: AppColors.border),
             borderRadius: BorderRadius.circular(14),
           ),
           focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: primario.withOpacity(0.72)),
+            borderSide: BorderSide(color: primario, width: 1.6),
             borderRadius: BorderRadius.circular(14),
           ),
           labelText: hint,
           labelStyle: const TextStyle(
-            color: Colors.black45,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
+            color: AppColors.textMuted,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
           ),
           floatingLabelStyle: TextStyle(
-            color: Colors.blueGrey.shade600,
+            color: primario,
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w700,
           ),
-          fillColor: Colors.white.withOpacity(0.62),
+          fillColor: Colors.white,
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           filled: true,
@@ -330,9 +334,7 @@ class CustomButton extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: isPrimary
-                      ? Colors.transparent
-                      : Colors.white.withOpacity(0.92),
+                  color: isPrimary ? Colors.transparent : AppColors.border,
                 ),
                 boxShadow: isPrimary
                     ? [
@@ -397,16 +399,16 @@ class GlassPanel extends StatelessWidget {
           width: double.infinity,
           padding: padding,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.78),
-                Colors.white.withOpacity(0.58),
+                Colors.white,
+                Colors.white,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: borderRadius,
-            border: Border.all(color: Colors.white.withOpacity(0.92)),
+            border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
                 color: Colors.blueGrey.shade900.withOpacity(0.08),

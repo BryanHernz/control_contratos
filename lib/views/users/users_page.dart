@@ -7,6 +7,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../customs/widgets/page_header.dart';
 import '../../customs/widgets_custom.dart';
@@ -33,13 +35,6 @@ class _UsersPageState extends State<UsersPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  double _sheetMaxWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 1100) return 960;
-    if (width > 820) return 840;
-    return width * 0.96;
   }
 
   String _displayName(Map<String, dynamic> data) {
@@ -78,89 +73,13 @@ class _UsersPageState extends State<UsersPage> {
     return '--';
   }
 
-  Future<void> _openStyledSheet({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Widget child,
-    String? hint,
-    bool danger = false,
-    double? maxWidth,
-  }) async {
-    final media = MediaQuery.of(context);
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxWidth ?? _sheetMaxWidth(context),
-                maxHeight: media.size.height * 0.94,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _UsersSheetHeader(title: title, icon: icon, danger: danger),
-                    if (hint != null && hint.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border:
-                                Border.all(color: primario.withOpacity(0.14)),
-                          ),
-                          child: Text(
-                            hint,
-                            style: TextStyle(
-                              color: Colors.blueGrey.shade600,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Flexible(child: child),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _openCreateUserSheet() {
-    _openStyledSheet(
+    showAppModal(
       context: context,
       title: 'Nuevo usuario',
       icon: Icons.person_add_alt_1_rounded,
       hint:
           'Crea un usuario con correo y contrasena y define sus accesos por vista y funcion.',
-      maxWidth: MediaQuery.of(context).size.width > 980
-          ? 980
-          : _sheetMaxWidth(context),
       child: const UserEditorSheet(),
     );
   }
@@ -169,15 +88,12 @@ class _UsersPageState extends State<UsersPage> {
     String userId,
     Map<String, dynamic> userData,
   ) {
-    _openStyledSheet(
+    showAppModal(
       context: context,
       title: 'Editar usuario',
       icon: Icons.edit_rounded,
       hint:
           'Actualiza datos del perfil y controla a que vistas o funciones puede acceder.',
-      maxWidth: MediaQuery.of(context).size.width > 980
-          ? 980
-          : _sheetMaxWidth(context),
       child: UserEditorSheet(
         userId: userId,
         userData: userData,
@@ -220,14 +136,14 @@ class _UsersPageState extends State<UsersPage> {
       return;
     }
 
-    _openStyledSheet(
+    showAppModal(
       context: context,
       title: 'Eliminar ficha de usuario',
       icon: Icons.delete_outline_rounded,
       danger: true,
       hint:
           'Esto elimina solo el documento en Usuarios. No elimina la cuenta de Firebase Auth.',
-      maxWidth: MediaQuery.of(context).size.width > 640 ? 620 : null,
+      maxWidth: 620,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
@@ -321,13 +237,13 @@ class _UsersPageState extends State<UsersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: AppColors.background,
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              const Color(0xFFF4F8FC),
-              const Color(0xFFEAF0F5),
+              Color(0xFFF4F8FC),
+              Color(0xFFEAF0F5),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -417,14 +333,14 @@ class _UsersPageState extends State<UsersPage> {
                                             decoration: InputDecoration(
                                               hintText:
                                                   'Buscar por nombre o correo...',
-                                              hintStyle: TextStyle(
-                                                color: Colors.blueGrey.shade400,
+                                              hintStyle: const TextStyle(
+                                                color: AppColors.textFaint,
                                                 fontSize: 13.5,
                                                 fontWeight: FontWeight.w500,
                                               ),
-                                              prefixIcon: Icon(
+                                              prefixIcon: const Icon(
                                                 Icons.search_rounded,
-                                                color: Colors.blueGrey.shade400,
+                                                color: AppColors.iconMuted,
                                                 size: 20,
                                               ),
                                               suffixIcon: _searchQuery.isEmpty
@@ -504,14 +420,14 @@ class _UsersPageState extends State<UsersPage> {
                                       decoration: InputDecoration(
                                         hintText:
                                             'Buscar por nombre o correo...',
-                                        hintStyle: TextStyle(
-                                          color: Colors.blueGrey.shade400,
+                                        hintStyle: const TextStyle(
+                                          color: AppColors.textFaint,
                                           fontSize: 13.5,
                                           fontWeight: FontWeight.w500,
                                         ),
-                                        prefixIcon: Icon(
+                                        prefixIcon: const Icon(
                                           Icons.search_rounded,
-                                          color: Colors.blueGrey.shade400,
+                                          color: AppColors.iconMuted,
                                           size: 20,
                                         ),
                                         suffixIcon: _searchQuery.isEmpty
@@ -522,17 +438,15 @@ class _UsersPageState extends State<UsersPage> {
                                                   setState(
                                                       () => _searchQuery = '');
                                                 },
-                                                icon: Icon(
+                                                icon: const Icon(
                                                   Icons.close_rounded,
-                                                  color:
-                                                      Colors.blueGrey.shade500,
+                                                  color: AppColors.iconMuted,
                                                   size: 19,
                                                 ),
                                                 tooltip: 'Limpiar',
                                               ),
                                         filled: true,
-                                        fillColor:
-                                            Colors.white.withOpacity(0.62),
+                                        fillColor: Colors.white,
                                         contentPadding:
                                             const EdgeInsets.symmetric(
                                                 horizontal: 14, vertical: 13),
@@ -690,16 +604,16 @@ class _GlassPanel extends StatelessWidget {
           width: double.infinity,
           padding: padding,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            gradient: const LinearGradient(
               colors: [
-                Colors.white.withOpacity(0.78),
-                Colors.white.withOpacity(0.58),
+                Colors.white,
+                Colors.white,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: radius,
-            border: Border.all(color: Colors.white.withOpacity(0.92)),
+            border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
                 color: Colors.blueGrey.shade900.withOpacity(0.08),
@@ -747,9 +661,9 @@ class _UsersSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.62),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.9)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -824,9 +738,9 @@ class _UserInfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.58),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.85)),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1074,75 +988,6 @@ class _UserCard extends StatelessWidget {
           color: foreground,
           fontSize: 11.5,
           fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-}
-
-class _UsersSheetHeader extends StatelessWidget {
-  const _UsersSheetHeader({
-    required this.title,
-    required this.icon,
-    this.danger = false,
-  });
-
-  final String title;
-  final IconData icon;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        gradient: LinearGradient(
-          colors: danger
-              ? [Colors.red.shade700, Colors.red.shade500]
-              : [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-        child: Column(
-          children: [
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.28),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );

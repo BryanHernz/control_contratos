@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../app_colors.dart';
 
 class ContractsLineChart extends StatelessWidget {
   final List<Map<String, dynamic>> workers;
@@ -123,9 +124,9 @@ class ContractsLineChart extends StatelessWidget {
                           child: Text(
                             label.toUpperCase(),
                             style: const TextStyle(
-                                color: Colors.black54,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11),
+                                color: AppColors.textBody,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12.5),
                           ),
                         );
                       },
@@ -142,7 +143,9 @@ class ContractsLineChart extends StatelessWidget {
                         return Text(
                           value.toInt().toString(),
                           style: const TextStyle(
-                              color: Colors.black38, fontSize: 11),
+                              color: AppColors.textBody,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12.5),
                         );
                       },
                     ),
@@ -171,16 +174,11 @@ class ContractsLineChart extends StatelessWidget {
                         );
                       },
                     ),
+                    // Relleno parejo en vez de degradado: el desvanecido hacia
+                    // el fondo dejaba el area a medio pintar.
                     belowBarData: BarAreaData(
                       show: true,
-                      gradient: LinearGradient(
-                        colors: [
-                          baseColor.withOpacity(0.35),
-                          baseColor.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
+                      color: baseColor.withOpacity(0.18),
                     ),
                   ),
                 ],
@@ -195,11 +193,7 @@ class ContractsLineChart extends StatelessWidget {
   Widget _buildCard({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
-      ),
+      decoration: appCardDecoration(),
       child: child,
     );
   }

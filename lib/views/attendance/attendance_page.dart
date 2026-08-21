@@ -22,6 +22,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/widgets_custom.dart';
 import '../../customs/widgets/page_header.dart';
 import '../../services/attendance_service.dart';
@@ -117,69 +119,24 @@ class AttendancePageState extends State<AttendancePage> {
     return math.min(needed, halfScreen);
   }
 
-  double _sheetMaxWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 980) return 920;
-    return width * 0.96;
-  }
-
+  /// Envoltura fina sobre [showAppModal] para no repetir el `context` en cada
+  /// llamada de esta pantalla.
   Future<T?> _openAttendanceSheet<T>({
     required String title,
     required IconData icon,
     required Widget child,
     String? hint,
     bool danger = false,
-    double? maxWidth,
-  }) async {
-    final media = MediaQuery.of(context);
-
-    return showModalBottomSheet<T>(
+    double maxWidth = kModalMaxWidth,
+  }) {
+    return showAppModal<T>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxWidth ?? _sheetMaxWidth(context),
-                maxHeight: media.size.height * 0.92,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _AttendanceSheetHeader(
-                      title: title,
-                      icon: icon,
-                      danger: danger,
-                    ),
-                    if (hint != null && hint.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                        child: _AttendanceHint(text: hint),
-                      ),
-                    Flexible(child: child),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      title: title,
+      icon: icon,
+      hint: hint,
+      danger: danger,
+      maxWidth: maxWidth,
+      child: child,
     );
   }
 
@@ -1723,18 +1680,18 @@ class AttendancePageState extends State<AttendancePage> {
     final searchBox = Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7FA),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blueGrey.shade100),
       ),
       child: TextField(
         controller: _search,
         style: const TextStyle(color: Colors.black87, fontSize: 16),
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           hintText: 'Buscar por nombre o apellido...',
-          hintStyle: TextStyle(color: Colors.grey.shade500),
+          hintStyle: TextStyle(color: AppColors.textFaint),
           border: InputBorder.none,
-          icon: Icon(CupertinoIcons.search, color: Colors.grey.shade500),
+          icon: Icon(CupertinoIcons.search, color: AppColors.iconMuted),
         ),
       ),
     );
@@ -1742,7 +1699,7 @@ class AttendancePageState extends State<AttendancePage> {
     final groupBox = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F7FA),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blueGrey.shade100),
       ),
@@ -1765,7 +1722,7 @@ class AttendancePageState extends State<AttendancePage> {
       builder: (context, snap) {
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFFF4F7FA),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.blueGrey.shade100),
           ),
@@ -1791,7 +1748,7 @@ class AttendancePageState extends State<AttendancePage> {
     );
 
     return Container(
-      color: const Color(0xFFF0F2F5),
+      color: AppColors.background,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Container(
         width: double.infinity,
@@ -1877,13 +1834,18 @@ class AttendancePageState extends State<AttendancePage> {
   Widget _buildLegacyLayout(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
-          const PageHeader(
+          PageHeader(
             title: 'Asistencia',
             subtitle: 'Registro y control diario de personal',
             icon: CupertinoIcons.calendar_today,
+            rightWidget: IconButton(
+              icon: const Icon(CupertinoIcons.doc_chart, color: Colors.white),
+              tooltip: 'Exportar Reporte Mensual (PDF)',
+              onPressed: () => exportMonthlyAttendanceToPDF(),
+            ),
           ),
           _buildControls(isDesktop),
           Expanded(
@@ -2049,13 +2011,18 @@ class AttendancePageState extends State<AttendancePage> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: AppColors.background,
       body: Column(
         children: [
-          const PageHeader(
+          PageHeader(
             title: 'Asistencia',
             subtitle: 'Registro y control diario de personal',
             icon: CupertinoIcons.calendar_today,
+            rightWidget: IconButton(
+              icon: const Icon(CupertinoIcons.doc_chart, color: Colors.white),
+              tooltip: 'Exportar Reporte Mensual (PDF)',
+              onPressed: () => exportMonthlyAttendanceToPDF(),
+            ),
           ),
           _buildControls(isDesktop),
           Expanded(
@@ -2083,7 +2050,7 @@ class AttendancePageState extends State<AttendancePage> {
                           width: double.infinity,
                           margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF4F7FA),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: Colors.blueGrey.shade100),
                           ),
@@ -2162,13 +2129,13 @@ class AttendancePageState extends State<AttendancePage> {
                           }
                           final entries = snap.data!;
                           if (entries.isEmpty) {
-                            return SizedBox(
+                            return const SizedBox(
                               height: 220,
                               child: Center(
                                 child: Text(
                                   'Aun no hay asistentes para esta lista.',
                                   style: TextStyle(
-                                    color: Colors.blueGrey.shade500,
+                                    color: AppColors.textMuted,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -2250,122 +2217,6 @@ class AttendancePageState extends State<AttendancePage> {
                     ],
                   ),
                 ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AttendanceSheetHeader extends StatelessWidget {
-  const _AttendanceSheetHeader({
-    required this.title,
-    required this.icon,
-    this.danger = false,
-  });
-
-  final String title;
-  final IconData icon;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        gradient: LinearGradient(
-          colors: danger
-              ? [Colors.red.shade700, Colors.red.shade500]
-              : [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-        child: Column(
-          children: [
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.28),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AttendanceHint extends StatelessWidget {
-  const _AttendanceHint({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: primario.withOpacity(0.12)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: primario.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              Icons.tips_and_updates_outlined,
-              color: primario,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                color: Colors.blueGrey.shade600,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
               ),
             ),
           ),

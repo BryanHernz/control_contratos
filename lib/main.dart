@@ -8,7 +8,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 import 'auth/auth_pages.dart';
-import 'customs/constants_values.dart'; // aquí tienes `primario = Colors.blueGrey[700]!`
+import 'customs/app_colors.dart';
+import 'customs/constants_values.dart';
 import 'firebase_options.dart';
 import 'services/update_service.dart';
 
@@ -93,34 +94,34 @@ class _MyAppState extends State<MyApp> {
           centerTitle: true,
           systemOverlayStyle: overlay, // asegura contraste correcto bajo AppBar
         ),
-        scaffoldBackgroundColor: const Color(0xFFEFF4F8),
+        scaffoldBackgroundColor: AppColors.background,
+        // Las superficies salen de AppColors.surface (hueso), no de blanco
+        // puro, y sin contorno: la separacion la dan el fondo y la sombra.
         cardTheme: CardThemeData(
-          color: Colors.white.withOpacity(0.68),
+          color: AppColors.surface,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: BorderSide(color: Colors.white.withOpacity(0.9)),
+            borderRadius: BorderRadius.circular(24),
           ),
         ),
         dialogTheme: DialogThemeData(
-          backgroundColor: Colors.white.withOpacity(0.78),
+          backgroundColor: AppColors.surface,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-            side: BorderSide(color: Colors.white.withOpacity(0.92)),
+            borderRadius: BorderRadius.circular(24),
           ),
         ),
-        bottomSheetTheme: BottomSheetThemeData(
-          backgroundColor: Colors.transparent,
+        bottomSheetTheme: const BottomSheetThemeData(
+          backgroundColor: AppColors.surface,
           surfaceTintColor: Colors.transparent,
           elevation: 0,
-          shape: const RoundedRectangleBorder(
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
         ),
         chipTheme: ChipThemeData(
-          backgroundColor: Colors.white.withOpacity(0.62),
-          side: BorderSide(color: Colors.white.withOpacity(0.9)),
+          backgroundColor: Colors.white,
+          side: BorderSide(color: Colors.black.withOpacity(0.05)),
           labelStyle: TextStyle(
             color: Colors.blueGrey.shade800,
             fontWeight: FontWeight.w700,

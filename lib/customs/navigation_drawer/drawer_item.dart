@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_colors.dart';
 import '../constants_values.dart';
 
 class DrawerItem extends StatelessWidget {
@@ -37,11 +38,11 @@ class DrawerItem extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              color: selected
-                  ? Colors.white.withOpacity(0.65)
-                  : Colors.transparent,
+              // Tinte del primario, no blanco: la barra ya es blanca, asi que
+              // un seleccionado blanco sobre blanco no marcaba nada.
+              color: selected ? primario.withOpacity(0.12) : Colors.transparent,
               border: selected
-                  ? Border.all(color: Colors.white.withOpacity(0.9))
+                  ? Border.all(color: primario.withOpacity(0.28))
                   : null,
             ),
             child: Row(
@@ -63,7 +64,7 @@ class DrawerItem extends StatelessWidget {
                 Icon(
                   icon,
                   size: 22,
-                  color: selected ? primario : Colors.black54,
+                  color: selected ? primario : AppColors.iconMuted,
                 ),
                 ClipRect(
                   child: AnimatedAlign(
@@ -75,10 +76,12 @@ class DrawerItem extends StatelessWidget {
                       child: Text(
                         title,
                         style: TextStyle(
-                          fontSize: 15,
+                          // El item sin seleccionar iba en w500: con Rajdhani
+                          // el menu entero se leia como texto deshabilitado.
+                          fontSize: 15.5,
                           fontWeight:
-                              selected ? FontWeight.w700 : FontWeight.w500,
-                          color: selected ? primario : Colors.black87,
+                              selected ? FontWeight.w800 : FontWeight.w700,
+                          color: selected ? primario : AppColors.textBody,
                         ),
                         softWrap: false,
                         overflow: TextOverflow.visible,

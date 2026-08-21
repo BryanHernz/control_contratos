@@ -194,7 +194,7 @@ class _LoginPageState extends State<LoginPage> {
             colors: [
               Colors.blueGrey.shade900,
               Colors.blueGrey.shade700,
-              const Color(0xFFF4F7FA),
+              Colors.white,
             ],
             stops: const [0.0, 0.42, 1.0],
           ),
@@ -208,7 +208,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF4F7FA),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(color: Colors.white.withOpacity(0.85)),
                     boxShadow: [

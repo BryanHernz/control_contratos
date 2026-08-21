@@ -10,6 +10,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:responsive_grid_list/responsive_grid_list.dart';
 import 'package:rut_utils/rut_utils.dart';
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
@@ -42,150 +44,21 @@ class _EditWorkerState extends State<EditWorker> {
 
   final _formKey = GlobalKey<FormState>();
 
+  /// Envoltura fina sobre [showAppModal] para los "crear al vuelo" (labor,
+  /// lugar, comuna...) que se abren desde el formulario.
   Future<void> _openQuickCreateSheet({
     required String title,
     required IconData icon,
     required String hint,
     required Widget child,
-  }) async {
-    final media = MediaQuery.of(context);
-    final maxWidth = media.size.width > 820 ? 820.0 : media.size.width * 0.96;
-
-    await showModalBottomSheet(
+  }) {
+    return showAppModal<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxWidth,
-                maxHeight: media.size.height * 0.9,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(24)),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.blueGrey.shade900,
-                            Colors.blueGrey.shade700,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.28),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child:
-                                      Icon(icon, color: Colors.white, size: 20),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: primario.withOpacity(0.12),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: primario.withOpacity(0.10),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                Icons.tips_and_updates_outlined,
-                                color: primario,
-                                size: 18,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                hint,
-                                style: TextStyle(
-                                  color: Colors.blueGrey.shade600,
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Flexible(child: child),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      title: title,
+      icon: icon,
+      hint: hint,
+      maxWidth: 820,
+      child: child,
     );
   }
 
@@ -202,19 +75,26 @@ class _EditWorkerState extends State<EditWorker> {
         borderSide: BorderSide(color: primario),
         borderRadius: BorderRadius.circular(14),
       ),
+      // Mismo borde visible que InputTextField: antes el desplegable se
+      // distinguia solo por el relleno gris y no parecia un campo.
       enabledBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: Colors.blueGrey.shade100),
+        borderSide: const BorderSide(color: AppColors.border),
         borderRadius: BorderRadius.circular(14),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: primario),
+        borderSide: BorderSide(color: primario, width: 1.6),
         borderRadius: BorderRadius.circular(14),
       ),
       labelText: label,
+      labelStyle: const TextStyle(
+        color: AppColors.textMuted,
+        fontSize: 14.5,
+        fontWeight: FontWeight.w600,
+      ),
       floatingLabelBehavior: FloatingLabelBehavior.always,
       hintText: hintText,
-      hintStyle: _dropdownValueStyle.copyWith(color: Colors.black45),
-      fillColor: const Color(0xFFF2F5F8),
+      hintStyle: _dropdownValueStyle.copyWith(color: AppColors.textFaint),
+      fillColor: Colors.white,
       filled: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     );
@@ -222,18 +102,18 @@ class _EditWorkerState extends State<EditWorker> {
 
   TextStyle get _dropdownValueStyle =>
       Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Colors.black54,
-            fontWeight: FontWeight.w500,
+            color: AppColors.textStrong,
+            fontWeight: FontWeight.w600,
           ) ??
       const TextStyle(
-        color: Colors.black54,
-        fontWeight: FontWeight.w500,
+        color: AppColors.textStrong,
+        fontWeight: FontWeight.w600,
       );
 
-  IconStyleData _dropdownIconStyleData() => IconStyleData(
+  IconStyleData _dropdownIconStyleData() => const IconStyleData(
         icon: Icon(
           Icons.keyboard_arrow_down_rounded,
-          color: Colors.blueGrey.shade500,
+          color: AppColors.iconMuted,
         ),
         iconSize: 22,
       );
@@ -457,12 +337,12 @@ class _EditWorkerState extends State<EditWorker> {
             fontWeight: FontWeight.w700,
           ),
       weekdayLabelTextStyle: captionStyle?.copyWith(
-            color: Colors.blueGrey.shade400,
+            color: AppColors.textMuted,
             fontWeight: FontWeight.w700,
             fontSize: 12,
           ) ??
-          TextStyle(
-            color: Colors.blueGrey.shade400,
+          const TextStyle(
+            color: AppColors.textMuted,
             fontWeight: FontWeight.w700,
             fontSize: 12,
           ),
@@ -674,56 +554,6 @@ class _EditWorkerState extends State<EditWorker> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.edit_rounded,
-                          color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    const Text(
-                      'Editar Trabajador',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
         Flexible(
           flex: 1,
           child: Form(
@@ -958,7 +788,7 @@ class _EditWorkerState extends State<EditWorker> {
                       ),
                       dialogSize: const Size(350, 420),
                       borderRadius: BorderRadius.circular(18),
-                      dialogBackgroundColor: const Color(0xFFF4F7FA),
+                      dialogBackgroundColor: Colors.white,
                       value: [initialDate],
                     );
                     // --------------------------------------------------------
@@ -1363,7 +1193,7 @@ class _EditWorkerState extends State<EditWorker> {
                       ),
                       dialogSize: const Size(350, 420),
                       borderRadius: BorderRadius.circular(18),
-                      dialogBackgroundColor: const Color(0xFFF4F7FA),
+                      dialogBackgroundColor: Colors.white,
                       value: [initialDate],
                     );
 

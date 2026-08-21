@@ -18,16 +18,12 @@ class NavigationDrawerHeader extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: double.infinity,
-      height: isDesktop ? (isExpanded ? 190 : 150) : null,
+      height: isDesktop ? 190 : null,
       padding: EdgeInsets.symmetric(horizontal: isExpanded ? 16 : 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blueGrey.shade900,
-            Colors.blueGrey.shade700,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: Colors.blueGrey.shade900,
+        border: Border(
+          bottom: BorderSide(color: Colors.white.withOpacity(0.26)),
         ),
       ),
       child: Column(

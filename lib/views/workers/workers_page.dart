@@ -8,6 +8,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../models/worker_model.dart';
 import '../../customs/widgets/page_header.dart';
@@ -56,51 +58,20 @@ class WorkersPageState extends State<WorkersPage> {
 
   late Stream<QuerySnapshot> _workersStream;
 
-  double _sheetMaxWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 980) return 920;
-    return width * 0.96;
-  }
+  Future<void> _openNewWorker() => showAppModal(
+        context: context,
+        title: 'Nuevo trabajador',
+        subtitle: 'Ficha de ingreso',
+        icon: Icons.person_add_rounded,
+        child: const NewWorker(),
+      );
 
-  Future<void> _openStyledWorkerSheet(
-    Widget child, {
-    double? maxWidth,
-  }) async {
-    final media = MediaQuery.of(context);
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxWidth ?? _sheetMaxWidth(context),
-                maxHeight: media.size.height * 0.92,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: child,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  /// El detalle trae su propia cabecera (avatar, editar, eliminar), asi que va
+  /// sin `title`: el modal solo lo recorta y lo acota.
+  Future<void> _openWorkerDetails(WorkerModel worker) => showAppModal(
+        context: context,
+        child: WorkerDetails(worker: worker),
+      );
 
   @override
   void initState() {
@@ -355,12 +326,12 @@ class WorkersPageState extends State<WorkersPage> {
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: AppColors.background,
       resizeToAvoidBottomInset: false,
       floatingActionButton: FloatingActionButton(
         heroTag: null,
         tooltip: 'Nuevo Trabajador',
-        onPressed: () => _openStyledWorkerSheet(const NewWorker()),
+        onPressed: () => _openNewWorker(),
         child: const Icon(Icons.person_add_outlined),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
@@ -505,9 +476,9 @@ class WorkersPageState extends State<WorkersPage> {
                               Text(
                                 'Total Trabajadores: ${_displayedWorkers.length}',
                                 style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black54,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textBody,
                                 ),
                               ),
                               IconButton(
@@ -578,18 +549,8 @@ class WorkersPageState extends State<WorkersPage> {
                                           rowPlayers.map((worker) {
                                         return Expanded(
                                           child: GestureDetector(
-                                            onTap: () => _openStyledWorkerSheet(
-                                              WorkerDetails(worker: worker),
-                                              maxWidth: MediaQuery.of(context)
-                                                          .size
-                                                          .width >
-                                                      800
-                                                  ? 900
-                                                  : MediaQuery.of(context)
-                                                          .size
-                                                          .width *
-                                                      0.95,
-                                            ),
+                                            onTap: () =>
+                                                _openWorkerDetails(worker),
                                             child: _WorkerCard(worker: worker),
                                           ),
                                         );
@@ -675,13 +636,13 @@ class WorkersPageState extends State<WorkersPage> {
                                                   child: Text(
                                                     letter,
                                                     style: TextStyle(
-                                                      fontSize: 12,
+                                                      fontSize: 12.5,
                                                       fontWeight: isActive
-                                                          ? FontWeight.bold
-                                                          : FontWeight.w500,
+                                                          ? FontWeight.w800
+                                                          : FontWeight.w700,
                                                       color: isActive
                                                           ? Colors.white
-                                                          : Colors.black54,
+                                                          : AppColors.textMuted,
                                                     ),
                                                   ),
                                                 ),
@@ -731,430 +692,170 @@ class WorkersPageState extends State<WorkersPage> {
 
   // --- MODAL DE FILTROS AVANZADOS ---
   void _showFilterSheet() {
-    // Generamos las opciones únicas del modal con los datos actuales de la base
-    Set<String> allEnterprises = {};
-    Set<String> allLabors = {};
-    Set<String> allCommunes = {};
-    Set<String> allNacionalities = {};
-    Set<String> allAfps = {};
-    Set<String> allPrevisions = {};
+    // Opciones unicas a partir de los datos ya cargados.
+    final allEnterprises = <String>{};
+    final allLabors = <String>{};
+    final allCommunes = <String>{};
+    final allNacionalities = <String>{};
+    final allAfps = <String>{};
+    final allPrevisions = <String>{};
 
-    for (var worker in _allWorkers) {
-      if (worker.place != null && worker.place!.isNotEmpty) {
-        allEnterprises.add(worker.place!);
-      }
-      if (worker.labor != null && worker.labor!.isNotEmpty) {
-        allLabors.add(worker.labor!);
-      }
-      if (worker.commune != null && worker.commune!.isNotEmpty) {
-        allCommunes.add(worker.commune!);
-      }
-      if (worker.nacionality != null && worker.nacionality!.isNotEmpty) {
-        allNacionalities.add(worker.nacionality!);
-      }
-      if (worker.afp != null && worker.afp!.isNotEmpty) {
-        allAfps.add(worker.afp!);
-      }
-      if (worker.prevision != null && worker.prevision!.isNotEmpty) {
-        allPrevisions.add(worker.prevision!);
-      }
+    void addIf(Set<String> target, String? value) {
+      if (value != null && value.isNotEmpty) target.add(value);
     }
 
-    List<String> enterpriseList = ['Todas', ...allEnterprises.toList()..sort()];
-    List<String> laborList = ['Todos', ...allLabors.toList()..sort()];
-    List<String> communeList = ['Todas', ...allCommunes.toList()..sort()];
-    List<String> nacionalityList = [
-      'Todas',
-      ...allNacionalities.toList()..sort()
-    ];
-    List<String> afpList = ['Todas', ...allAfps.toList()..sort()];
-    List<String> previsionList = ['Todas', ...allPrevisions.toList()..sort()];
+    for (final worker in _allWorkers) {
+      addIf(allEnterprises, worker.place);
+      addIf(allLabors, worker.labor);
+      addIf(allCommunes, worker.commune);
+      addIf(allNacionalities, worker.nacionality);
+      addIf(allAfps, worker.afp);
+      addIf(allPrevisions, worker.prevision);
+    }
 
-    showModalBottomSheet(
+    List<String> options(String todos, Set<String> values) =>
+        [todos, ...values.toList()..sort()];
+
+    final enterpriseList = options('Todas', allEnterprises);
+    final laborList = options('Todos', allLabors);
+    final communeList = options('Todas', allCommunes);
+    final nacionalityList = options('Todas', allNacionalities);
+    final afpList = options('Todas', allAfps);
+    final previsionList = options('Todas', allPrevisions);
+
+    void resetAll(StateSetter setModalState) {
+      void apply() {
+        _selectedEnterpriseFilter = 'Todas';
+        _selectedLaborFilter = 'Todos';
+        _selectedCommuneFilter = 'Todas';
+        _selectedNacionalityFilter = 'Todas';
+        _selectedPrevisionFilter = 'Todas';
+        _selectedAfpFilter = 'Todas';
+      }
+
+      setModalState(apply);
+      setState(apply);
+    }
+
+    showAppModal(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width > 800
-            ? 900
-            : MediaQuery.of(context).size.width * 0.95,
-      ),
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Container(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      title: 'Filtros avanzados',
+      subtitle: 'Acota el listado de trabajadores',
+      icon: Icons.tune_rounded,
+      child: StatefulBuilder(
+        builder: (context, setModalState) {
+          Widget filtro(
+            String label,
+            String value,
+            List<String> items,
+            void Function(String) onPick,
+          ) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: AppColors.textBody,
+                  ),
                 ),
-                clipBehavior: Clip.hardEdge,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10.0),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                  ),
+                  value: value,
+                  isExpanded: true,
+                  items: items
+                      .map((v) =>
+                          DropdownMenuItem<String>(value: v, child: Text(v)))
+                      .toList(),
+                  onChanged: (newValue) {
+                    if (newValue == null) return;
+                    setModalState(() => onPick(newValue));
+                    setState(() => onPick(newValue));
+                  },
+                ),
+              ],
+            );
+          }
+
+          return AppModalBody(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // En el modal centrado caben 2-3 columnas; en el telefono, 1.
+                AppModalFieldGrid(
                   children: [
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(24)),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.blueGrey.shade900,
-                            Colors.blueGrey.shade700,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 42,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.28),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.tune_rounded,
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                const Expanded(
-                                  child: Text(
-                                    'Filtros avanzados',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close_rounded,
-                                      color: Colors.white),
-                                  onPressed: () => Navigator.pop(context),
-                                ),
-                              ],
-                            ),
-                          ],
+                    filtro('Empresa / Lugar', _selectedEnterpriseFilter,
+                        enterpriseList, (v) => _selectedEnterpriseFilter = v),
+                    filtro('Labor', _selectedLaborFilter, laborList,
+                        (v) => _selectedLaborFilter = v),
+                    filtro('Comuna', _selectedCommuneFilter, communeList,
+                        (v) => _selectedCommuneFilter = v),
+                    filtro('Nacionalidad', _selectedNacionalityFilter,
+                        nacionalityList, (v) => _selectedNacionalityFilter = v),
+                    filtro('Prevision', _selectedPrevisionFilter, previsionList,
+                        (v) => _selectedPrevisionFilter = v),
+                    filtro('AFP', _selectedAfpFilter, afpList,
+                        (v) => _selectedAfpFilter = v),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          resetAll(setModalState);
+                          Navigator.pop(context);
+                        },
+                        child: Text(
+                          'Limpiar',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: primario,
+                          ),
                         ),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Empresa / Lugar',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 16),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primario,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
-                          const SizedBox(height: 10),
-                          DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
-                            value: _selectedEnterpriseFilter,
-                            isExpanded: true,
-                            items: enterpriseList.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (newValue) {
-                              setModalState(() {
-                                _selectedEnterpriseFilter = newValue!;
-                              });
-                              setState(() {
-                                _selectedEnterpriseFilter = newValue!;
-                              });
-                            },
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text(
+                          'Aplicar Filtros',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Cargo / Especialidad',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 16),
-                          ),
-                          const SizedBox(height: 10),
-                          DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
-                            value: _selectedLaborFilter,
-                            isExpanded: true,
-                            items: laborList.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (newValue) {
-                              setModalState(() {
-                                _selectedLaborFilter = newValue!;
-                              });
-                              setState(() {
-                                _selectedLaborFilter = newValue!;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Comuna',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 16),
-                          ),
-                          const SizedBox(height: 10),
-                          DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
-                            value: _selectedCommuneFilter,
-                            isExpanded: true,
-                            items: communeList.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (newValue) {
-                              setModalState(() {
-                                _selectedCommuneFilter = newValue!;
-                              });
-                              setState(() {
-                                _selectedCommuneFilter = newValue!;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          const Text(
-                            'Nacionalidad',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w600, fontSize: 16),
-                          ),
-                          const SizedBox(height: 10),
-                          DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
-                            value: _selectedNacionalityFilter,
-                            isExpanded: true,
-                            items: nacionalityList.map((String value) {
-                              return DropdownMenuItem<String>(
-                                value: value,
-                                child: Text(value),
-                              );
-                            }).toList(),
-                            onChanged: (newValue) {
-                              setModalState(() {
-                                _selectedNacionalityFilter = newValue!;
-                              });
-                              setState(() {
-                                _selectedNacionalityFilter = newValue!;
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Previsión de Salud',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    DropdownButtonFormField<String>(
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10.0),
-                                        ),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 12),
-                                      ),
-                                      value: _selectedPrevisionFilter,
-                                      isExpanded: true,
-                                      items: previsionList.map((String value) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      }).toList(),
-                                      onChanged: (newValue) {
-                                        setModalState(() {
-                                          _selectedPrevisionFilter = newValue!;
-                                        });
-                                        setState(() {
-                                          _selectedPrevisionFilter = newValue!;
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'AFP',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    DropdownButtonFormField<String>(
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10.0),
-                                        ),
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 12),
-                                      ),
-                                      value: _selectedAfpFilter,
-                                      isExpanded: true,
-                                      items: afpList.map((String value) {
-                                        return DropdownMenuItem<String>(
-                                          value: value,
-                                          child: Text(value),
-                                        );
-                                      }).toList(),
-                                      onChanged: (newValue) {
-                                        setModalState(() {
-                                          _selectedAfpFilter = newValue!;
-                                        });
-                                        setState(() {
-                                          _selectedAfpFilter = newValue!;
-                                        });
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  style: OutlinedButton.styleFrom(
-                                    side: BorderSide(color: primario, width: 2),
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    setModalState(() {
-                                      _selectedEnterpriseFilter = 'Todas';
-                                      _selectedLaborFilter = 'Todos';
-                                      _selectedCommuneFilter = 'Todas';
-                                      _selectedNacionalityFilter = 'Todas';
-                                      _selectedPrevisionFilter = 'Todas';
-                                      _selectedAfpFilter = 'Todas';
-                                    });
-                                    setState(() {
-                                      _selectedEnterpriseFilter = 'Todas';
-                                      _selectedLaborFilter = 'Todos';
-                                      _selectedCommuneFilter = 'Todas';
-                                      _selectedNacionalityFilter = 'Todas';
-                                      _selectedPrevisionFilter = 'Todas';
-                                      _selectedAfpFilter = 'Todas';
-                                    });
-                                    Navigator.pop(context);
-                                  },
-                                  child: Text('Limpiar',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: primario)),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: primario,
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text('Aplicar Filtros',
-                                      style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white)),
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
-            );
-          },
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -1182,17 +883,7 @@ class _WorkerCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.all(5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: primario.withOpacity(0.10),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: appCardDecoration(radius: 14),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: Stack(
@@ -1244,10 +935,10 @@ class _WorkerCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           rut.toUpperCase(),
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -1259,7 +950,10 @@ class _WorkerCard extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: primario.withOpacity(0.08),
+                                    // Al 8% el chip era practicamente
+                                    // invisible; con 14% se lee como chip sin
+                                    // pelear con el nombre.
+                                    color: primario.withOpacity(0.14),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -1267,9 +961,9 @@ class _WorkerCard extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 11.5,
                                       color: primario,
-                                      fontWeight: FontWeight.w600,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),
@@ -1282,7 +976,7 @@ class _WorkerCard extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: Colors.teal.withOpacity(0.08),
+                                    color: Colors.teal.withOpacity(0.14),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -1290,9 +984,9 @@ class _WorkerCard extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.teal.shade700,
-                                      fontWeight: FontWeight.w600,
+                                      fontSize: 11.5,
+                                      color: Colors.teal.shade800,
+                                      fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                 ),

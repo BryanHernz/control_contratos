@@ -51,16 +51,13 @@ class NavigationDrawerCustom extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [
-                  Colors.white.withOpacity(0.78),
-                  Colors.white.withOpacity(0.60),
+                  Colors.white,
+                  Colors.white,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-              ),
-              border: Border(
-                right: BorderSide(color: Colors.white.withOpacity(0.92)),
               ),
               boxShadow: [
                 BoxShadow(
@@ -70,94 +67,123 @@ class NavigationDrawerCustom extends StatelessWidget {
                 ),
               ],
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    children: <Widget>[
-                      NavigationDrawerHeader(
-                        isExpanded: isExpanded,
-                        onToggle: onToggle,
+            child: Column(
+              children: [
+                NavigationDrawerHeader(
+                  isExpanded: isExpanded,
+                  onToggle: onToggle,
+                ),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border(
+                        right:
+                            BorderSide(color: Colors.black.withOpacity(0.05)),
                       ),
-                      const SizedBox(height: 20),
-                      if (showDashboard)
-                        DrawerItem(
-                          title: 'Dashboard',
-                          icon: CupertinoIcons.chart_bar_square,
-                          selected: selectedTab == 0,
-                          isExpanded: isExpanded,
-                          onPressed: () => openTab(0),
-                        ),
-                      if (showWorkers)
-                        DrawerItem(
-                          title: 'Trabajadores',
-                          icon: CupertinoIcons.briefcase,
-                          selected: selectedTab == 1,
-                          isExpanded: isExpanded,
-                          onPressed: () => openTab(1),
-                        ),
-                      if (showAttendance)
-                        DrawerItem(
-                          title: 'Asistencia',
-                          icon: CupertinoIcons.calendar_today,
-                          selected: selectedTab == 2,
-                          isExpanded: isExpanded,
-                          onPressed: () => openTab(2),
-                        ),
-                      if (showUsers)
-                        DrawerItem(
-                          title: 'Usuarios',
-                          icon: CupertinoIcons.person_2,
-                          selected: selectedTab == 3,
-                          isExpanded: isExpanded,
-                          onPressed: () => openTab(3),
-                        ),
-                      if (showSettings)
-                        DrawerItem(
-                          title: 'Ajustes',
-                          icon: CupertinoIcons.settings,
-                          selected: selectedTab == 4,
-                          isExpanded: isExpanded,
-                          onPressed: () => openTab(4),
-                        ),
-                    ],
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight,
+                            ),
+                            child: IntrinsicHeight(
+                              child: Column(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    children: <Widget>[
+                                      const SizedBox(height: 20),
+                                      if (showDashboard)
+                                        DrawerItem(
+                                          title: 'Dashboard',
+                                          icon: CupertinoIcons.chart_bar_square,
+                                          selected: selectedTab == 0,
+                                          isExpanded: isExpanded,
+                                          onPressed: () => openTab(0),
+                                        ),
+                                      if (showWorkers)
+                                        DrawerItem(
+                                          title: 'Trabajadores',
+                                          icon: CupertinoIcons.briefcase,
+                                          selected: selectedTab == 1,
+                                          isExpanded: isExpanded,
+                                          onPressed: () => openTab(1),
+                                        ),
+                                      if (showAttendance)
+                                        DrawerItem(
+                                          title: 'Asistencia',
+                                          icon: CupertinoIcons.calendar_today,
+                                          selected: selectedTab == 2,
+                                          isExpanded: isExpanded,
+                                          onPressed: () => openTab(2),
+                                        ),
+                                      if (showUsers)
+                                        DrawerItem(
+                                          title: 'Usuarios',
+                                          icon: CupertinoIcons.person_2,
+                                          selected: selectedTab == 3,
+                                          isExpanded: isExpanded,
+                                          onPressed: () => openTab(3),
+                                        ),
+                                      if (showSettings)
+                                        DrawerItem(
+                                          title: 'Ajustes',
+                                          icon: CupertinoIcons.settings,
+                                          selected: selectedTab == 4,
+                                          isExpanded: isExpanded,
+                                          onPressed: () => openTab(4),
+                                        ),
+                                    ],
+                                  ),
+                                  Column(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      const SizedBox(height: 70),
+                                      Divider(
+                                        thickness: 0.5,
+                                        color: Colors.blueGrey.shade300
+                                            .withOpacity(0.6),
+                                        indent: 50,
+                                        endIndent: 50,
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 20.0),
+                                        child: DrawerItem(
+                                          title: 'Cerrar Sesion',
+                                          icon: Icons.logout_rounded,
+                                          selected: false,
+                                          isExpanded: isExpanded,
+                                          onPressed: () {
+                                            FirebaseAuth.instance.signOut();
+                                            AnimatedSnackBar.material(
+                                              'Sesion finalizada con exito',
+                                              mobileSnackBarPosition:
+                                                  MobileSnackBarPosition.top,
+                                              desktopSnackBarPosition:
+                                                  DesktopSnackBarPosition
+                                                      .bottomRight,
+                                              type:
+                                                  AnimatedSnackBarType.success,
+                                            ).show(context);
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const SizedBox(height: 70),
-                      Divider(
-                        thickness: 0.5,
-                        color: Colors.blueGrey.shade300.withOpacity(0.6),
-                        indent: 50,
-                        endIndent: 50,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20.0),
-                        child: DrawerItem(
-                          title: 'Cerrar Sesion',
-                          icon: Icons.logout_rounded,
-                          selected: false,
-                          isExpanded: isExpanded,
-                          onPressed: () {
-                            FirebaseAuth.instance.signOut();
-                            AnimatedSnackBar.material(
-                              'Sesion finalizada con exito',
-                              mobileSnackBarPosition:
-                                  MobileSnackBarPosition.top,
-                              desktopSnackBarPosition:
-                                  DesktopSnackBarPosition.bottomRight,
-                              type: AnimatedSnackBarType.success,
-                            ).show(context);
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

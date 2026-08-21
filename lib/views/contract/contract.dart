@@ -9,6 +9,8 @@ import 'package:get/get.dart';
 import 'package:rut_utils/rut_utils.dart';
 import 'package:spelling_number/spelling_number.dart';
 
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../customs/widgets/page_header.dart';
@@ -22,115 +24,32 @@ class ContractPage extends StatefulWidget {
 }
 
 class _ContractPageState extends State<ContractPage> {
-  double _sheetMaxWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 980) return 920;
-    return width * 0.96;
-  }
-
+  /// Envoltura fina sobre [showAppModal]: esta pantalla abre varios modales de
+  /// ajustes y todos comparten forma.
   Future<void> _openStyledSettingsSheet({
     required BuildContext context,
     required String title,
     required IconData icon,
     required Widget child,
     String? hint,
-    double? maxWidth,
+    double maxWidth = kModalMaxWidth,
     bool danger = false,
-  }) async {
-    final media = MediaQuery.of(context);
-
-    await showModalBottomSheet(
+  }) {
+    return showAppModal<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: maxWidth ?? _sheetMaxWidth(context),
-                maxHeight: media.size.height * 0.92,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _SettingsSheetHeader(
-                      title: title,
-                      icon: icon,
-                      danger: danger,
-                    ),
-                    if (hint != null && hint.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: primario.withOpacity(0.14),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: primario.withOpacity(0.10),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  Icons.tips_and_updates_outlined,
-                                  color: primario,
-                                  size: 18,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  hint,
-                                  style: TextStyle(
-                                    color: Colors.blueGrey.shade600,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    Flexible(child: child),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+      title: title,
+      icon: icon,
+      hint: hint,
+      danger: danger,
+      maxWidth: maxWidth,
+      child: child,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F2F5),
+      backgroundColor: AppColors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -416,9 +335,6 @@ class _ContractPageState extends State<ContractPage> {
       icon: Icons.manage_accounts_rounded,
       hint:
           'Gestiona los datos de cada usuario y define su tipo de acceso en el sistema.',
-      maxWidth: MediaQuery.of(context).size.width > 900
-          ? 920
-          : _sheetMaxWidth(context),
       child: _buildUsersManagerContent(context),
     );
   }
@@ -433,9 +349,6 @@ class _ContractPageState extends State<ContractPage> {
       icon: Icons.admin_panel_settings_rounded,
       hint:
           'Crea y organiza los tipos de usuario que podras asignar al administrar cuentas.',
-      maxWidth: MediaQuery.of(context).size.width > 820
-          ? 860
-          : _sheetMaxWidth(context),
       child: _buildUserTypesManagerContent(context),
     );
   }
@@ -446,9 +359,6 @@ class _ContractPageState extends State<ContractPage> {
       title: 'Nuevo tipo de usuario',
       icon: Icons.person_add_alt_1_rounded,
       hint: 'Crea un nuevo tipo para la administracion de usuarios.',
-      maxWidth: MediaQuery.of(context).size.width > 620
-          ? 620
-          : _sheetMaxWidth(context),
       child: const NewUserType(),
     );
   }
@@ -498,9 +408,9 @@ class _ContractPageState extends State<ContractPage> {
                       ),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.info_outline_rounded,
-                            color: Colors.blueGrey.shade500,
+                            color: AppColors.iconMuted,
                             size: 20,
                           ),
                           const SizedBox(width: 10),
@@ -662,12 +572,7 @@ class _ContractPageState extends State<ContractPage> {
                                           icon: Icons.person_rounded,
                                           hint:
                                               'Actualiza nombre, contacto y tipo de acceso del usuario.',
-                                          maxWidth: MediaQuery.of(context)
-                                                      .size
-                                                      .width >
-                                                  700
-                                              ? 760
-                                              : _sheetMaxWidth(context),
+                                          maxWidth: 760,
                                           child: EditSystemUser(
                                             userId: doc.id,
                                             userData: userData,
@@ -794,10 +699,7 @@ class _ContractPageState extends State<ContractPage> {
                                   icon: Icons.edit_rounded,
                                   hint:
                                       'Modifica el nombre del tipo para mantener el catalogo actualizado.',
-                                  maxWidth:
-                                      MediaQuery.of(context).size.width > 620
-                                          ? 620
-                                          : _sheetMaxWidth(context),
+                                  maxWidth: 620,
                                   child: EditGenericCategory(
                                     docId: 'tipos_usuarios',
                                     existingItem: currentType,
@@ -877,9 +779,6 @@ class _ContractPageState extends State<ContractPage> {
       hint:
           'Esta accion elimina la ficha del usuario en la coleccion Usuarios.',
       danger: true,
-      maxWidth: MediaQuery.of(context).size.width > 620
-          ? 620
-          : _sheetMaxWidth(context),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
@@ -991,9 +890,6 @@ class _ContractPageState extends State<ContractPage> {
       hint:
           'Si hay usuarios con este tipo, se reasignaran al primer tipo disponible.',
       danger: true,
-      maxWidth: MediaQuery.of(context).size.width > 650
-          ? 650
-          : _sheetMaxWidth(context),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
@@ -2421,75 +2317,6 @@ class _NewAmountState extends State<NewAmount> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsSheetHeader extends StatelessWidget {
-  const _SettingsSheetHeader({
-    required this.title,
-    required this.icon,
-    this.danger = false,
-  });
-
-  final String title;
-  final IconData icon;
-  final bool danger;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        gradient: LinearGradient(
-          colors: danger
-              ? [Colors.red.shade700, Colors.red.shade500]
-              : [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-        child: Column(
-          children: [
-            Container(
-              width: 42,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.28),
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );

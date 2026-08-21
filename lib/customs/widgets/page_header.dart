@@ -31,33 +31,12 @@ class PageHeader extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blueGrey.shade900.withOpacity(0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border(
-          bottom: BorderSide(color: Colors.white.withOpacity(0.26)),
-        ),
+        // Sin sombra ni borde inferior: el header ya se separa del cuerpo por
+        // ser oscuro. La sombra que habia (blur 20, desplazada 8px) caia sobre
+        // el fondo azul-gris y dejaba una franja celeste bajo el header.
       ),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.white.withOpacity(0.08),
-                    Colors.transparent,
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-          ),
           // Ghost decoration icon
           Positioned(
             right: -10,

@@ -77,5 +77,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'contratos-control.appspot.com',
     iosBundleId: 'cl.controlcontratos.app',
   );
-
 }

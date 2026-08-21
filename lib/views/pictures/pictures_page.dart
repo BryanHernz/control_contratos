@@ -13,6 +13,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart'
     show kIsWeb; // Import for platform check
 
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../models/worker_model.dart';
 
 class PicturesPage extends StatefulWidget {
@@ -171,10 +173,10 @@ class _PicturesPageState extends State<PicturesPage> {
                               fontSize: 13.5,
                             ),
                           ),
-                          Text(
+                          const Text(
                             'A\u00fan no cargada',
                             style: TextStyle(
-                              color: Colors.blueGrey.shade500,
+                              color: AppColors.textMuted,
                               fontWeight: FontWeight.w500,
                               fontSize: 11.8,
                             ),
@@ -212,8 +214,8 @@ class _PicturesPageState extends State<PicturesPage> {
                           textAlign: TextAlign.center,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.blueGrey.shade500,
+                          style: const TextStyle(
+                            color: AppColors.textMuted,
                             fontSize: 12,
                             height: 1.2,
                           ),
@@ -374,197 +376,113 @@ class _PicturesPageState extends State<PicturesPage> {
   void _showDeleteDialog(int position) {
     final sideLabel = position == 1 ? 'frontal' : 'trasera';
 
-    showModalBottomSheet(
+    showAppModal<void>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => SafeArea(
-        top: false,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFF4F7FA),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-          ),
-          clipBehavior: Clip.hardEdge,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(26)),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.blueGrey.shade900,
-                      Colors.blueGrey.shade700
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.32),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.14),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.delete_outline_rounded,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Eliminar imagen',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 17,
-                                  ),
-                                ),
-                                Text(
-                                  'Lado ${sideLabel.toUpperCase()} del carnet',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.78),
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+      title: 'Eliminar imagen',
+      subtitle: 'Lado ${sideLabel.toUpperCase()} del carnet',
+      icon: Icons.delete_outline_rounded,
+      danger: true,
+      maxWidth: 560,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: Colors.blueGrey.shade100,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: Colors.blueGrey.shade100,
-                        ),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD64545).withOpacity(0.10),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.warning_amber_rounded,
-                              color: Color(0xFFD64545),
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Esta accion no se puede deshacer',
-                                  style: TextStyle(
-                                    color: Colors.blueGrey.shade900,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Se eliminara la imagen $sideLabel asociada al carnet del trabajador.',
-                                  style: TextStyle(
-                                    color: Colors.blueGrey.shade600,
-                                    fontSize: 12.5,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD64545).withOpacity(0.10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 14),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F0),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFFD7D4)),
-                      ),
-                      child: const Text(
-                        'Confirma solo si estas seguro de continuar con la eliminacion.',
-                        style: TextStyle(
-                          color: Color(0xFF8D2A20),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    child: const Icon(
+                      Icons.warning_amber_rounded,
+                      color: Color(0xFFD64545),
+                      size: 20,
                     ),
-                    const SizedBox(height: 14),
-                    Row(
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: _SheetLikeActionButton(
-                            label: 'Cancelar',
-                            icon: Icons.close_rounded,
-                            onPressed: () => Get.back(),
+                        Text(
+                          'Esta accion no se puede deshacer',
+                          style: TextStyle(
+                            color: Colors.blueGrey.shade900,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _SheetLikeActionButton(
-                            label: 'Eliminar',
-                            icon: Icons.delete_outline_rounded,
-                            isPrimary: true,
-                            primaryColor: const Color(0xFFD64545),
-                            onPressed: () => _deleteImage(position),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Se eliminara la imagen $sideLabel asociada al carnet del trabajador.',
+                          style: TextStyle(
+                            color: Colors.blueGrey.shade600,
+                            fontSize: 12.5,
+                            height: 1.35,
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF1F0),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFFD7D4)),
+              ),
+              child: const Text(
+                'Confirma solo si estas seguro de continuar con la eliminacion.',
+                style: TextStyle(
+                  color: Color(0xFF8D2A20),
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _SheetLikeActionButton(
+                    label: 'Cancelar',
+                    icon: Icons.close_rounded,
+                    onPressed: () => Get.back(),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _SheetLikeActionButton(
+                    label: 'Eliminar',
+                    icon: Icons.delete_outline_rounded,
+                    isPrimary: true,
+                    primaryColor: const Color(0xFFD64545),
+                    onPressed: () => _deleteImage(position),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

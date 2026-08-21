@@ -247,14 +247,14 @@ class _HomePageState extends State<HomePage> {
                         context: context,
                       ),
                     ),
-              appBar: AppBar(
-                title: const Text('CONTROL DE CONTRATOS'),
-                centerTitle: true,
-                backgroundColor: primario,
-                foregroundColor: Colors.white,
-                leading: isDesktop
-                    ? null
-                    : IconButton(
+              appBar: isDesktop
+                  ? null
+                  : AppBar(
+                      title: const Text('CONTROL DE CONTRATOS'),
+                      centerTitle: true,
+                      backgroundColor: primario,
+                      foregroundColor: Colors.white,
+                      leading: IconButton(
                         icon: const Icon(
                           CupertinoIcons.line_horizontal_3_decrease,
                         ),
@@ -262,25 +262,7 @@ class _HomePageState extends State<HomePage> {
                           _scaffoldKey.currentState!.openDrawer();
                         },
                       ),
-                actions: [
-                  if (safeSelectedTab == 1)
-                    IconButton(
-                      icon: const Icon(CupertinoIcons.doc_text,
-                          color: Colors.white),
-                      tooltip: 'Exportar Listado (PDF)',
-                      onPressed: () => workerKey.currentState?.exportToPDF(),
                     ),
-                  if (safeSelectedTab == 2)
-                    IconButton(
-                      icon: const Icon(CupertinoIcons.doc_chart,
-                          color: Colors.white),
-                      tooltip: 'Exportar Reporte Mensual (PDF)',
-                      onPressed: () => attendanceKey.currentState
-                          ?.exportMonthlyAttendanceToPDF(),
-                    ),
-                  const SizedBox(width: 8.0),
-                ],
-              ),
               body: SafeArea(
                 child: Stack(
                   children: [

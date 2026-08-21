@@ -15,6 +15,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:spelling_number/spelling_number.dart';
 
+import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
@@ -104,12 +106,12 @@ class _WorkerDetailsState extends State<WorkerDetails> {
             fontWeight: FontWeight.w700,
           ),
       weekdayLabelTextStyle: captionStyle?.copyWith(
-            color: Colors.blueGrey.shade400,
+            color: AppColors.textMuted,
             fontWeight: FontWeight.w700,
             fontSize: 12,
           ) ??
-          TextStyle(
-            color: Colors.blueGrey.shade400,
+          const TextStyle(
+            color: AppColors.textMuted,
             fontWeight: FontWeight.w700,
             fontSize: 12,
           ),
@@ -218,118 +220,124 @@ class _WorkerDetailsState extends State<WorkerDetails> {
 
   @override
   Widget build(BuildContext context) {
-    // Envolvemos todo en Material para que los estilos de texto no se rompan
-    // al no tener un Scaffold padre.
-    return Material(
-      color: Colors.transparent,
-      child: Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
+    // El recorte, el ancho y el alto los pone showAppModal. Aca solo van la
+    // cabecera oscura y el cuerpo blanco; el blanco NO envuelve a la cabecera,
+    // o vuelve a asomar por la curva superior.
+    final wide = MediaQuery.sizeOf(context).width >= kModalWideBreakpoint;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min, // Abraza el contenido
+      children: [
+        // ----------------------------------------------------
+        // 1. REEMPLAZO DEL APPBAR (Header personalizado)
+        // ----------------------------------------------------
+        // â”€â”€ HEADER BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        _ModalHeader(
+          worker: widget.worker,
+          onDelete: _openDeleteWorkerSheet,
+          onEdit: _openEditWorkerSheet,
+          onClose: () => Navigator.of(context).maybePop(),
+          showGrabber: !wide,
         ),
-        child: Container(
-          clipBehavior: Clip.hardEdge,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // Abraza el contenido
-            children: [
-              // ----------------------------------------------------
-              // 1. REEMPLAZO DEL APPBAR (Header personalizado)
-              // ----------------------------------------------------
-              // â”€â”€ HEADER BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-              _ModalHeader(
-                worker: widget.worker,
-                onDelete: _openDeleteWorkerSheet,
-                onEdit: _openEditWorkerSheet,
-              ),
 
-              // ----------------------------------------------------
-              // 2. CUERPO DEL DETALLE (Scrollable)
-              // ----------------------------------------------------
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 25.0, vertical: 10.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // â”€â”€ INFO CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                      _InfoCard(
-                        title: 'Informaci\u00f3n personal',
-                        icon: Icons.person_outline_rounded,
-                        items: [
-                          _InfoItem(Icons.badge_outlined, 'Nombres',
-                              widget.worker.name!.toUpperCase()),
-                          _InfoItem(Icons.person_outline, 'Apellidos',
-                              widget.worker.lastName!.toUpperCase()),
-                          _InfoItem(Icons.credit_card_outlined, 'RUT',
-                              widget.worker.rut!),
-                          _InfoItem(Icons.email_outlined, 'Correo',
-                              widget.worker.email?.toUpperCase() ?? '\u2014'),
-                          _InfoItem(Icons.flag_outlined, 'Nacionalidad',
-                              widget.worker.nacionality!.toUpperCase()),
-                          _InfoItem(
-                              Icons.favorite_border_rounded,
-                              'Estado civil',
-                              widget.worker.civilState!.toUpperCase()),
-                          _InfoItem(Icons.cake_outlined, 'Fecha nacimiento',
-                              widget.worker.birth!.toUpperCase()),
-                          _InfoItem(Icons.home_outlined, 'Direcci\u00f3n',
-                              widget.worker.adress!.toUpperCase()),
-                          _InfoItem(Icons.location_city_outlined, 'Comuna',
-                              widget.worker.commune!.toUpperCase()),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      _InfoCard(
-                        title: 'Informaci\u00f3n laboral',
-                        icon: Icons.work_outline_rounded,
-                        items: [
-                          _InfoItem(Icons.construction_outlined, 'Labor',
-                              widget.worker.labor!.toUpperCase()),
-                          _InfoItem(Icons.business_outlined, 'Establecimiento',
-                              widget.worker.place!.toUpperCase()),
-                          _InfoItem(Icons.savings_outlined, 'AFP',
-                              widget.worker.afp!.toUpperCase()),
-                          _InfoItem(
-                              Icons.local_hospital_outlined,
-                              'Previsi\u00f3n',
-                              widget.worker.prevision!.toUpperCase()),
-                          _InfoItem(
-                              Icons.calendar_today_outlined,
-                              'Fecha de ingreso',
-                              widget.worker.ingress!.toUpperCase()),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
+        // ----------------------------------------------------
+        // 2. CUERPO DEL DETALLE (Scrollable) + acciones al pie.
+        //    Ambos van dentro del MISMO Material blanco: si el blanco cubre
+        //    solo el scroll, los botones del pie quedan flotando sobre el
+        //    fondo oscuro del modal.
+        // ----------------------------------------------------
+        Flexible(
+          child: Material(
+            // Hace de pagina dentro del modal: las _InfoCard van en `surface`.
+            color: AppColors.surfaceSunken,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 25.0, vertical: 10.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // â”€â”€ INFO CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                        _InfoCard(
+                          title: 'Informaci\u00f3n personal',
+                          icon: Icons.person_outline_rounded,
+                          items: [
+                            _InfoItem(Icons.badge_outlined, 'Nombres',
+                                widget.worker.name!.toUpperCase()),
+                            _InfoItem(Icons.person_outline, 'Apellidos',
+                                widget.worker.lastName!.toUpperCase()),
+                            _InfoItem(Icons.credit_card_outlined, 'RUT',
+                                widget.worker.rut!),
+                            _InfoItem(Icons.email_outlined, 'Correo',
+                                widget.worker.email?.toUpperCase() ?? '\u2014'),
+                            _InfoItem(Icons.flag_outlined, 'Nacionalidad',
+                                widget.worker.nacionality!.toUpperCase()),
+                            _InfoItem(
+                                Icons.favorite_border_rounded,
+                                'Estado civil',
+                                widget.worker.civilState!.toUpperCase()),
+                            _InfoItem(Icons.cake_outlined, 'Fecha nacimiento',
+                                widget.worker.birth!.toUpperCase()),
+                            _InfoItem(Icons.home_outlined, 'Direcci\u00f3n',
+                                widget.worker.adress!.toUpperCase()),
+                            _InfoItem(Icons.location_city_outlined, 'Comuna',
+                                widget.worker.commune!.toUpperCase()),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        _InfoCard(
+                          title: 'Informaci\u00f3n laboral',
+                          icon: Icons.work_outline_rounded,
+                          items: [
+                            _InfoItem(Icons.construction_outlined, 'Labor',
+                                widget.worker.labor!.toUpperCase()),
+                            _InfoItem(
+                                Icons.business_outlined,
+                                'Establecimiento',
+                                widget.worker.place!.toUpperCase()),
+                            _InfoItem(Icons.savings_outlined, 'AFP',
+                                widget.worker.afp!.toUpperCase()),
+                            _InfoItem(
+                                Icons.local_hospital_outlined,
+                                'Previsi\u00f3n',
+                                widget.worker.prevision!.toUpperCase()),
+                            _InfoItem(
+                                Icons.calendar_today_outlined,
+                                'Fecha de ingreso',
+                                widget.worker.ingress!.toUpperCase()),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
 
-                      // MEJORA 4: Ultimo contrato generado
-                      StreamBuilder<DocumentSnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('Trabajadores')
-                            .doc(widget.worker.id)
-                            .snapshots(),
-                        builder: (ctx, snap) {
-                          String val = '\u2014';
-                          if (snap.hasData && snap.data!.exists) {
-                            final data =
-                                snap.data!.data() as Map<String, dynamic>?;
-                            final ts = data?['ultimoContrato'];
-                            if (ts is Timestamp) {
-                              val = DateFormat('dd/MM/yyyy \u2013 HH:mm', 'es')
-                                  .format(ts.toDate());
+                        // MEJORA 4: Ultimo contrato generado
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('Trabajadores')
+                              .doc(widget.worker.id)
+                              .snapshots(),
+                          builder: (ctx, snap) {
+                            String val = '\u2014';
+                            if (snap.hasData && snap.data!.exists) {
+                              final data =
+                                  snap.data!.data() as Map<String, dynamic>?;
+                              final ts = data?['ultimoContrato'];
+                              if (ts is Timestamp) {
+                                val =
+                                    DateFormat('dd/MM/yyyy \u2013 HH:mm', 'es')
+                                        .format(ts.toDate());
+                              }
                             }
-                          }
-                          return _InfoCard(
-                              title: '\u00daltimo contrato',
-                              icon: Icons.calendar_today_outlined,
-                              items: [
-                                _InfoItem(Icons.calendar_today_outlined,
-                                    '\u00daltimo contrato', val),
-                              ]);
-                          /* Padding(
+                            return _InfoCard(
+                                title: '\u00daltimo contrato',
+                                icon: Icons.calendar_today_outlined,
+                                items: [
+                                  _InfoItem(Icons.calendar_today_outlined,
+                                      '\u00daltimo contrato', val),
+                                ]);
+                            /* Padding(
                             padding: const EdgeInsets.only(bottom: 5.0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -359,126 +367,105 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                               ],
                             ),
                           ); */
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ----------------------------------------------------
-              // 3. REEMPLAZO DE LOS FLOATING ACTION BUTTONS
-              // ----------------------------------------------------
-              Padding(
-                padding: const EdgeInsets.only(
-                    top: 15.0, bottom: 25.0, left: 10.0, right: 10.0),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    const spacing = 10.0;
-                    final maxWidth = constraints.maxWidth;
-                    final useThreeColumns = maxWidth >= 560;
-                    final computedWidth = useThreeColumns
-                        ? (maxWidth - (spacing * 2)) / 3
-                        : (maxWidth - spacing) / 2;
-                    final buttonWidth =
-                        computedWidth.clamp(130.0, 220.0).toDouble();
-
-                    return Wrap(
-                      alignment: WrapAlignment.center,
-                      runAlignment: WrapAlignment.center,
-                      spacing: spacing,
-                      runSpacing: spacing,
-                      children: [
-                        // BotÃ³n Finiquito
-                        SizedBox(
-                          width: buttonWidth,
-                          child: CustomButton(
-                            funcion: _openSettlementSheet,
-                            texto: 'Finiquito',
-                            icon: Icons.file_copy_outlined,
-                          ),
-                        ),
-
-                        // BotÃ³n Documentos
-                        SizedBox(
-                          width: buttonWidth,
-                          child: CustomButton(
-                            funcion: _openDocumentsSheet,
-                            texto: 'Documentos',
-                            icon: Icons.local_print_shop_outlined,
-                          ),
-                        ),
-
-                        // BotÃ³n Carnet
-                        SizedBox(
-                          width: buttonWidth,
-                          child: CustomButton(
-                            funcion: _openCarnetSheet,
-                            texto: 'Carnet',
-                            icon: Icons.badge_outlined,
-                          ),
+                          },
                         ),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  double _sheetMaxWidth(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    if (width > 980) return 920;
-    return width * 0.96;
-  }
+                // ----------------------------------------------------
+                // 3. REEMPLAZO DE LOS FLOATING ACTION BUTTONS
+                // ----------------------------------------------------
+                Padding(
+                  padding: const EdgeInsets.only(
+                      top: 16.0, bottom: 20.0, left: 24.0, right: 24.0),
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      const spacing = 10.0;
+                      final maxWidth = constraints.maxWidth;
+                      final useThreeColumns = maxWidth >= 560;
+                      final computedWidth = useThreeColumns
+                          ? (maxWidth - (spacing * 2)) / 3
+                          : (maxWidth - spacing) / 2;
+                      final buttonWidth =
+                          computedWidth.clamp(130.0, 220.0).toDouble();
 
-  void _openEditWorkerSheet() {
-    final media = MediaQuery.of(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => AnimatedPadding(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
-        ),
-        child: SafeArea(
-          top: false,
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: _sheetMaxWidth(context),
-                maxHeight: media.size.height * 0.92,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFFF4F7FA),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      return Wrap(
+                        alignment: WrapAlignment.center,
+                        runAlignment: WrapAlignment.center,
+                        spacing: spacing,
+                        runSpacing: spacing,
+                        children: [
+                          // BotÃ³n Finiquito
+                          SizedBox(
+                            width: buttonWidth,
+                            child: CustomButton(
+                              funcion: _openSettlementSheet,
+                              texto: 'Finiquito',
+                              icon: Icons.file_copy_outlined,
+                            ),
+                          ),
+
+                          // BotÃ³n Documentos
+                          SizedBox(
+                            width: buttonWidth,
+                            child: CustomButton(
+                              funcion: _openDocumentsSheet,
+                              texto: 'Documentos',
+                              icon: Icons.local_print_shop_outlined,
+                            ),
+                          ),
+
+                          // BotÃ³n Carnet
+                          SizedBox(
+                            width: buttonWidth,
+                            child: CustomButton(
+                              funcion: _openCarnetSheet,
+                              texto: 'Carnet',
+                              icon: Icons.badge_outlined,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-                clipBehavior: Clip.hardEdge,
-                child: EditWorker(worker: widget.worker),
-              ),
+              ],
             ),
           ),
         ),
-      ),
+      ],
+    );
+  }
+
+  String get _workerDisplayName {
+    final name = (widget.worker.name ?? '').toUpperCase();
+    final lastName = (widget.worker.lastName ?? '').toUpperCase();
+    return '$name $lastName'.trim();
+  }
+
+  void _openEditWorkerSheet() {
+    showAppModal(
+      context: context,
+      title: 'Editar trabajador',
+      subtitle: _workerDisplayName,
+      badge: 'Ficha',
+      icon: Icons.edit_note_rounded,
+      child: EditWorker(worker: widget.worker),
     );
   }
 
   void _openDeleteWorkerSheet() {
-    showModalBottomSheet(
+    showAppModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _DeleteWorkerSheet(
+      title: 'Eliminar trabajador',
+      subtitle: _workerDisplayName,
+      badge: 'Accion',
+      icon: Icons.delete_outline_rounded,
+      danger: true,
+      maxWidth: 560,
+      child: _DeleteWorkerSheet(
         worker: widget.worker,
         onConfirm: _deleteWorker,
       ),
@@ -527,11 +514,14 @@ class _WorkerDetailsState extends State<WorkerDetails> {
   }
 
   void _openDocumentsSheet() {
-    showModalBottomSheet(
+    showAppModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _DocumentsSheet(
+      title: 'Documentos',
+      subtitle: _workerDisplayName,
+      badge: 'Impresion',
+      icon: Icons.description_outlined,
+      maxWidth: 720,
+      child: _DocumentsSheet(
         worker: widget.worker,
         onPrint: (selections) async {
           Get.back();
@@ -542,11 +532,14 @@ class _WorkerDetailsState extends State<WorkerDetails> {
   }
 
   void _openSettlementSheet() {
-    showModalBottomSheet(
+    showAppModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _SettlementSheet(
+      title: 'Finiquito',
+      subtitle: _workerDisplayName,
+      badge: 'Documento',
+      icon: Icons.file_copy_outlined,
+      maxWidth: 720,
+      child: _SettlementSheet(
         worker: widget.worker,
         formKey: _formKey,
         exitController: _exitController,
@@ -559,11 +552,14 @@ class _WorkerDetailsState extends State<WorkerDetails> {
   }
 
   void _openCarnetSheet() {
-    showModalBottomSheet(
+    showAppModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _CarnetSheet(worker: widget.worker),
+      title: 'Carnet',
+      subtitle: _workerDisplayName,
+      badge: 'Fotos',
+      icon: Icons.badge_outlined,
+      maxWidth: 720,
+      child: _CarnetSheet(worker: widget.worker),
     );
   }
 
@@ -584,7 +580,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
       ),
       dialogSize: const Size(350, 420),
       borderRadius: BorderRadius.circular(18),
-      dialogBackgroundColor: const Color(0xFFF4F7FA),
+      dialogBackgroundColor: Colors.white,
       value: [initialValue ?? DateTime.now()],
     );
 
@@ -3889,93 +3885,57 @@ class _DeleteWorkerSheet extends StatelessWidget {
   final WorkerModel worker;
   final Future<void> Function() onConfirm;
 
-  String get _workerDisplayName {
-    final name = (worker.name ?? '').toUpperCase();
-    final lastName = (worker.lastName ?? '').toUpperCase();
-    return '$name $lastName'.trim();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFFF4F7FA),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    return AppModalBody(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SheetInfoBanner(
+            icon: Icons.warning_amber_rounded,
+            title: 'Esta accion no se puede deshacer',
+            message:
+                'Se eliminaran los datos del trabajador y las imagenes asociadas al carnet.',
           ),
-          clipBehavior: Clip.hardEdge,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _WorkerSheetHeroHeader(
-                icon: Icons.delete_outline_rounded,
-                title: 'Eliminar trabajador',
-                subtitle: _workerDisplayName,
-                badge: 'Accion',
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF1F0),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFFD7D4)),
+            ),
+            child: const Text(
+              'Confirma solo si estas seguro de continuar con la eliminacion.',
+              style: TextStyle(
+                color: Color(0xFF8D2A20),
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _SheetInfoBanner(
-                      icon: Icons.warning_amber_rounded,
-                      title: 'Esta accion no se puede deshacer',
-                      message:
-                          'Se eliminaran los datos del trabajador y las imagenes asociadas al carnet.',
-                    ),
-                    const SizedBox(height: 18),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F0),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFFD7D4)),
-                      ),
-                      child: const Text(
-                        'Confirma solo si estas seguro de continuar con la eliminacion.',
-                        style: TextStyle(
-                          color: Color(0xFF8D2A20),
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _SheetActionButton(
-                            label: 'Cancelar',
-                            icon: Icons.close_rounded,
-                            onPressed: () => Get.back(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _DangerActionButton(
-                            label: 'Eliminar',
-                            icon: Icons.delete_outline_rounded,
-                            onPressed: () async => onConfirm(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _SheetActionButton(
+                  label: 'Cancelar',
+                  icon: Icons.close_rounded,
+                  onPressed: () => Get.back(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _DangerActionButton(
+                  label: 'Eliminar',
+                  icon: Icons.delete_outline_rounded,
+                  onPressed: () async => onConfirm(),
                 ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -4000,147 +3960,107 @@ class _SettlementSheet extends StatelessWidget {
   final Future<void> Function() onPickExitDate;
   final VoidCallback onPrint;
 
-  String get _workerDisplayName {
-    final name = (worker.name ?? '').toUpperCase();
-    final lastName = (worker.lastName ?? '').toUpperCase();
-    return '$name $lastName'.trim();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F7FA),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            clipBehavior: Clip.hardEdge,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _WorkerSheetHeroHeader(
-                  icon: Icons.file_copy_outlined,
-                  title: 'Finiquito',
-                  subtitle: _workerDisplayName,
-                  badge: 'Documento',
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SheetInfoBanner(
-                        icon: Icons.event_note_outlined,
-                        title: 'Datos de termino',
-                        message:
-                            'Completa fecha de egreso, vacaciones y total para generar el finiquito.',
-                      ),
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Colors.blueGrey.shade50),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: formKey,
-                          child: Column(
-                            children: [
-                              InputTextField(
-                                teclado: TextInputType.none,
-                                readOnly: true,
-                                textController: exitController,
-                                hint: 'Fecha de egreso',
-                                onTap: onPickExitDate,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Por favor ingrese fecha de egreso';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              InputTextField(
-                                teclado: TextInputType.number,
-                                textController: vacationsController,
-                                formater:
-                                    FilteringTextInputFormatter.digitsOnly,
-                                hint: 'Vacaciones proporcionales',
-                                money: true,
-                                prefix: '\$',
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Por favor ingrese un monto';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              InputTextField(
-                                teclado: TextInputType.number,
-                                textController: totalController,
-                                formater:
-                                    FilteringTextInputFormatter.digitsOnly,
-                                hint: 'Total',
-                                money: true,
-                                prefix: '\$',
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Por favor ingrese un monto';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SheetActionButton(
-                              label: 'Cancelar',
-                              icon: Icons.close_rounded,
-                              onPressed: () => Get.back(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SheetActionButton(
-                              label: 'Imprimir',
-                              icon: Icons.local_print_shop_outlined,
-                              isPrimary: true,
-                              onPressed: onPrint,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+    return AppModalBody(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _SheetInfoBanner(
+            icon: Icons.event_note_outlined,
+            title: 'Datos de termino',
+            message:
+                'Completa fecha de egreso, vacaciones y total para generar el finiquito.',
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.blueGrey.shade50),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
+            child: Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  InputTextField(
+                    teclado: TextInputType.none,
+                    readOnly: true,
+                    textController: exitController,
+                    hint: 'Fecha de egreso',
+                    onTap: onPickExitDate,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor ingrese fecha de egreso';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  InputTextField(
+                    teclado: TextInputType.number,
+                    textController: vacationsController,
+                    formater: FilteringTextInputFormatter.digitsOnly,
+                    hint: 'Vacaciones proporcionales',
+                    money: true,
+                    prefix: '\$',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor ingrese un monto';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  InputTextField(
+                    teclado: TextInputType.number,
+                    textController: totalController,
+                    formater: FilteringTextInputFormatter.digitsOnly,
+                    hint: 'Total',
+                    money: true,
+                    prefix: '\$',
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Por favor ingrese un monto';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _SheetActionButton(
+                  label: 'Cancelar',
+                  icon: Icons.close_rounded,
+                  onPressed: () => Get.back(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SheetActionButton(
+                  label: 'Imprimir',
+                  icon: Icons.local_print_shop_outlined,
+                  isPrimary: true,
+                  onPressed: onPrint,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -4153,94 +4073,65 @@ class _CarnetSheet extends StatelessWidget {
 
   final WorkerModel worker;
 
-  String get _workerDisplayName {
-    final name = (worker.name ?? '').toUpperCase();
-    final lastName = (worker.lastName ?? '').toUpperCase();
-    return '$name $lastName'.trim();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final modalHeight = (MediaQuery.of(context).size.height * 0.92)
-        .clamp(560.0, 860.0)
-        .toDouble();
+    // El visor de fotos usa Expanded, asi que necesita alto definido. El modal
+    // ya acota el alto disponible; aca solo se toma el que sobra bajo el header.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final modalHeight = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : (MediaQuery.sizeOf(context).height * 0.7)
+                .clamp(480.0, 760.0)
+                .toDouble();
 
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
+        return SizedBox(
           height: modalHeight,
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F7FA),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            clipBehavior: Clip.hardEdge,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _WorkerSheetHeroHeader(
-                  icon: Icons.badge_outlined,
-                  title: 'Carnet',
-                  subtitle: _workerDisplayName,
-                  badge: 'Fotos',
+                const _SheetInfoBanner(
+                  icon: Icons.photo_camera_outlined,
+                  title: 'Gestion de imagenes',
+                  message:
+                      'Aqui puedes revisar y actualizar las fotos frontal y trasera del carnet.',
                 ),
+                const SizedBox(height: 14),
                 Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const _SheetInfoBanner(
-                          icon: Icons.photo_camera_outlined,
-                          title: 'Gestion de imagenes',
-                          message:
-                              'Aqui puedes revisar y actualizar las fotos frontal y trasera del carnet.',
-                        ),
-                        const SizedBox(height: 14),
-                        Expanded(
-                          child: Container(
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(22),
-                              border:
-                                  Border.all(color: Colors.blueGrey.shade50),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 16,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: PicturesPage(worker: worker),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          width: double.infinity,
-                          child: _SheetActionButton(
-                            label: 'Cerrar',
-                            icon: Icons.check_rounded,
-                            onPressed: () => Get.back(),
-                          ),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: Colors.blueGrey.shade50),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
+                    clipBehavior: Clip.antiAlias,
+                    child: PicturesPage(worker: worker),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: _SheetActionButton(
+                    label: 'Cerrar',
+                    icon: Icons.check_rounded,
+                    onPressed: () => Get.back(),
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -4270,18 +4161,6 @@ class _DocumentsSheetState extends State<_DocumentsSheet> {
         if ((widget.worker.imageFront ?? '').isNotEmpty) 'Carnet',
       ];
 
-  String get _workerDisplayName {
-    final name = (widget.worker.name ?? '').toUpperCase();
-    final lastName = (widget.worker.lastName ?? '').toUpperCase();
-    return '$name $lastName'.trim();
-  }
-
-  String get _selectionSummary {
-    final count = _selectedDocuments.length;
-    if (count == 1) return '1 seleccionado';
-    return '$count seleccionados';
-  }
-
   void _onDocumentSelected(String document, bool isSelected) {
     setState(() {
       if (isSelected) {
@@ -4296,289 +4175,130 @@ class _DocumentsSheetState extends State<_DocumentsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedPadding(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeOut,
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF4F7FA),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            clipBehavior: Clip.hardEdge,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _WorkerSheetHeroHeader(
-                  icon: Icons.description_outlined,
-                  title: 'Documentos',
-                  subtitle: _workerDisplayName,
-                  badge: _selectionSummary,
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SheetInfoBanner(
-                        icon: Icons.tips_and_updates_outlined,
-                        title: 'Impresion rapida',
-                        message:
-                            'Selecciona uno o mas documentos para imprimirlos en un solo flujo.',
-                      ),
-                      const SizedBox(height: 18),
-                      Text(
-                        'Documentos disponibles',
-                        style: TextStyle(
-                          color: Colors.blueGrey.shade900,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Puedes combinar opciones segun lo que necesites generar para este trabajador.',
-                        style: TextStyle(
-                          color: Colors.blueGrey.shade500,
-                          fontSize: 12.5,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(color: Colors.blueGrey.shade50),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
-                            ),
-                          ],
-                        ),
-                        child: GroupButton<String>(
-                          isRadio: false,
-                          buttons: _availableDocuments,
-                          onSelected: (value, index, isSelected) {
-                            _onDocumentSelected(value, isSelected);
-                          },
-                          options: GroupButtonOptions(
-                            groupingType: GroupingType.wrap,
-                            mainGroupAlignment: MainGroupAlignment.start,
-                            crossGroupAlignment: CrossGroupAlignment.start,
-                            spacing: 10,
-                            runSpacing: 10,
-                            buttonHeight: 46,
-                            elevation: 0,
-                            borderRadius: const BorderRadius.all(
-                              Radius.circular(14),
-                            ),
-                            textPadding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            selectedColor: primario,
-                            unselectedColor: Colors.white,
-                            selectedBorderColor: primario,
-                            unselectedBorderColor: Colors.blueGrey.shade100,
-                            selectedTextStyle: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                            unselectedTextStyle: TextStyle(
-                              color: Colors.blueGrey.shade700,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 180),
-                        child: _selectedDocuments.isEmpty
-                            ? const _EmptySelectionState()
-                            : Wrap(
-                                key: const ValueKey('selected-documents'),
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _selectedDocuments
-                                    .map(
-                                      (document) => _SelectedDocumentChip(
-                                          label: document),
-                                    )
-                                    .toList(),
-                              ),
-                      ),
-                      const SizedBox(height: 22),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _SheetActionButton(
-                              label: 'Cancelar',
-                              icon: Icons.close_rounded,
-                              onPressed: () => Get.back(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _SheetActionButton(
-                              label: 'Imprimir',
-                              icon: Icons.local_print_shop_outlined,
-                              isPrimary: true,
-                              onPressed: _selectedDocuments.isEmpty
-                                  ? null
-                                  : () async {
-                                      await widget.onPrint(
-                                        List<String>.of(_selectedDocuments),
-                                      );
-                                    },
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WorkerSheetHeroHeader extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String badge;
-
-  const _WorkerSheetHeroHeader({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.badge,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        gradient: LinearGradient(
-          colors: [Colors.blueGrey.shade900, Colors.blueGrey.shade700],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
+    return AppModalBody(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            right: -18,
-            top: 12,
-            child: Icon(
-              icon,
-              size: 92,
-              color: Colors.white.withOpacity(0.06),
+          const _SheetInfoBanner(
+            icon: Icons.tips_and_updates_outlined,
+            title: 'Impresion rapida',
+            message:
+                'Selecciona uno o mas documentos para imprimirlos en un solo flujo.',
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Documentos disponibles',
+            style: TextStyle(
+              color: Colors.blueGrey.shade900,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 42,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.28),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.12),
-                        ),
-                      ),
-                      child: Icon(icon, color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.72),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.14),
-                        ),
-                      ),
-                      child: Text(
-                        badge,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
+          const SizedBox(height: 6),
+          const Text(
+            'Puedes combinar opciones segun lo que necesites generar para este trabajador.',
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 12.5,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: Colors.blueGrey.shade50),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
+            child: GroupButton<String>(
+              isRadio: false,
+              buttons: _availableDocuments,
+              onSelected: (value, index, isSelected) {
+                _onDocumentSelected(value, isSelected);
+              },
+              options: GroupButtonOptions(
+                groupingType: GroupingType.wrap,
+                mainGroupAlignment: MainGroupAlignment.start,
+                crossGroupAlignment: CrossGroupAlignment.start,
+                spacing: 10,
+                runSpacing: 10,
+                buttonHeight: 46,
+                elevation: 0,
+                borderRadius: const BorderRadius.all(
+                  Radius.circular(14),
+                ),
+                textPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                selectedColor: primario,
+                unselectedColor: Colors.white,
+                selectedBorderColor: primario,
+                unselectedBorderColor: Colors.blueGrey.shade100,
+                selectedTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+                unselectedTextStyle: TextStyle(
+                  color: Colors.blueGrey.shade700,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: _selectedDocuments.isEmpty
+                ? const _EmptySelectionState()
+                : Wrap(
+                    key: const ValueKey('selected-documents'),
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectedDocuments
+                        .map(
+                          (document) => _SelectedDocumentChip(label: document),
+                        )
+                        .toList(),
+                  ),
+          ),
+          const SizedBox(height: 22),
+          Row(
+            children: [
+              Expanded(
+                child: _SheetActionButton(
+                  label: 'Cancelar',
+                  icon: Icons.close_rounded,
+                  onPressed: () => Get.back(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _SheetActionButton(
+                  label: 'Imprimir',
+                  icon: Icons.local_print_shop_outlined,
+                  isPrimary: true,
+                  onPressed: _selectedDocuments.isEmpty
+                      ? null
+                      : () async {
+                          await widget.onPrint(
+                            List<String>.of(_selectedDocuments),
+                          );
+                        },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -4666,10 +4386,10 @@ class _EmptySelectionState extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.checklist_rtl_rounded,
             size: 18,
-            color: Colors.blueGrey.shade400,
+            color: AppColors.iconMuted,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -4859,11 +4579,15 @@ class _ModalHeader extends StatelessWidget {
   final WorkerModel worker;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onClose;
+  final bool showGrabber;
 
   const _ModalHeader({
     required this.worker,
     required this.onDelete,
     required this.onEdit,
+    required this.onClose,
+    required this.showGrabber,
   });
 
   @override
@@ -4876,6 +4600,8 @@ class _ModalHeader extends StatelessWidget {
         '${nameParts.isNotEmpty && nameParts[0].isNotEmpty ? nameParts[0][0] : ''}${lastParts.isNotEmpty && lastParts[0].isNotEmpty ? lastParts[0][0] : ''}';
     final isActive = worker.activo == true;
 
+    // Sin borderRadius a proposito: redondea el ClipRRect de showAppModal. Si
+    // vuelve a traer radio propio, reaparece el fleco blanco en la curva.
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -4884,7 +4610,6 @@ class _ModalHeader extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Stack(
         children: [
@@ -4900,18 +4625,22 @@ class _ModalHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
+                // El tirador solo tiene sentido cuando el modal es una hoja
+                // que se arrastra; en el dialogo centrado sobra.
+                if (showGrabber) ...[
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ] else
+                  const SizedBox(height: 4),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -5025,6 +4754,21 @@ class _ModalHeader extends StatelessWidget {
                           ),
                           onPressed: onDelete,
                         ),
+                        // Siempre visible: en el dialogo centrado no hay
+                        // gesto de arrastrar para cerrar.
+                        IconButton(
+                          tooltip: 'Cerrar',
+                          icon: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.close_rounded,
+                                color: Colors.white, size: 18),
+                          ),
+                          onPressed: onClose,
+                        ),
                       ],
                     ),
                   ],
@@ -5053,17 +4797,7 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
+      decoration: appCardDecoration(radius: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -5107,15 +4841,14 @@ class _InfoCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   child: Row(
                     children: [
-                      Icon(item.icon,
-                          size: 16, color: Colors.blueGrey.shade400),
+                      Icon(item.icon, size: 16, color: AppColors.iconMuted),
                       const SizedBox(width: 10),
                       Text(
                         item.label,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.blueGrey.shade500,
-                          fontWeight: FontWeight.w500,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -5125,10 +4858,10 @@ class _InfoCard extends StatelessWidget {
                           textAlign: TextAlign.end,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 13,
+                          style: const TextStyle(
+                            fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Colors.blueGrey.shade800,
+                            color: AppColors.textStrong,
                           ),
                         ),
                       ),

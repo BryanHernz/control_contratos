@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../app_colors.dart';
+
 class GenericPieChart extends StatefulWidget {
   final String title;
   final Map<String, int> data;
@@ -127,9 +129,9 @@ class _GenericPieChartState extends State<GenericPieChart> {
                           const Text(
                             'total',
                             style: TextStyle(
-                              fontSize: 9,
-                              color: Colors.black45,
-                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
@@ -177,11 +179,14 @@ class _GenericPieChartState extends State<GenericPieChart> {
                               child: Text(
                                 item.key,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  // Rajdhani a 11px con peso normal se pierde;
+                                  // la leyenda es el texto mas chico de la
+                                  // vista y necesita cuerpo.
+                                  fontSize: 12.5,
                                   fontWeight: isTouched
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: Colors.black87,
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                  color: AppColors.textBody,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -191,10 +196,10 @@ class _GenericPieChartState extends State<GenericPieChart> {
                             Text(
                               '$pct%',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12.5,
                                 fontWeight: isTouched
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
+                                    ? FontWeight.w800
+                                    : FontWeight.w700,
                                 color:
                                     colorPalette[index % colorPalette.length],
                               ),
@@ -222,20 +227,16 @@ class _GenericPieChartState extends State<GenericPieChart> {
       final pct = (value / total * 100).toStringAsFixed(1);
       final baseColor = colorPalette[i % colorPalette.length];
       return PieChartSectionData(
-        gradient: LinearGradient(
-          colors: [
-            baseColor.withOpacity(0.95),
-            baseColor.withOpacity(0.15),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
+        // Color plano. El degradado que habia iba del 95% al 15% de opacidad,
+        // asi que la parte baja de cada gajo se desvanecia contra el blanco y
+        // los sectores dejaban de leerse como sectores.
+        color: baseColor,
         value: value.toDouble(),
         title: isTouched ? '$pct%' : '',
         radius: isTouched ? 54.0 : 46.0,
         titleStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w800,
           color: Colors.white,
         ),
       );
@@ -245,11 +246,7 @@ class _GenericPieChartState extends State<GenericPieChart> {
   Widget _buildCard({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
-      ),
+      decoration: appCardDecoration(),
       child: child,
     );
   }

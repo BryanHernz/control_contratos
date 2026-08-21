@@ -49,10 +49,23 @@ class WorkerModel {
       // O lanzar un error, dependiendo de cómo quieras manejarlo.
       // Para este caso, podemos devolver un WorkerModel con valores predeterminados o vacíos
       return WorkerModel(
-        name: '', lastName: '', id: doc.id, rut: '', email: '',
-        nacionality: '', civilState: '', birth: '', adress: '',
-        commune: '', labor: '', place: '', afp: '', prevision: '',
-        ingress: '', imageFront: '', imageBack: '',
+        name: '',
+        lastName: '',
+        id: doc.id,
+        rut: '',
+        email: '',
+        nacionality: '',
+        civilState: '',
+        birth: '',
+        adress: '',
+        commune: '',
+        labor: '',
+        place: '',
+        afp: '',
+        prevision: '',
+        ingress: '',
+        imageFront: '',
+        imageBack: '',
       );
     }
 
