@@ -1,13 +1,59 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"contratos-control","appId":"1:233057701817:android:98832fd4815140e0cf7068","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"contratos-control","configurations":{"android":"1:233057701817:android:98832fd4815140e0cf7068","ios":"1:233057701817:ios:e2820e4af8002bf3cf7068","web":"1:233057701817:web:26a75cb2d96783f8cf7068","windows":"1:233057701817:web:49d0ddaafa3484fecf7068"}}}}},"hosting": {
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "contratos-control",
+          "appId": "1:233057701817:android:98832fd4815140e0cf7068",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "contratos-control",
+          "configurations": {
+            "android": "1:233057701817:android:98832fd4815140e0cf7068",
+            "ios": "1:233057701817:ios:e2820e4af8002bf3cf7068",
+            "web": "1:233057701817:web:26a75cb2d96783f8cf7068",
+            "windows": "1:233057701817:web:49d0ddaafa3484fecf7068"
+          }
+        }
+      }
+    }
+  },
+  "firestore": [
+    {
+      "database": "(default)",
+      "rules": "firestore.rules"
+    },
+    {
+      "database": "pruebas",
+      "rules": "firestore.rules"
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "hosting": {
     "public": "build/web",
     "headers": [
       {
         "source": "**",
         "headers": [
-          { "key": "Permissions-Policy", "value": "camera=(self), microphone=(self), geolocation=(), fullscreen=(self)" },
-          { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-          { "key": "X-Content-Type-Options", "value": "nosniff" }
+          {
+            "key": "Permissions-Policy",
+            "value": "camera=(self), microphone=(self), geolocation=(), fullscreen=(self)"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "strict-origin-when-cross-origin"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          }
         ]
       }
     ]
-  }}
+  }
+}
