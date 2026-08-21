@@ -16,6 +16,7 @@ import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
 import '../widgets/settings_dialogs.dart';
+import '../../services/firestore_db.dart';
 
 class EditWorker extends StatefulWidget {
   const EditWorker({super.key, required this.worker});
@@ -476,10 +477,7 @@ class _EditWorkerState extends State<EditWorker> {
   void saveWorker(WorkerModel worker) {
     try {
       var user = FirebaseAuth.instance.currentUser!;
-      FirebaseFirestore.instance
-          .collection('Trabajadores')
-          .doc(widget.worker.id)
-          .update({
+      db.collection('Trabajadores').doc(widget.worker.id).update({
         'nombres': worker.name!.trim().toLowerCase(),
         'apellidos': worker.lastName!.trim().toLowerCase(),
         'userAdd': user.uid,
@@ -624,7 +622,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'nacionalidades')
                         .snapshots(),
@@ -690,7 +688,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'estadosciviles')
                         .snapshots(),
@@ -823,7 +821,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'comunas')
                         .snapshots(),
@@ -889,7 +887,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'labores')
                         .snapshots(),
@@ -955,7 +953,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'lugares')
                         .snapshots(),
@@ -1024,7 +1022,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'afps')
                         .snapshots(),
@@ -1090,7 +1088,7 @@ class _EditWorkerState extends State<EditWorker> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
+                    stream: db
                         .collection('Otros')
                         .where('nombre', isEqualTo: 'previsiones')
                         .snapshots(),

@@ -192,7 +192,7 @@ class ContractsLineChart extends StatelessWidget {
 
   Widget _buildCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: appCardDecoration(),
       child: child,
     );

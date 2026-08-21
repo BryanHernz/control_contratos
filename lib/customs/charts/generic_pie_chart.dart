@@ -85,10 +85,10 @@ class _GenericPieChartState extends State<GenericPieChart> {
           Expanded(
             child: Row(
               children: [
-                const SizedBox(width: 15),
+                const SizedBox(width: 8),
                 // Donut with total in center
                 SizedBox(
-                  width: 140,
+                  width: 118,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
@@ -110,7 +110,7 @@ class _GenericPieChartState extends State<GenericPieChart> {
                           ),
                           borderData: FlBorderData(show: false),
                           sectionsSpace: 3,
-                          centerSpaceRadius: 36,
+                          centerSpaceRadius: 30,
                           sections: _buildSections(displayEntries, total),
                         ),
                       ),
@@ -139,7 +139,7 @@ class _GenericPieChartState extends State<GenericPieChart> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 50),
+                const SizedBox(width: 34),
                 // Legend
                 Expanded(
                   child: Column(
@@ -233,7 +233,7 @@ class _GenericPieChartState extends State<GenericPieChart> {
         color: baseColor,
         value: value.toDouble(),
         title: isTouched ? '$pct%' : '',
-        radius: isTouched ? 54.0 : 46.0,
+        radius: isTouched ? 44.0 : 38.0,
         titleStyle: const TextStyle(
           fontSize: 12.5,
           fontWeight: FontWeight.w800,
@@ -245,7 +245,7 @@ class _GenericPieChartState extends State<GenericPieChart> {
 
   Widget _buildCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: appCardDecoration(),
       child: child,
     );

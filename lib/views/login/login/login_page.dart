@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../customs/widgets_custom.dart';
 import '../../../utils/user_access.dart';
 import '../forgot_pw_page.dart';
+import '../../../services/firestore_db.dart';
 
 class LoginPage extends StatefulWidget {
   final VoidCallback showRegisterPage;
@@ -86,7 +87,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _ensureUserProfile(User user, {required String email}) async {
-    final ref = FirebaseFirestore.instance.collection('Usuarios').doc(user.uid);
+    final ref = db.collection('Usuarios').doc(user.uid);
     final snap = await ref.get();
 
     if (!snap.exists || snap.data() == null) {

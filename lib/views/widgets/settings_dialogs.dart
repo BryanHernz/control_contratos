@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import '../../customs/widgets_custom.dart';
+import '../../services/firestore_db.dart';
 
 // --- Shared Helper Methods ---
 
@@ -71,11 +72,10 @@ class _NewPlaceState extends State<NewPlace> {
           : _formatOrFallback(_vDesde, _vHasta, '08:00', '17:00');
 
       if (horasLugar.isEmpty) horasLugar = "44";
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentReference lugaresRef =
-            FirebaseFirestore.instance.collection('Otros').doc('lugares');
+      await db.runTransaction((transaction) async {
+        DocumentReference lugaresRef = db.collection('Otros').doc('lugares');
         DocumentReference horasRef =
-            FirebaseFirestore.instance.collection('Otros').doc('lugares_horas');
+            db.collection('Otros').doc('lugares_horas');
 
         DocumentSnapshot lugaresSnapshot = await transaction.get(lugaresRef);
         DocumentSnapshot horasSnapshot = await transaction.get(horasRef);
@@ -416,15 +416,11 @@ class _EditPlaceState extends State<EditPlace> {
 
   void _loadPlaceData() async {
     try {
-      DocumentSnapshot snapshot = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares_horas')
-          .get();
+      DocumentSnapshot snapshot =
+          await db.collection('Otros').doc('lugares_horas').get();
 
-      DocumentSnapshot snapshotNombres = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares')
-          .get();
+      DocumentSnapshot snapshotNombres =
+          await db.collection('Otros').doc('lugares').get();
 
       if (snapshot.exists && snapshotNombres.exists) {
         List<dynamic> nombres = snapshotNombres['tipos'];
@@ -521,9 +517,8 @@ class _EditPlaceState extends State<EditPlace> {
           ? _formatOrFallback(_sDesde, _sHasta, '08:00', '12:00')
           : "N/A";
 
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentReference ref =
-            FirebaseFirestore.instance.collection('Otros').doc('lugares_horas');
+      await db.runTransaction((transaction) async {
+        DocumentReference ref = db.collection('Otros').doc('lugares_horas');
         DocumentSnapshot snapshot = await transaction.get(ref);
 
         if (snapshot.exists) {
@@ -856,10 +851,7 @@ Widget _buildNewGeneric(String title, String hint, TextEditingController cont,
                   hint: hint,
                   onFieldSubmitted: (_) {
                     if (key.currentState!.validate()) {
-                      FirebaseFirestore.instance
-                          .collection('Otros')
-                          .doc(docId)
-                          .update({
+                      db.collection('Otros').doc(docId).update({
                         'tipos': FieldValue.arrayUnion([cont.text.trim()])
                       });
                       Get.back();
@@ -886,10 +878,7 @@ Widget _buildNewGeneric(String title, String hint, TextEditingController cont,
                     child: CustomButton(
                       funcion: () {
                         if (key.currentState!.validate()) {
-                          FirebaseFirestore.instance
-                              .collection('Otros')
-                              .doc(docId)
-                              .update({
+                          db.collection('Otros').doc(docId).update({
                             'tipos': FieldValue.arrayUnion([cont.text.trim()])
                           });
                           Get.back();
@@ -942,9 +931,8 @@ class _EditGenericCategoryState extends State<EditGenericCategory> {
 
   void _save() async {
     try {
-      await FirebaseFirestore.instance.runTransaction((transaction) async {
-        DocumentReference ref =
-            FirebaseFirestore.instance.collection('Otros').doc(widget.docId);
+      await db.runTransaction((transaction) async {
+        DocumentReference ref = db.collection('Otros').doc(widget.docId);
         DocumentSnapshot snap = await transaction.get(ref);
         if (snap.exists) {
           List<dynamic> items = List.from(snap['tipos']);

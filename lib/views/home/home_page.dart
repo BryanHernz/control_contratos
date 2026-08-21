@@ -15,6 +15,7 @@ import '../contract/contract.dart';
 import '../users/users_page.dart';
 import '../workers/workers_page.dart';
 import 'dashboard_page.dart';
+import '../../services/firestore_db.dart';
 
 final GlobalKey<AttendancePageState> attendanceKey =
     GlobalKey<AttendancePageState>();
@@ -40,10 +41,7 @@ class _HomePageState extends State<HomePage> {
     final user = FirebaseAuth.instance.currentUser;
     _userStream = user == null
         ? const Stream.empty()
-        : FirebaseFirestore.instance
-            .collection('Usuarios')
-            .doc(user.uid)
-            .snapshots();
+        : db.collection('Usuarios').doc(user.uid).snapshots();
     _loadDrawerState();
   }
 

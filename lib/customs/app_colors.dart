@@ -43,25 +43,20 @@ class AppColors {
   static const Color divider = Color(0xFFE3E9ED);
   static const Color border = Color(0xFFC4D0DA);
 
-  /// **La tarjeta es MAS OSCURA que el fondo, no al reves.**
+  /// Tarjeta blanca sobre fondo gris muy claro: es el esquema **original** del
+  /// proyecto (`Colors.white` sobre `0xFFF0F2F5`), recuperado despues de que
+  /// una tanda de intentos lo invirtiera (fondo azul-gris con tarjeta clara),
+  /// que es de donde salia el "celeste" que hubo que perseguir.
   ///
-  /// El fondo del cuerpo es blanco, el mismo del drawer lateral, para que la
-  /// pantalla se lea como una sola superficie continua. La tarjeta se despega
-  /// bajando un par de grados desde ese blanco: sigue siendo un tono de blanco,
-  /// nunca celeste.
-  ///
-  /// Intentos anteriores hicieron lo contrario -- fondo azul-gris (#CBD8E2,
-  /// #B3C4D2) con la tarjeta mas clara -- y el resultado era el "celeste" que
-  /// habia que sacar. Si hace falta mas separacion, se baja [surface] otro par
-  /// de grados; [background] se queda en blanco.
-  /// #ECEDEF (19 puntos bajo el blanco) resulto imperceptible. Este baja 33.
-  static const Color surface = Color(0xFFDEE2E6);
-  static const Color background = Colors.white;
+  /// Lo unico que cambia respecto del original es que ya no estan repetidos a
+  /// mano en cinco vistas y en el tema.
+  static const Color surface = Colors.white;
+  static const Color background = Color(0xFFF0F2F5);
 
   /// Zonas que hacen de "pagina" dentro de un modal y que a su vez contienen
-  /// tarjetas ([surface]). Mismo blanco que [background], por el mismo motivo:
-  /// la tarjeta es la que baja, no la pagina.
-  static const Color surfaceSunken = Colors.white;
+  /// tarjetas ([surface]). Mismo gris que el fondo, para que la tarjeta de
+  /// adentro se despegue igual que en la pantalla.
+  static const Color surfaceSunken = Color(0xFFF0F2F5);
 
   /// Texto sobre superficies oscuras (headers con gradiente).
   static const Color onDarkStrong = Colors.white;
@@ -70,23 +65,18 @@ class AppColors {
   static const Color onDarkMuted = Color(0xCCFFFFFF);
 }
 
-/// Decoracion estandar de una tarjeta.
+/// Decoracion estandar de una tarjeta: blanca, con el borde negro al 5% que
+/// tenia el proyecto originalmente.
 ///
 /// Existe porque cada tipo de tarjeta (metrica, grafico, listado, ficha de
-/// trabajador) traia su propio `Border.all(color: Colors.black.withOpacity(
-/// 0.05))`. Sobre un fondo claro ese borde no se ve, asi que ninguna de las
-/// tarjetas se leia como superficie separada: el dashboard quedaba "todo
-/// parejo". Una sola definicion para todas.
+/// trabajador) repetia esta misma decoracion por su cuenta. Unificarlas es lo
+/// unico que cambia respecto del original.
 ///
-/// **Plana: sin borde y SIN sombra.** La unica separacion es el salto de color
-/// entre [AppColors.surface] y [AppColors.background].
-///
-/// Cualquier sombra, por chica que sea, se difumina sobre un fondo azul-gris y
-/// se lee como un halo celeste rodeando la tarjeta. Se probo ancha (blur 16) y
-/// minima (blur 5) y las dos se veian igual de celestes. Si alguien quiere
-/// volver a "elevar" las tarjetas, el camino NO es una sombra: es separar mas
-/// los dos tonos.
+/// **Sin sombra.** Cualquier sombra difuminada toma el color del fondo y se
+/// lee como un halo alrededor de la tarjeta; se probo con blur 16 y con blur 5
+/// y las dos se veian mal.
 BoxDecoration appCardDecoration({double radius = 16}) => BoxDecoration(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: Colors.black.withOpacity(0.05)),
     );

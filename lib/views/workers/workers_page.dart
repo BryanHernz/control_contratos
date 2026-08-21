@@ -15,6 +15,7 @@ import '../../models/worker_model.dart';
 import '../../customs/widgets/page_header.dart';
 import 'new_worker_page.dart';
 import 'worker_details.dart';
+import '../../services/firestore_db.dart';
 
 class WorkersPage extends StatefulWidget {
   const WorkersPage({super.key});
@@ -80,10 +81,8 @@ class WorkersPageState extends State<WorkersPage> {
     _searchController.addListener(_onSearchChanged);
     itemPositionsListener.itemPositions.addListener(_scrollListener);
 
-    _workersStream = FirebaseFirestore.instance
-        .collection('Trabajadores')
-        .orderBy('nombres')
-        .snapshots();
+    _workersStream =
+        db.collection('Trabajadores').orderBy('nombres').snapshots();
   }
 
   @override

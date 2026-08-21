@@ -17,6 +17,7 @@ import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
 import '../widgets/settings_dialogs.dart';
+import '../../services/firestore_db.dart';
 
 class NewWorker extends StatefulWidget {
   const NewWorker({super.key});
@@ -503,7 +504,7 @@ class _NewWorkerState extends State<NewWorker> {
     }
     setState(() => _checkingRut = true);
     _rutDebounce = Timer(const Duration(milliseconds: 600), () async {
-      final qs = await FirebaseFirestore.instance
+      final qs = await db
           .collection('Trabajadores')
           .where('rut', isEqualTo: rut)
           .limit(1)
@@ -520,8 +521,7 @@ class _NewWorkerState extends State<NewWorker> {
   void saveNewWorker(WorkerModel worker) {
     try {
       var user = FirebaseAuth.instance.currentUser!;
-      final docRef =
-          FirebaseFirestore.instance.collection('Trabajadores').doc();
+      final docRef = db.collection('Trabajadores').doc();
       docRef.set({
         'nombres': worker.name!.trim().toLowerCase(),
         'apellidos': worker.lastName!.trim().toLowerCase(),
@@ -543,7 +543,7 @@ class _NewWorkerState extends State<NewWorker> {
       });
 
       // MEJORA 10: Registro de auditoría
-      FirebaseFirestore.instance.collection('Auditoria').add({
+      db.collection('Auditoria').add({
         'accion': 'CREAR_TRABAJADOR',
         'usuario': user.email ?? user.uid,
         'trabajadorId': docRef.id,
@@ -658,7 +658,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'nacionalidades')
                           .snapshots(),
@@ -728,7 +728,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'estadosciviles')
                           .snapshots(),
@@ -850,7 +850,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'comunas')
                           .snapshots(),
@@ -919,7 +919,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'labores')
                           .snapshots(),
@@ -988,7 +988,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'lugares')
                           .snapshots(),
@@ -1061,7 +1061,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'afps')
                           .snapshots(),
@@ -1130,7 +1130,7 @@ class _NewWorkerState extends State<NewWorker> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 0),
                     child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
+                      stream: db
                           .collection('Otros')
                           .where('nombre', isEqualTo: 'previsiones')
                           .snapshots(),

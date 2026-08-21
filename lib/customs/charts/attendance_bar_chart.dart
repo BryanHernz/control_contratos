@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../app_colors.dart';
 import '../../services/attendance_service.dart';
+import '../../services/firestore_db.dart';
 
 class AttendanceBarChart extends StatelessWidget {
   const AttendanceBarChart({super.key});
@@ -40,7 +41,7 @@ class AttendanceBarChart extends StatelessWidget {
           const SizedBox(height: 20),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
+              stream: db
                   .collection('Asistencias')
                   .where('dateKey', isGreaterThanOrEqualTo: weekAgoKey)
                   .snapshots(),
@@ -191,7 +192,7 @@ class AttendanceBarChart extends StatelessWidget {
 
   Widget _buildCard({required Widget child}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: appCardDecoration(),
       child: child,
     );

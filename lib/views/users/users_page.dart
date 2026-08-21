@@ -14,6 +14,7 @@ import '../../customs/widgets/page_header.dart';
 import '../../customs/widgets_custom.dart';
 import '../../firebase_options.dart';
 import '../../utils/user_access.dart';
+import '../../services/firestore_db.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({
@@ -114,7 +115,7 @@ class _UsersPageState extends State<UsersPage> {
       return;
     }
 
-    await FirebaseFirestore.instance.collection('Usuarios').doc(userId).set(
+    await db.collection('Usuarios').doc(userId).set(
       {
         'activo': nextValue,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -204,10 +205,7 @@ class _UsersPageState extends State<UsersPage> {
                     ),
                     onPressed: () async {
                       try {
-                        await FirebaseFirestore.instance
-                            .collection('Usuarios')
-                            .doc(userId)
-                            .delete();
+                        await db.collection('Usuarios').doc(userId).delete();
                         if (!mounted) return;
                         Navigator.pop(context);
                         AnimatedSnackBar.material(
@@ -259,9 +257,7 @@ class _UsersPageState extends State<UsersPage> {
             ),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('Usuarios')
-                    .snapshots(),
+                stream: db.collection('Usuarios').snapshots(),
                 builder: (context, usersSnapshot) {
                   if (!usersSnapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -1110,7 +1106,7 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
           throw Exception('No fue posible obtener el uid del nuevo usuario.');
         }
 
-        await FirebaseFirestore.instance.collection('Usuarios').doc(uid).set({
+        await db.collection('Usuarios').doc(uid).set({
           'uid': uid,
           'email': _emailController.text.trim().toLowerCase(),
           'nombre': _nameController.text.trim(),
@@ -1125,10 +1121,7 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
 
         await secondaryAuth.signOut();
       } else {
-        await FirebaseFirestore.instance
-            .collection('Usuarios')
-            .doc(widget.userId)
-            .set(
+        await db.collection('Usuarios').doc(widget.userId).set(
           {
             'nombre': _nameController.text.trim(),
             'apellido': _lastNameController.text.trim(),

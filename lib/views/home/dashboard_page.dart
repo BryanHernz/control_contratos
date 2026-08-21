@@ -10,6 +10,14 @@ import '../../customs/charts/generic_pie_chart.dart';
 import '../../customs/charts/attendance_bar_chart.dart';
 import '../../customs/charts/contracts_line_chart.dart';
 import '../../customs/widgets/page_header.dart';
+import '../../services/firestore_db.dart';
+
+/// Ancho maximo del contenido del dashboard.
+///
+/// En monitores anchos el contenido se estiraba de borde a borde: las tres
+/// tarjetas de metrica quedaban larguisimas y casi vacias, y los graficos
+/// desproporcionados. Debajo de este ancho no cambia nada.
+const double kDashboardMaxWidth = 1400;
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -57,7 +65,7 @@ class _DashboardPageState extends State<DashboardPage> {
     _today = DateTime(_now.year, _now.month, _now.day);
     _monthStart = DateTime(_now.year, _now.month, 1);
 
-    final trabajadores = FirebaseFirestore.instance.collection('Trabajadores');
+    final trabajadores = db.collection('Trabajadores');
     final activos = trabajadores.where('activo', isEqualTo: true);
 
     _activosStreamMetrica = activos.snapshots();
@@ -76,7 +84,7 @@ class _DashboardPageState extends State<DashboardPage> {
         .limit(5)
         .snapshots();
 
-    _auditoriaStream = FirebaseFirestore.instance
+    _auditoriaStream = db
         .collection('Auditoria')
         .orderBy('timestamp', descending: true)
         .limit(8)
@@ -103,356 +111,383 @@ class _DashboardPageState extends State<DashboardPage> {
 
           Expanded(
             child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ── Métricas ─────────────────────────────────────
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final isDesktop = constraints.maxWidth >= 800;
-                            final crossCount = isDesktop ? 3 : 1;
-
-                            return Wrap(
-                              spacing: 16,
-                              runSpacing: 16,
-                              children: [
-                                StreamBuilder<QuerySnapshot>(
-                                  stream: _activosStreamMetrica,
-                                  builder: (ctx, snap) {
-                                    final total = snap.data?.docs.length ?? 0;
-                                    return _MetricCard(
-                                      icon: Icons.people_rounded,
-                                      label: 'Trabajadores activos',
-                                      value: '$total',
-                                      subtitle: 'Con contrato activo',
-                                      accentColor: const Color(0xFF546E7A),
-                                      fraction: 1 / crossCount,
-                                      maxWidth: constraints.maxWidth,
-                                    );
-                                  },
-                                ),
-                                StreamBuilder<List<Map<String, dynamic>>>(
-                                  stream: _presentesStream,
-                                  builder: (ctx, snap) {
-                                    final count = snap.data?.length ?? 0;
-                                    return _MetricCard(
-                                      icon: Icons.how_to_reg_rounded,
-                                      label: 'Presentes hoy',
-                                      value: '$count',
-                                      subtitle:
-                                          DateFormat('EEEE d MMM', 'es_CL')
-                                              .format(now),
-                                      accentColor: const Color(0xFF00897B),
-                                      fraction: 1 / crossCount,
-                                      maxWidth: constraints.maxWidth,
-                                    );
-                                  },
-                                ),
-                                FutureBuilder<int>(
-                                  future: _contratosDelMes,
-                                  builder: (ctx, snap) {
-                                    final count = snap.data;
-                                    return _MetricCard(
-                                      icon: Icons.description_rounded,
-                                      label: 'Contratos este mes',
-                                      value: count == null ? '--' : '$count',
-                                      subtitle: DateFormat('MMMM yyyy', 'es_CL')
-                                          .format(now),
-                                      accentColor: const Color(0xFF5C6BC0),
-                                      fraction: 1 / crossCount,
-                                      maxWidth: constraints.maxWidth,
-                                    );
-                                  },
-                                ),
-                              ],
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // ── Gráficos ─────────────────────────────────────
-                        const _SectionHeader(
-                          title: 'Analítica',
-                          icon: Icons.bar_chart_rounded,
-                        ),
-                        const SizedBox(height: 14),
-
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _activosStreamGrafico,
-                          builder: (ctx, snap) {
-                            if (!snap.hasData) {
-                              return _ChartLoadingPlaceholder();
-                            }
-
-                            final workers = snap.data!.docs
-                                .map((e) => e.data() as Map<String, dynamic>)
-                                .toList();
-
-                            final placesData = <String, int>{};
-                            final taskData = <String, int>{};
-
-                            for (var w in workers) {
-                              final l =
-                                  (w['lugar'] ?? 'Sin asignar').toString();
-                              final t =
-                                  (w['labor'] ?? 'Sin asignar').toString();
-                              placesData[l] = (placesData[l] ?? 0) + 1;
-                              taskData[t] = (taskData[t] ?? 0) + 1;
-                            }
-
-                            return LayoutBuilder(
+              // Tope de ancho centrado: en un monitor grande el contenido se
+              // estiraba de borde a borde y las tarjetas quedaban con enormes
+              // huecos vacios. Bajo ese ancho ocupa todo, como antes.
+              child: Center(
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: kDashboardMaxWidth),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Métricas ─────────────────────────────────────
+                            LayoutBuilder(
                               builder: (context, constraints) {
                                 final isDesktop = constraints.maxWidth >= 800;
-                                final chartWidth = isDesktop
-                                    ? (constraints.maxWidth - 16) / 2
-                                    : constraints.maxWidth;
-
-                                final renderPlacesData = placesData.length <= 1
-                                    ? {
-                                        'Sede Central (Demo)': 45,
-                                        'Sucursal Norte (Demo)': 25,
-                                        'Planta Ind. (Demo)': 15,
-                                        'Oficina Sur (Demo)': 10,
-                                        'Otros (Demo)': 5
-                                      }
-                                    : placesData;
-
-                                final renderTaskData = taskData.length <= 1
-                                    ? {
-                                        'Temporera (Demo)': 40,
-                                        'Admin. (Demo)': 20,
-                                        'Supervisor (Demo)': 15,
-                                        'Mantención (Demo)': 15,
-                                        'Logística (Demo)': 10
-                                      }
-                                    : taskData;
+                                final crossCount = isDesktop ? 3 : 1;
 
                                 return Wrap(
                                   spacing: 16,
                                   runSpacing: 16,
                                   children: [
-                                    SizedBox(
-                                      width: chartWidth,
-                                      height: 290,
-                                      child: GenericPieChart(
-                                        title: 'Por Establecimiento',
-                                        data: renderPlacesData,
-                                      ),
+                                    StreamBuilder<QuerySnapshot>(
+                                      stream: _activosStreamMetrica,
+                                      builder: (ctx, snap) {
+                                        final total =
+                                            snap.data?.docs.length ?? 0;
+                                        return _MetricCard(
+                                          icon: Icons.people_rounded,
+                                          label: 'Trabajadores activos',
+                                          value: '$total',
+                                          subtitle: 'Con contrato activo',
+                                          accentColor: const Color(0xFF546E7A),
+                                          fraction: 1 / crossCount,
+                                          maxWidth: constraints.maxWidth,
+                                        );
+                                      },
                                     ),
-                                    SizedBox(
-                                      width: chartWidth,
-                                      height: 290,
-                                      child: GenericPieChart(
-                                        title: 'Por Labor',
-                                        data: renderTaskData,
-                                      ),
+                                    StreamBuilder<List<Map<String, dynamic>>>(
+                                      stream: _presentesStream,
+                                      builder: (ctx, snap) {
+                                        final count = snap.data?.length ?? 0;
+                                        return _MetricCard(
+                                          icon: Icons.how_to_reg_rounded,
+                                          label: 'Presentes hoy',
+                                          value: '$count',
+                                          subtitle:
+                                              DateFormat('EEEE d MMM', 'es_CL')
+                                                  .format(now),
+                                          accentColor: const Color(0xFF00897B),
+                                          fraction: 1 / crossCount,
+                                          maxWidth: constraints.maxWidth,
+                                        );
+                                      },
                                     ),
-                                    SizedBox(
-                                      width: chartWidth,
-                                      height: 290,
-                                      child: ContractsLineChart(
-                                        workers: workers,
-                                        baseColor: Colors.teal.shade400,
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: chartWidth,
-                                      height: 290,
-                                      child: const AttendanceBarChart(),
+                                    FutureBuilder<int>(
+                                      future: _contratosDelMes,
+                                      builder: (ctx, snap) {
+                                        final count = snap.data;
+                                        return _MetricCard(
+                                          icon: Icons.description_rounded,
+                                          label: 'Contratos este mes',
+                                          value:
+                                              count == null ? '--' : '$count',
+                                          subtitle:
+                                              DateFormat('MMMM yyyy', 'es_CL')
+                                                  .format(now),
+                                          accentColor: const Color(0xFF5C6BC0),
+                                          fraction: 1 / crossCount,
+                                          maxWidth: constraints.maxWidth,
+                                        );
+                                      },
                                     ),
                                   ],
                                 );
                               },
-                            );
-                          },
-                        ),
+                            ),
 
-                        const SizedBox(height: 32),
+                            const SizedBox(height: 32),
 
-                        // ── Últimos contratos ─────────────────────────────
-                        const _SectionHeader(
-                          title: 'Últimos contratos generados',
-                          icon: Icons.assignment_turned_in_outlined,
-                        ),
-                        const SizedBox(height: 14),
+                            // ── Gráficos ─────────────────────────────────────
+                            const _SectionHeader(
+                              title: 'Analítica',
+                              icon: Icons.bar_chart_rounded,
+                            ),
+                            const SizedBox(height: 14),
 
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _ultimosContratosStream,
-                          builder: (ctx, snap) {
-                            if (!snap.hasData) return _ListLoadingPlaceholder();
-                            if (snap.data!.docs.isEmpty) {
-                              return const _EmptyState(
-                                  icon: Icons.inbox_outlined,
-                                  message: 'Ningún contrato generado aún.');
-                            }
-                            return _StyledCard(
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: snap.data!.docs.length,
-                                separatorBuilder: (_, __) => Divider(
-                                  height: 1,
-                                  color: Colors.grey.shade100,
-                                  indent: 72,
-                                ),
-                                itemBuilder: (_, i) {
-                                  final doc = snap.data!.docs[i];
-                                  final data =
-                                      doc.data() as Map<String, dynamic>;
-                                  final nombres =
-                                      (data['nombres'] ?? '').toString();
-                                  final apellidos =
-                                      (data['apellidos'] ?? '').toString();
-                                  final ts = data['ultimoContrato'];
-                                  String fecha = '—';
-                                  if (ts is Timestamp) {
-                                    fecha =
-                                        DateFormat('dd/MM/yyyy · HH:mm', 'es')
+                            StreamBuilder<QuerySnapshot>(
+                              stream: _activosStreamGrafico,
+                              builder: (ctx, snap) {
+                                if (!snap.hasData) {
+                                  return _ChartLoadingPlaceholder();
+                                }
+
+                                final workers = snap.data!.docs
+                                    .map(
+                                        (e) => e.data() as Map<String, dynamic>)
+                                    .toList();
+
+                                final placesData = <String, int>{};
+                                final taskData = <String, int>{};
+
+                                for (var w in workers) {
+                                  final l =
+                                      (w['lugar'] ?? 'Sin asignar').toString();
+                                  final t =
+                                      (w['labor'] ?? 'Sin asignar').toString();
+                                  placesData[l] = (placesData[l] ?? 0) + 1;
+                                  taskData[t] = (taskData[t] ?? 0) + 1;
+                                }
+
+                                return LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final isDesktop =
+                                        constraints.maxWidth >= 800;
+                                    final chartWidth = isDesktop
+                                        ? (constraints.maxWidth - 16) / 2
+                                        : constraints.maxWidth;
+
+                                    final renderPlacesData =
+                                        placesData.length <= 1
+                                            ? {
+                                                'Sede Central (Demo)': 45,
+                                                'Sucursal Norte (Demo)': 25,
+                                                'Planta Ind. (Demo)': 15,
+                                                'Oficina Sur (Demo)': 10,
+                                                'Otros (Demo)': 5
+                                              }
+                                            : placesData;
+
+                                    final renderTaskData = taskData.length <= 1
+                                        ? {
+                                            'Temporera (Demo)': 40,
+                                            'Admin. (Demo)': 20,
+                                            'Supervisor (Demo)': 15,
+                                            'Mantención (Demo)': 15,
+                                            'Logística (Demo)': 10
+                                          }
+                                        : taskData;
+
+                                    return Wrap(
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: [
+                                        SizedBox(
+                                          width: chartWidth,
+                                          height: 290,
+                                          child: GenericPieChart(
+                                            title: 'Por Establecimiento',
+                                            data: renderPlacesData,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: chartWidth,
+                                          height: 290,
+                                          child: GenericPieChart(
+                                            title: 'Por Labor',
+                                            data: renderTaskData,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: chartWidth,
+                                          height: 290,
+                                          child: ContractsLineChart(
+                                            workers: workers,
+                                            baseColor: Colors.teal.shade400,
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: chartWidth,
+                                          height: 290,
+                                          child: const AttendanceBarChart(),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // ── Últimos contratos ─────────────────────────────
+                            const _SectionHeader(
+                              title: 'Últimos contratos generados',
+                              icon: Icons.assignment_turned_in_outlined,
+                            ),
+                            const SizedBox(height: 14),
+
+                            StreamBuilder<QuerySnapshot>(
+                              stream: _ultimosContratosStream,
+                              builder: (ctx, snap) {
+                                if (!snap.hasData)
+                                  return _ListLoadingPlaceholder();
+                                if (snap.data!.docs.isEmpty) {
+                                  return const _EmptyState(
+                                      icon: Icons.inbox_outlined,
+                                      message: 'Ningún contrato generado aún.');
+                                }
+                                return _StyledCard(
+                                  child: ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: snap.data!.docs.length,
+                                    separatorBuilder: (_, __) => Divider(
+                                      height: 1,
+                                      color: Colors.grey.shade100,
+                                      indent: 72,
+                                    ),
+                                    itemBuilder: (_, i) {
+                                      final doc = snap.data!.docs[i];
+                                      final data =
+                                          doc.data() as Map<String, dynamic>;
+                                      final nombres =
+                                          (data['nombres'] ?? '').toString();
+                                      final apellidos =
+                                          (data['apellidos'] ?? '').toString();
+                                      final ts = data['ultimoContrato'];
+                                      String fecha = '—';
+                                      if (ts is Timestamp) {
+                                        fecha = DateFormat(
+                                                'dd/MM/yyyy · HH:mm', 'es')
                                             .format(ts.toDate());
-                                  }
-                                  return ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 6),
-                                    leading: _InitialsAvatar(
-                                      name: nombres.isNotEmpty ? nombres : '?',
-                                      color: primario,
+                                      }
+                                      return ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 24, vertical: 8),
+                                        leading: _InitialsAvatar(
+                                          name: nombres.isNotEmpty
+                                              ? nombres
+                                              : '?',
+                                          color: primario,
+                                        ),
+                                        title: Text(
+                                          '$apellidos $nombres'.toUpperCase(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14.5,
+                                            color: AppColors.textStrong,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                        subtitle: Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 3),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.schedule_rounded,
+                                                  size: 14,
+                                                  color: AppColors.iconMuted),
+                                              const SizedBox(width: 5),
+                                              Text(
+                                                fecha,
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.textMuted,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        trailing: const Icon(
+                                            Icons.chevron_right_rounded,
+                                            color: AppColors.iconMuted),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // ── Actividad reciente ────────────────────────────
+                            const _SectionHeader(
+                              title: 'Actividad reciente',
+                              icon: Icons.history_rounded,
+                            ),
+                            const SizedBox(height: 14),
+
+                            StreamBuilder<QuerySnapshot>(
+                              stream: _auditoriaStream,
+                              builder: (ctx, snap) {
+                                if (!snap.hasData)
+                                  return _ListLoadingPlaceholder();
+                                if (snap.data!.docs.isEmpty) {
+                                  return const _EmptyState(
+                                      icon: Icons.history_rounded,
+                                      message: 'Sin actividad registrada.');
+                                }
+                                return _StyledCard(
+                                  child: ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: snap.data!.docs.length,
+                                    separatorBuilder: (_, __) => Divider(
+                                      height: 1,
+                                      color: Colors.grey.shade100,
+                                      indent: 72,
                                     ),
-                                    title: Text(
-                                      '$apellidos $nombres'.toUpperCase(),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14.5,
-                                        color: AppColors.textStrong,
-                                        letterSpacing: 0.3,
-                                      ),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 3),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.schedule_rounded,
-                                              size: 14,
-                                              color: AppColors.iconMuted),
-                                          const SizedBox(width: 5),
-                                          Text(
-                                            fecha,
+                                    itemBuilder: (_, i) {
+                                      final doc = snap.data!.docs[i];
+                                      final data =
+                                          doc.data() as Map<String, dynamic>;
+                                      final accion =
+                                          (data['accion'] ?? '').toString();
+                                      final usuario =
+                                          (data['usuario'] ?? '').toString();
+                                      final nombre =
+                                          (data['nombre'] ?? '').toString();
+                                      final ts = data['timestamp'];
+                                      String fecha = '—';
+                                      if (ts is Timestamp) {
+                                        fecha =
+                                            DateFormat('dd/MM · HH:mm', 'es')
+                                                .format(ts.toDate());
+                                      }
+                                      return ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 24, vertical: 8),
+                                        leading: CircleAvatar(
+                                          backgroundColor:
+                                              Colors.blueGrey.shade50,
+                                          child: Icon(Icons.history_rounded,
+                                              color: primario, size: 18),
+                                        ),
+                                        title: Text(
+                                          nombre.isNotEmpty ? nombre : accion,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        subtitle: Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                            '$accion · $usuario',
                                             style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
+                                              fontSize: 11,
                                               color: AppColors.textMuted,
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    trailing: const Icon(
-                                        Icons.chevron_right_rounded,
-                                        color: AppColors.iconMuted),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        // ── Actividad reciente ────────────────────────────
-                        const _SectionHeader(
-                          title: 'Actividad reciente',
-                          icon: Icons.history_rounded,
-                        ),
-                        const SizedBox(height: 14),
-
-                        StreamBuilder<QuerySnapshot>(
-                          stream: _auditoriaStream,
-                          builder: (ctx, snap) {
-                            if (!snap.hasData) return _ListLoadingPlaceholder();
-                            if (snap.data!.docs.isEmpty) {
-                              return const _EmptyState(
-                                  icon: Icons.history_rounded,
-                                  message: 'Sin actividad registrada.');
-                            }
-                            return _StyledCard(
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: snap.data!.docs.length,
-                                separatorBuilder: (_, __) => Divider(
-                                  height: 1,
-                                  color: Colors.grey.shade100,
-                                  indent: 72,
-                                ),
-                                itemBuilder: (_, i) {
-                                  final doc = snap.data!.docs[i];
-                                  final data =
-                                      doc.data() as Map<String, dynamic>;
-                                  final accion =
-                                      (data['accion'] ?? '').toString();
-                                  final usuario =
-                                      (data['usuario'] ?? '').toString();
-                                  final nombre =
-                                      (data['nombre'] ?? '').toString();
-                                  final ts = data['timestamp'];
-                                  String fecha = '—';
-                                  if (ts is Timestamp) {
-                                    fecha = DateFormat('dd/MM · HH:mm', 'es')
-                                        .format(ts.toDate());
-                                  }
-                                  return ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 6),
-                                    leading: CircleAvatar(
-                                      backgroundColor: Colors.blueGrey.shade50,
-                                      child: Icon(Icons.history_rounded,
-                                          color: primario, size: 18),
-                                    ),
-                                    title: Text(
-                                      nombre.isNotEmpty ? nombre : accion,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Text(
-                                        '$accion · $usuario',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textMuted,
                                         ),
-                                      ),
-                                    ),
-                                    trailing: Text(
-                                      fecha,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                                        trailing: Text(
+                                          fecha,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
 
-                        const SizedBox(height: 36),
-                      ],
-                    ),
+                            const SizedBox(height: 36),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -586,7 +621,7 @@ class _MetricCard extends StatelessWidget {
               ),
               // Content
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 16, 18),
+                padding: const EdgeInsets.fromLTRB(26, 24, 24, 24),
                 child: Row(
                   children: [
                     Container(
@@ -704,6 +739,10 @@ class _StyledCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: appCardDecoration(),
+      // Aire propio, igual que las tarjetas de grafico: la envoltura de
+      // "Ultimos contratos generados" y "Actividad reciente" pegaba su
+      // contenido al borde.
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: child,

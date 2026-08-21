@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:animated_snack_bar/animated_snack_bar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -28,6 +27,7 @@ import '../../customs/widgets_custom.dart';
 import '../../customs/widgets/page_header.dart';
 import '../../services/attendance_service.dart';
 import '../../utils/normalize.dart';
+import '../../services/firestore_db.dart';
 
 DateTime normalizeDay(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -141,7 +141,7 @@ class AttendancePageState extends State<AttendancePage> {
   }
 
   void _listenWorkers() {
-    FirebaseFirestore.instance
+    db
         .collection('Trabajadores')
         .orderBy('apellidos')
         .snapshots()
@@ -1484,10 +1484,8 @@ class AttendancePageState extends State<AttendancePage> {
       for (int i = 1; i <= daysInMonth; i++) {
         final currentDayDate = DateTime(selectedYear, selectedMonth, i);
         final dayKey = AttendanceService.dateKeyFrom(currentDayDate);
-        final docSnapshot = await FirebaseFirestore.instance
-            .collection('Asistencias')
-            .doc(dayKey)
-            .get();
+        final docSnapshot =
+            await db.collection('Asistencias').doc(dayKey).get();
 
         if (docSnapshot.exists) {
           final data = docSnapshot.data();

@@ -15,6 +15,7 @@ import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../customs/widgets/page_header.dart';
 import '../widgets/settings_dialogs.dart';
+import '../../services/firestore_db.dart';
 
 class ContractPage extends StatefulWidget {
   const ContractPage({super.key});
@@ -62,9 +63,7 @@ class _ContractPageState extends State<ContractPage> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: StreamBuilder(
-                stream: FirebaseFirestore.instance
-                    .collection('Otros')
-                    .where('nombre', whereIn: [
+                stream: db.collection('Otros').where('nombre', whereIn: [
                   'contratosmont',
                   'empresadata',
                   'lugares',
@@ -309,7 +308,7 @@ class _ContractPageState extends State<ContractPage> {
   }
 
   Future<void> _ensureUserTypesDocument() async {
-    final ref = FirebaseFirestore.instance.collection('Otros').doc(
+    final ref = db.collection('Otros').doc(
           'tipos_usuarios',
         );
     final snap = await ref.get();
@@ -365,17 +364,14 @@ class _ContractPageState extends State<ContractPage> {
 
   Widget _buildUsersManagerContent(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('tipos_usuarios')
-          .snapshots(),
+      stream: db.collection('Otros').doc('tipos_usuarios').snapshots(),
       builder: (context, typesSnapshot) {
         final userTypes = _extractUserTypes(
           typesSnapshot.data?.data() as Map<String, dynamic>?,
         );
 
         return StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('Usuarios').snapshots(),
+          stream: db.collection('Usuarios').snapshots(),
           builder: (context, usersSnapshot) {
             if (!usersSnapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
@@ -620,10 +616,7 @@ class _ContractPageState extends State<ContractPage> {
 
   Widget _buildUserTypesManagerContent(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('tipos_usuarios')
-          .snapshots(),
+      stream: db.collection('Otros').doc('tipos_usuarios').snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -839,10 +832,7 @@ class _ContractPageState extends State<ContractPage> {
                     ),
                     onPressed: () async {
                       try {
-                        await FirebaseFirestore.instance
-                            .collection('Usuarios')
-                            .doc(userId)
-                            .delete();
+                        await db.collection('Usuarios').doc(userId).delete();
 
                         if (!mounted) return;
                         Get.back();
@@ -957,9 +947,8 @@ class _ContractPageState extends State<ContractPage> {
                       final replacementType = remainingTypes.first;
 
                       try {
-                        final typesRef = FirebaseFirestore.instance
-                            .collection('Otros')
-                            .doc('tipos_usuarios');
+                        final typesRef =
+                            db.collection('Otros').doc('tipos_usuarios');
                         await typesRef.set(
                           {
                             'nombre': 'tipos_usuarios',
@@ -969,11 +958,10 @@ class _ContractPageState extends State<ContractPage> {
                           SetOptions(merge: true),
                         );
 
-                        final usersSnapshot = await FirebaseFirestore.instance
-                            .collection('Usuarios')
-                            .get();
+                        final usersSnapshot =
+                            await db.collection('Usuarios').get();
 
-                        final batch = FirebaseFirestore.instance.batch();
+                        final batch = db.batch();
                         var hasUpdates = false;
                         for (final userDoc in usersSnapshot.docs) {
                           final userType = _resolveUserType(
@@ -1022,7 +1010,7 @@ class _ContractPageState extends State<ContractPage> {
 
   Widget _buildPlacesManagerContent(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
+      stream: db
           .collection('Otros')
           .where('nombre', whereIn: ['lugares', 'lugaresHoras']).snapshots(),
       builder: (context, modalSnapshot) {
@@ -1211,10 +1199,7 @@ class _ContractPageState extends State<ContractPage> {
           ? 900
           : MediaQuery.of(context).size.width,
       child: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('Otros')
-            .doc(docId)
-            .snapshots(),
+        stream: db.collection('Otros').doc(docId).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -1459,10 +1444,7 @@ class _ContractPageState extends State<ContractPage> {
                     ),
                     onPressed: () async {
                       try {
-                        await FirebaseFirestore.instance
-                            .collection('Otros')
-                            .doc(docId)
-                            .update({
+                        await db.collection('Otros').doc(docId).update({
                           'tipos': FieldValue.arrayRemove([item])
                         });
                         if (!mounted) return;
@@ -1539,10 +1521,7 @@ void _confirmDeleteCategoryItem(
                           ElevatedButton.styleFrom(backgroundColor: Colors.red),
                       onPressed: () async {
                         try {
-                          await FirebaseFirestore.instance
-                              .collection('Otros')
-                              .doc(docId)
-                              .update({
+                          await db.collection('Otros').doc(docId).update({
                             'tipos': FieldValue.arrayRemove([item])
                           });
                           if (!ctx.mounted) return;
@@ -1600,19 +1579,14 @@ class _EditGenericCategoryState extends State<EditGenericCategory> {
 
   Future<void> saveEdit() async {
     try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc(widget.docId)
-          .get();
+      DocumentSnapshot doc =
+          await db.collection('Otros').doc(widget.docId).get();
       List<dynamic> types = doc['tipos'];
       int index = types.indexOf(widget.existingItem);
 
       if (index != -1) {
         types[index] = _controller.text.trim();
-        await FirebaseFirestore.instance
-            .collection('Otros')
-            .doc(widget.docId)
-            .update({'tipos': types});
+        await db.collection('Otros').doc(widget.docId).update({'tipos': types});
 
         if (!mounted) return;
         Navigator.pop(context);
@@ -1771,10 +1745,7 @@ class _EditSystemUserState extends State<EditSystemUser> {
     setState(() => _saving = true);
 
     try {
-      await FirebaseFirestore.instance
-          .collection('Usuarios')
-          .doc(widget.userId)
-          .set(
+      await db.collection('Usuarios').doc(widget.userId).set(
         {
           'uid': widget.userId,
           'nombre': _nameController.text.trim(),
@@ -1992,8 +1963,7 @@ class _NewUserTypeState extends State<NewUserType> {
     setState(() => _saving = true);
 
     try {
-      final ref =
-          FirebaseFirestore.instance.collection('Otros').doc('tipos_usuarios');
+      final ref = db.collection('Otros').doc('tipos_usuarios');
       final snap = await ref.get();
       final currentRaw =
           (snap.data()?['tipos'] as List?)?.cast<dynamic>() ?? <dynamic>[];
@@ -2109,7 +2079,7 @@ class _NewEnterpriseDataState extends State<NewEnterpriseData> {
 
   void saveNewEnterpriseData() {
     try {
-      FirebaseFirestore.instance.collection('Otros').doc('empresadata').update({
+      db.collection('Otros').doc('empresadata').update({
         'nombreempresa': _empresaController.text,
         'rut': _rutController.text,
       });
@@ -2234,7 +2204,7 @@ class _NewAmountState extends State<NewAmount> {
 
   void saveNewAmount() {
     try {
-      FirebaseFirestore.instance.collection('Otros').doc('contrato').update({
+      db.collection('Otros').doc('contrato').update({
         'montonum': int.parse(
             _montoController.text.replaceAll(',', '').replaceAll('.', '')),
         'montotext': SpellingNumber(lang: 'es')

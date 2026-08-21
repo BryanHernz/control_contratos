@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../services/firestore_db.dart';
 
 class AttendanceService {
   // Utils fecha
@@ -10,11 +11,11 @@ class AttendanceService {
 
   // Refs
   static DocumentReference<Map<String, dynamic>> _typesRef() =>
-      FirebaseFirestore.instance.collection('Otros').doc('listas-asistencia');
+      db.collection('Otros').doc('listas-asistencia');
 
   static DocumentReference<Map<String, dynamic>> _dayRef(DateTime day) {
     final key = dateKeyFrom(DateTime(day.year, day.month, day.day));
-    return FirebaseFirestore.instance.collection('Asistencias').doc(key);
+    return db.collection('Asistencias').doc(key);
   }
 
   // Tipos globales

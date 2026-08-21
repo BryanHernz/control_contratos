@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:animated_snack_bar/animated_snack_bar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,6 +15,7 @@ import 'package:flutter/foundation.dart'
 import '../../customs/app_colors.dart';
 import '../../customs/widgets/app_modal.dart';
 import '../../models/worker_model.dart';
+import '../../services/firestore_db.dart';
 
 class PicturesPage extends StatefulWidget {
   const PicturesPage({super.key, required this.worker});
@@ -353,7 +353,7 @@ class _PicturesPageState extends State<PicturesPage> {
       final snapshot = await uploadTask;
       final downloadUrl = await snapshot.ref.getDownloadURL();
 
-      await FirebaseFirestore.instance
+      await db
           .collection('Trabajadores')
           .doc(widget.worker.id)
           .update({position == 1 ? 'imagenFront' : 'imagenBack': downloadUrl});
@@ -497,7 +497,7 @@ class _PicturesPageState extends State<PicturesPage> {
       Get.back();
       await FirebaseStorage.instance.ref(path).child(fileName).delete();
 
-      await FirebaseFirestore.instance
+      await db
           .collection('Trabajadores')
           .doc(widget.worker.id)
           .update({position == 1 ? 'imagenFront' : 'imagenBack': ''});

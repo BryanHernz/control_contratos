@@ -22,6 +22,7 @@ import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
 import '../pictures/pictures_page.dart';
 import 'edit_worker_page.dart';
+import '../../services/firestore_db.dart';
 
 class WorkerDetails extends StatefulWidget {
   const WorkerDetails({super.key, required this.worker});
@@ -314,7 +315,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
 
                         // MEJORA 4: Ultimo contrato generado
                         StreamBuilder<DocumentSnapshot>(
-                          stream: FirebaseFirestore.instance
+                          stream: db
                               .collection('Trabajadores')
                               .doc(widget.worker.id)
                               .snapshots(),
@@ -486,10 +487,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
         await FirebaseStorage.instance.ref(path).child(backFile).delete();
       } catch (_) {}
 
-      await FirebaseFirestore.instance
-          .collection('Trabajadores')
-          .doc(widget.worker.id)
-          .delete();
+      await db.collection('Trabajadores').doc(widget.worker.id).delete();
 
       Get.back();
       if (mounted) {
@@ -621,20 +619,11 @@ class _WorkerDetailsState extends State<WorkerDetails> {
       final image1 = await networkImage(url1);
       final image2 = await networkImage(url2);
 
-      var contrato = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('contrato')
-          .get();
-      var empresa = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('empresadata')
-          .get();
+      var contrato = await db.collection('Otros').doc('contrato').get();
+      var empresa = await db.collection('Otros').doc('empresadata').get();
 
       // Fetch the places array to find the index
-      var lugaresParam = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares')
-          .get();
+      var lugaresParam = await db.collection('Otros').doc('lugares').get();
       List<String> lugaresTipos = [];
       if (lugaresParam.exists && lugaresParam.data() != null) {
         var data = lugaresParam.data()!;
@@ -644,10 +633,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
       }
 
       // Fetch the hours configuration array
-      var horasParam = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares_horas')
-          .get();
+      var horasParam = await db.collection('Otros').doc('lugares_horas').get();
       List<String> pruebaHoras = [];
       List<String> lunesJuevesList = [];
       List<String> viernesList = [];
@@ -3237,10 +3223,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
       // Registrar contrato en Firestore solo si se generÃ³ un contrato
       if (selections.contains('Contrato') && widget.worker.id != null) {
         try {
-          await FirebaseFirestore.instance
-              .collection('Trabajadores')
-              .doc(widget.worker.id)
-              .update({
+          await db.collection('Trabajadores').doc(widget.worker.id).update({
             'ultimoContrato': FieldValue.serverTimestamp(),
             'activo': true,
           });
@@ -3267,10 +3250,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
     double baselina = 4;
     double letterSize = 12;
 
-    var empresa = await FirebaseFirestore.instance
-        .collection('Otros')
-        .doc('empresadata')
-        .get();
+    var empresa = await db.collection('Otros').doc('empresadata').get();
 
     pdf.addPage(
       pw.Page(
@@ -3825,10 +3805,7 @@ class _WorkerDetailsState extends State<WorkerDetails> {
     // MEJORA 4: Registrar fecha de generaciÃ³n del contrato ANTES del await pdf
     try {
       if (widget.worker.id != null) {
-        await FirebaseFirestore.instance
-            .collection('Trabajadores')
-            .doc(widget.worker.id)
-            .update({
+        await db.collection('Trabajadores').doc(widget.worker.id).update({
           'ultimoContrato': FieldValue.serverTimestamp(),
           'activo': false,
         });

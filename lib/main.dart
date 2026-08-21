@@ -11,6 +11,7 @@ import 'auth/auth_pages.dart';
 import 'customs/app_colors.dart';
 import 'customs/constants_values.dart';
 import 'firebase_options.dart';
+import 'services/firestore_db.dart';
 import 'services/update_service.dart';
 
 Future<void> main() async {
@@ -146,7 +147,17 @@ class _MyAppState extends State<MyApp> {
           data: mediaQueryData.copyWith(
             textScaler: const TextScaler.linear(1.0),
           ),
-          child: child!,
+          // Cinta de aviso cuando la app NO apunta a produccion. Sin esto no
+          // hay forma de distinguir de un vistazo si lo que se esta viendo es
+          // la base real o la copia, y las dos tienen los mismos datos.
+          child: usandoBaseDePruebas
+              ? Banner(
+                  message: kFirestoreDatabaseId.toUpperCase(),
+                  location: BannerLocation.topStart,
+                  color: const Color(0xFFB3382B),
+                  child: child!,
+                )
+              : child!,
         );
       },
       home: const MainPage(),

@@ -5,6 +5,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../models/worker_model.dart';
+import '../services/firestore_db.dart';
 
 class PdfContractService {
   static Future<void> generateBatchContracts(List<WorkerModel> workers) async {
@@ -14,16 +15,10 @@ class PdfContractService {
       var calibri = await rootBundle.load("lib/images/Calibri Regular.ttf");
       var calibriBold = await rootBundle.load("lib/images/Calibri Bold.ttf");
 
-      var empresaParam = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('empresadata')
-          .get();
+      var empresaParam = await db.collection('Otros').doc('empresadata').get();
 
       // Fetch the places array to find the index
-      var lugaresParam = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares')
-          .get();
+      var lugaresParam = await db.collection('Otros').doc('lugares').get();
       List<String> lugaresTipos = [];
       if (lugaresParam.exists && lugaresParam.data() != null) {
         var data = lugaresParam.data()!;
@@ -33,10 +28,7 @@ class PdfContractService {
       }
 
       // Fetch the hours configuration array (created by user as prueba_horas)
-      var horasParam = await FirebaseFirestore.instance
-          .collection('Otros')
-          .doc('lugares_horas')
-          .get();
+      var horasParam = await db.collection('Otros').doc('lugares_horas').get();
       List<String> pruebaHoras = [];
       List<String> lunesJuevesList = [];
       List<String> viernesList = [];
@@ -860,10 +852,7 @@ class PdfContractService {
       final now = FieldValue.serverTimestamp();
       for (var worker in workers) {
         if (worker.id != null && worker.id!.isNotEmpty) {
-          FirebaseFirestore.instance
-              .collection('Trabajadores')
-              .doc(worker.id)
-              .update({
+          db.collection('Trabajadores').doc(worker.id).update({
             'ultimoContrato': now,
             'activo': true,
           }).catchError((_) {});
