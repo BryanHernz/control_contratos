@@ -26,7 +26,14 @@ class UpdateService {
       final bytes = await ref.getData();
       if (bytes == null) return;
 
-      final Map<String, dynamic> json = jsonDecode(String.fromCharCodes(bytes));
+      // `String.fromCharCodes` trata cada byte como un code unit, o sea que
+      // decodifica en latin-1: el changelog llegaba con "versiÃ³n" en vez de
+      // "version". `utf8.decode` es lo correcto.
+      //
+      // OJO al escribir el changelog en `version.json`: quien lo muestra es la
+      // app YA INSTALADA, no esta. Mientras haya telefonos con una version
+      // anterior a este arreglo, el texto tiene que ir sin tildes.
+      final Map<String, dynamic> json = jsonDecode(utf8.decode(bytes));
 
       final String remoteVersion = json['version'] ?? '0.0.0';
       final String apkGsUrl = json['apk_url'] ?? '';
