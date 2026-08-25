@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
 import 'package:animated_snack_bar/animated_snack_bar.dart';
+import '../../customs/app_colors.dart';
+import '../../customs/constants_values.dart';
+import '../../customs/widgets/app_form.dart';
+import '../../customs/widgets/app_modal.dart';
 import '../../customs/widgets_custom.dart';
 import '../../services/firestore_db.dart';
 
@@ -31,6 +35,119 @@ String _formatOrFallback(TimeOfDay? start, TimeOfDay? end, String fallbackStart,
     return '${_formatTime(start)}/${_formatTime(end)}';
   }
   return '$fallbackStart/$fallbackEnd';
+}
+
+// --- Piezas propias de los formularios de horario ---
+
+/// Selector de hora con la misma piel que [InputTextField].
+///
+/// Antes era un `InputDecorator` con la decoracion por defecto: subrayado gris,
+/// sin relleno y sin afordancia de que se pudiera tocar.
+class _TimeField extends StatelessWidget {
+  const _TimeField({
+    required this.label,
+    required this.value,
+    required this.onPick,
+  });
+
+  final String label;
+  final TimeOfDay? value;
+  final ValueChanged<TimeOfDay> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _selectTime(context, value, onPick),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          labelStyle: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 14.5,
+            fontWeight: FontWeight.w600,
+          ),
+          floatingLabelStyle: TextStyle(
+            color: primario,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: const BorderSide(color: AppColors.border),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          border: OutlineInputBorder(
+            borderSide: const BorderSide(color: AppColors.border),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          suffixIcon: const Icon(
+            Icons.schedule_rounded,
+            size: 18,
+            color: AppColors.iconMuted,
+          ),
+        ),
+        child: Text(
+          _formatTime(value),
+          style: const TextStyle(
+            color: AppColors.textStrong,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Par desde/hasta de un dia, con su etiqueta.
+class _ScheduleRow extends StatelessWidget {
+  const _ScheduleRow({
+    required this.label,
+    required this.from,
+    required this.to,
+    required this.onFrom,
+    required this.onTo,
+  });
+
+  final String label;
+  final TimeOfDay? from;
+  final TimeOfDay? to;
+  final ValueChanged<TimeOfDay> onFrom;
+  final ValueChanged<TimeOfDay> onTo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: AppColors.textStrong,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _TimeField(label: 'Desde', value: from, onPick: onFrom),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _TimeField(label: 'Hasta', value: to, onPick: onTo),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 // --- Workplace Widgets (Lugares) ---
@@ -163,224 +280,161 @@ class _NewPlaceState extends State<NewPlace> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          0,
-          16,
-          MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InputTextField(
-                textController: _tipoController,
-                hint: 'Establecimiento',
-                onFieldSubmitted: (_) {
-                  if (_formKey.currentState!.validate()) saveNewPlace();
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingrese un establecimiento';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              InputTextField(
-                teclado: TextInputType.number,
-                textController: _horasController,
-                hint: 'Horas Semanales (Ej: 40 o 44)',
-                onFieldSubmitted: (_) {
-                  if (_formKey.currentState!.validate()) saveNewPlace();
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingrese las horas semanales';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Debe ser un número válido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              InputTextField(
-                teclado: const TextInputType.numberWithOptions(decimal: true),
-                textController: _colacionController,
-                hint: 'Minutos de Colación (Ej: 60 o 45)',
-                onFieldSubmitted: (_) {
-                  if (_formKey.currentState!.validate()) saveNewPlace();
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingrese los minutos de colación';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Debe ser un número válido';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              const Text('Horario Lunes a Jueves',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: AppModalBody(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context, _ljDesde,
-                          (time) => setState(() => _ljDesde = time)),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                            labelText: 'Desde', border: OutlineInputBorder()),
-                        child: Text(_formatTime(_ljDesde)),
-                      ),
+                  AppFormSection(
+                    title: 'Datos del establecimiento',
+                    icon: Icons.business_rounded,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InputTextField(
+                          textController: _tipoController,
+                          hint: 'Establecimiento',
+                          onFieldSubmitted: (_) {
+                            if (_formKey.currentState!.validate()) {
+                              saveNewPlace();
+                            }
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor ingrese un establecimiento';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        AppModalFieldGrid(
+                          minItemWidth: 230,
+                          maxColumns: 2,
+                          children: [
+                            InputTextField(
+                              teclado: TextInputType.number,
+                              textController: _horasController,
+                              hint: 'Horas semanales',
+                              help: 'Por ejemplo 40 o 44.',
+                              helper: true,
+                              onFieldSubmitted: (_) {
+                                if (_formKey.currentState!.validate()) {
+                                  saveNewPlace();
+                                }
+                              },
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Ingrese las horas semanales';
+                                }
+                                if (int.tryParse(value) == null) {
+                                  return 'Debe ser un numero valido';
+                                }
+                                return null;
+                              },
+                            ),
+                            InputTextField(
+                              teclado: const TextInputType.numberWithOptions(
+                                  decimal: true),
+                              textController: _colacionController,
+                              hint: 'Minutos de colacion',
+                              help: 'Por ejemplo 60 o 45.',
+                              helper: true,
+                              onFieldSubmitted: (_) {
+                                if (_formKey.currentState!.validate()) {
+                                  saveNewPlace();
+                                }
+                              },
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Ingrese los minutos de colacion';
+                                }
+                                if (int.tryParse(value) == null) {
+                                  return 'Debe ser un numero valido';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context, _ljHasta,
-                          (time) => setState(() => _ljHasta = time)),
-                      child: InputDecorator(
-                        decoration: const InputDecoration(
-                            labelText: 'Hasta', border: OutlineInputBorder()),
-                        child: Text(_formatTime(_ljHasta)),
-                      ),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Horarios',
+                    icon: Icons.schedule_rounded,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ScheduleRow(
+                          label: 'Lunes a jueves',
+                          from: _ljDesde,
+                          to: _ljHasta,
+                          onFrom: (t) => setState(() => _ljDesde = t),
+                          onTo: (t) => setState(() => _ljHasta = t),
+                        ),
+                        const SizedBox(height: 16),
+                        AppCheckRow(
+                          title: 'Mismo horario lunes a viernes',
+                          subtitle:
+                              'El viernes toma el mismo horario que lunes a jueves.',
+                          value: _mismoHorarioLunesViernes,
+                          onChanged: (v) =>
+                              setState(() => _mismoHorarioLunesViernes = v),
+                        ),
+                        if (!_mismoHorarioLunesViernes) ...[
+                          const SizedBox(height: 16),
+                          _ScheduleRow(
+                            label: 'Viernes',
+                            from: _vDesde,
+                            to: _vHasta,
+                            onFrom: (t) => setState(() => _vDesde = t),
+                            onTo: (t) => setState(() => _vHasta = t),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        AppCheckRow(
+                          title: 'Trabaja sabados',
+                          value: _trabajaSabado,
+                          onChanged: (v) => setState(() => _trabajaSabado = v),
+                        ),
+                        if (_trabajaSabado) ...[
+                          const SizedBox(height: 16),
+                          _ScheduleRow(
+                            label: 'Sabado',
+                            from: _sDesde,
+                            to: _sHasta,
+                            onFrom: (t) => setState(() => _sDesde = t),
+                            onTo: (t) => setState(() => _sHasta = t),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              CheckboxListTile(
-                title: const Text('Mismo horario Lunes a Viernes'),
-                subtitle: const Text(
-                    'El viernes tiene el mismo horario que Lunes a Jueves'),
-                value: _mismoHorarioLunesViernes,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _mismoHorarioLunesViernes = value ?? false;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              if (!_mismoHorarioLunesViernes) ...[
-                const Text('Horario Viernes',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _vDesde,
-                            (time) => setState(() => _vDesde = time)),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                              labelText: 'Desde', border: OutlineInputBorder()),
-                          child: Text(_formatTime(_vDesde)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _vHasta,
-                            (time) => setState(() => _vHasta = time)),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                              labelText: 'Hasta', border: OutlineInputBorder()),
-                          child: Text(_formatTime(_vHasta)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-              ],
-              CheckboxListTile(
-                title: const Text('Trabaja los Sábados'),
-                value: _trabajaSabado,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _trabajaSabado = value ?? false;
-                  });
-                },
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              if (_trabajaSabado) ...[
-                const Text('Horario Sábado',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _sDesde,
-                            (time) => setState(() => _sDesde = time)),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                              labelText: 'Desde', border: OutlineInputBorder()),
-                          child: Text(_formatTime(_sDesde)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _sHasta,
-                            (time) => setState(() => _sHasta = time)),
-                        child: InputDecorator(
-                          decoration: const InputDecoration(
-                              labelText: 'Hasta', border: OutlineInputBorder()),
-                          child: Text(_formatTime(_sHasta)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                      funcion: () {
-                        Get.back();
-                      },
-                      texto: 'Cancelar',
-                      cancelar: true,
-                      icon: Icons.close_rounded,
-                      width: double.infinity,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomButton(
-                        funcion: () {
-                          if (_formKey.currentState!.validate()) {
-                            _formKey.currentState!.save();
-                            saveNewPlace();
-                          }
-                        },
-                        texto: 'Agregar',
-                        cancelar: false,
-                        icon: Icons.add_rounded,
-                        width: double.infinity),
-                  )
-                ],
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        AppFormFooter(
+          onCancel: () => Get.back(),
+          onConfirm: () {
+            if (_formKey.currentState!.validate()) {
+              _formKey.currentState!.save();
+              saveNewPlace();
+            }
+          },
+          confirmText: 'Agregar',
+          confirmIcon: Icons.add_rounded,
+        ),
+      ],
     );
   }
 }
@@ -568,167 +622,127 @@ class _EditPlaceState extends State<EditPlace> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InputTextField(
-                teclado: TextInputType.number,
-                textController: _horasController,
-                hint: 'Horas Semanales',
-                onFieldSubmitted: (_) {
-                  if (_formKey.currentState!.validate()) saveEditPlace();
-                },
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              InputTextField(
-                teclado: TextInputType.number,
-                textController: _colacionController,
-                hint: 'Minutos de Colación',
-                onFieldSubmitted: (_) {
-                  if (_formKey.currentState!.validate()) saveEditPlace();
-                },
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              const Text('Horario Lunes a Jueves',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-              Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: AppModalBody(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context, _ljDesde,
-                          (t) => setState(() => _ljDesde = t)),
-                      child: InputDecorator(
-                          decoration: const InputDecoration(labelText: 'Desde'),
-                          child: Text(_formatTime(_ljDesde))),
+                  AppFormSection(
+                    title: 'Jornada',
+                    icon: Icons.tune_rounded,
+                    child: AppModalFieldGrid(
+                      minItemWidth: 230,
+                      maxColumns: 2,
+                      children: [
+                        InputTextField(
+                          teclado: TextInputType.number,
+                          textController: _horasController,
+                          hint: 'Horas semanales',
+                          onFieldSubmitted: (_) {
+                            if (_formKey.currentState!.validate()) {
+                              saveEditPlace();
+                            }
+                          },
+                          validator: (val) =>
+                              val == null || val.isEmpty ? 'Requerido' : null,
+                        ),
+                        InputTextField(
+                          teclado: TextInputType.number,
+                          textController: _colacionController,
+                          hint: 'Minutos de colacion',
+                          onFieldSubmitted: (_) {
+                            if (_formKey.currentState!.validate()) {
+                              saveEditPlace();
+                            }
+                          },
+                          validator: (val) =>
+                              val == null || val.isEmpty ? 'Requerido' : null,
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => _selectTime(context, _ljHasta,
-                          (t) => setState(() => _ljHasta = t)),
-                      child: InputDecorator(
-                          decoration: const InputDecoration(labelText: 'Hasta'),
-                          child: Text(_formatTime(_ljHasta))),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Horarios',
+                    icon: Icons.schedule_rounded,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _ScheduleRow(
+                          label: 'Lunes a jueves',
+                          from: _ljDesde,
+                          to: _ljHasta,
+                          onFrom: (t) => setState(() => _ljDesde = t),
+                          onTo: (t) => setState(() => _ljHasta = t),
+                        ),
+                        const SizedBox(height: 16),
+                        AppCheckRow(
+                          title: 'Mismo horario lunes a viernes',
+                          subtitle:
+                              'El viernes toma el mismo horario que lunes a jueves.',
+                          value: _mismoHorarioLunesViernes,
+                          onChanged: (v) =>
+                              setState(() => _mismoHorarioLunesViernes = v),
+                        ),
+                        if (!_mismoHorarioLunesViernes) ...[
+                          const SizedBox(height: 16),
+                          _ScheduleRow(
+                            label: 'Viernes',
+                            from: _vDesde,
+                            to: _vHasta,
+                            onFrom: (t) => setState(() => _vDesde = t),
+                            onTo: (t) => setState(() => _vHasta = t),
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        AppCheckRow(
+                          title: 'Trabaja sabados',
+                          value: _trabajaSabado,
+                          onChanged: (v) => setState(() => _trabajaSabado = v),
+                        ),
+                        if (_trabajaSabado) ...[
+                          const SizedBox(height: 16),
+                          _ScheduleRow(
+                            label: 'Sabado',
+                            from: _sDesde,
+                            to: _sHasta,
+                            onFrom: (t) => setState(() => _sDesde = t),
+                            onTo: (t) => setState(() => _sHasta = t),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              CheckboxListTile(
-                title: const Text('Mismo horario Lunes a Viernes'),
-                subtitle: const Text(
-                    'El viernes tiene el mismo horario que Lunes a Jueves'),
-                value: _mismoHorarioLunesViernes,
-                onChanged: (v) =>
-                    setState(() => _mismoHorarioLunesViernes = v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-              if (!_mismoHorarioLunesViernes) ...[
-                const Text('Horario Viernes',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _vDesde,
-                            (t) => setState(() => _vDesde = t)),
-                        child: InputDecorator(
-                            decoration:
-                                const InputDecoration(labelText: 'Desde'),
-                            child: Text(_formatTime(_vDesde))),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _vHasta,
-                            (t) => setState(() => _vHasta = t)),
-                        child: InputDecorator(
-                            decoration:
-                                const InputDecoration(labelText: 'Hasta'),
-                            child: Text(_formatTime(_vHasta))),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-              ],
-              CheckboxListTile(
-                title: const Text('Trabaja Sábados'),
-                value: _trabajaSabado,
-                onChanged: (v) => setState(() => _trabajaSabado = v ?? false),
-              ),
-              if (_trabajaSabado) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _sDesde,
-                            (t) => setState(() => _sDesde = t)),
-                        child: InputDecorator(
-                            decoration:
-                                const InputDecoration(labelText: 'Desde'),
-                            child: Text(_formatTime(_sDesde))),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () => _selectTime(context, _sHasta,
-                            (t) => setState(() => _sHasta = t)),
-                        child: InputDecorator(
-                            decoration:
-                                const InputDecoration(labelText: 'Hasta'),
-                            child: Text(_formatTime(_sHasta))),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                        funcion: () => Get.back(),
-                        texto: 'Cancelar',
-                        cancelar: true,
-                        icon: Icons.close_rounded,
-                        width: double.infinity),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomButton(
-                      funcion: () {
-                        if (_formKey.currentState!.validate()) {
-                          saveEditPlace();
-                        }
-                      },
-                      texto: 'Guardar',
-                      cancelar: false,
-                      icon: Icons.check_rounded,
-                      width: double.infinity,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
-      ),
+        AppFormFooter(
+          onCancel: () => Get.back(),
+          onConfirm: () {
+            if (_formKey.currentState!.validate()) {
+              saveEditPlace();
+            }
+          },
+          confirmText: 'Guardar',
+          confirmIcon: Icons.check_rounded,
+        ),
+      ],
     );
   }
 }
@@ -833,73 +847,39 @@ class _NewLaborState extends State<NewLabor> {
 
 Widget _buildNewGeneric(String title, String hint, TextEditingController cont,
     GlobalKey<FormState> key, String docId, String successMsg) {
-  return SingleChildScrollView(
-    child: Padding(
-      padding: EdgeInsets.only(
-          bottom: Get.context != null
-              ? MediaQuery.of(Get.context!).viewInsets.bottom
-              : 0),
-      child: Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: key,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InputTextField(
-                  textController: cont,
-                  hint: hint,
-                  onFieldSubmitted: (_) {
-                    if (key.currentState!.validate()) {
-                      db.collection('Otros').doc(docId).update({
-                        'tipos': FieldValue.arrayUnion([cont.text.trim()])
-                      });
-                      Get.back();
-                      AnimatedSnackBar.material(successMsg,
-                              type: AnimatedSnackBarType.success)
-                          .show(Get.context!);
-                    }
-                  },
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Requerido' : null),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                        funcion: () => Get.back(),
-                        texto: 'Cancelar',
-                        cancelar: true,
-                        icon: Icons.close_rounded,
-                        width: double.infinity),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomButton(
-                      funcion: () {
-                        if (key.currentState!.validate()) {
-                          db.collection('Otros').doc(docId).update({
-                            'tipos': FieldValue.arrayUnion([cont.text.trim()])
-                          });
-                          Get.back();
-                          AnimatedSnackBar.material(successMsg,
-                                  type: AnimatedSnackBarType.success)
-                              .show(Get.context!);
-                        }
-                      },
-                      texto: 'Agregar',
-                      cancelar: false,
-                      icon: Icons.add_rounded,
-                      width: double.infinity,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  void guardar() {
+    if (!key.currentState!.validate()) return;
+    db.collection('Otros').doc(docId).update({
+      'tipos': FieldValue.arrayUnion([cont.text.trim()])
+    });
+    Get.back();
+    AnimatedSnackBar.material(successMsg, type: AnimatedSnackBarType.success)
+        .show(Get.context!);
+  }
+
+  return Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Flexible(
+        child: AppModalBody(
+          child: Form(
+            key: key,
+            child: InputTextField(
+              textController: cont,
+              hint: hint,
+              onFieldSubmitted: (_) => guardar(),
+              validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+            ),
           ),
         ),
       ),
-    ),
+      AppFormFooter(
+        onCancel: () => Get.back(),
+        onConfirm: guardar,
+        confirmText: 'Agregar',
+        confirmIcon: Icons.add_rounded,
+      ),
+    ],
   );
 }
 
@@ -955,52 +935,33 @@ class _EditGenericCategoryState extends State<EditGenericCategory> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InputTextField(
-                  textController: _controller,
-                  hint: 'Nombre',
-                  onFieldSubmitted: (_) {
-                    if (_formKey.currentState!.validate()) _save();
-                  },
-                  validator: (v) =>
-                      v == null || v.isEmpty ? 'Requerido' : null),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: CustomButton(
-                        funcion: () => Get.back(),
-                        texto: 'Cancelar',
-                        cancelar: true,
-                        icon: Icons.close_rounded,
-                        width: double.infinity),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomButton(
-                        funcion: () {
-                          if (_formKey.currentState!.validate()) _save();
-                        },
-                        texto: 'Guardar',
-                        cancelar: false,
-                        icon: Icons.check_rounded,
-                        width: double.infinity),
-                  ),
-                ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: AppModalBody(
+            child: Form(
+              key: _formKey,
+              child: InputTextField(
+                textController: _controller,
+                hint: 'Nombre',
+                onFieldSubmitted: (_) {
+                  if (_formKey.currentState!.validate()) _save();
+                },
+                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        AppFormFooter(
+          onCancel: () => Get.back(),
+          onConfirm: () {
+            if (_formKey.currentState!.validate()) _save();
+          },
+          confirmText: 'Guardar',
+          confirmIcon: Icons.check_rounded,
+        ),
+      ],
     );
   }
 }

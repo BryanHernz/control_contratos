@@ -65,6 +65,13 @@ class AppColors {
   static const Color onDarkMuted = Color(0xCCFFFFFF);
 }
 
+/// Radio por defecto de las tarjetas, el que trae el proyecto de origen.
+///
+/// Se probaron 11 y varias formas para la barra de acento de la izquierda
+/// (mas gruesa, con radio convexo, con filetes concavos). Ninguna quedo: la
+/// barra va recta y de 5px, como estaba.
+const double kCardRadius = 16;
+
 /// Decoracion estandar de una tarjeta: blanca, con el borde negro al 5% que
 /// tenia el proyecto originalmente.
 ///
@@ -75,7 +82,7 @@ class AppColors {
 /// **Sin sombra.** Cualquier sombra difuminada toma el color del fondo y se
 /// lee como un halo alrededor de la tarjeta; se probo con blur 16 y con blur 5
 /// y las dos se veian mal.
-BoxDecoration appCardDecoration({double radius = 16}) => BoxDecoration(
+BoxDecoration appCardDecoration({double radius = kCardRadius}) => BoxDecoration(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: Colors.black.withOpacity(0.05)),

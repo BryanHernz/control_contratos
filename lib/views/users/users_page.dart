@@ -1,20 +1,20 @@
-import 'dart:ui';
-
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_form.dart';
 import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../customs/widgets/page_header.dart';
+import '../home/dashboard_page.dart' show kDashboardMaxWidth;
 import '../../customs/widgets_custom.dart';
-import '../../firebase_options.dart';
 import '../../utils/user_access.dart';
 import '../../services/firestore_db.dart';
+import '../../services/funciones.dart';
 
 class UsersPage extends StatefulWidget {
   const UsersPage({
@@ -145,430 +145,449 @@ class _UsersPageState extends State<UsersPage> {
       hint:
           'Esto elimina solo el documento en Usuarios. No elimina la cuenta de Firebase Auth.',
       maxWidth: 620,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Se eliminara la ficha de $userName.',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    funcion: () => Navigator.pop(context),
-                    texto: 'Cancelar',
-                    cancelar: true,
-                    icon: Icons.close_rounded,
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () async {
-                      try {
-                        await db.collection('Usuarios').doc(userId).delete();
-                        if (!mounted) return;
-                        Navigator.pop(context);
-                        AnimatedSnackBar.material(
-                          'Ficha eliminada con exito.',
-                          type: AnimatedSnackBarType.success,
-                        ).show(context);
-                      } catch (e) {
-                        if (!mounted) return;
-                        AnimatedSnackBar.material(
-                          'No se pudo eliminar la ficha: $e',
-                          type: AnimatedSnackBarType.error,
-                        ).show(context);
-                      }
-                    },
-                    icon: const Icon(Icons.delete_rounded, size: 18),
-                    label: const Text('Eliminar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      child: AppDangerConfirmBody(
+        message: 'Se eliminara la ficha de $userName.',
+        detail: 'La cuenta de acceso seguira existiendo en Firebase Auth.',
+        onCancel: () => Navigator.pop(context),
+        confirmText: 'Eliminar',
+        confirmIcon: Icons.delete_rounded,
+        onConfirm: () async {
+          try {
+            await db.collection('Usuarios').doc(userId).delete();
+            if (!mounted) return;
+            Navigator.pop(context);
+            AnimatedSnackBar.material(
+              'Ficha eliminada con exito.',
+              type: AnimatedSnackBarType.success,
+            ).show(context);
+          } catch (e) {
+            if (!mounted) return;
+            AnimatedSnackBar.material(
+              'No se pudo eliminar la ficha: $e',
+              type: AnimatedSnackBarType.error,
+            ).show(context);
+          }
+        },
       ),
     );
   }
 
+  /// Cabecera de la vista. Fija en escritorio, dentro del scroll en el
+  /// telefono: la pantalla es corta y no vale gastar espacio permanente en
+  /// repetir donde estas.
+  static const _cabecera = PageHeader(
+    title: 'Administracion de usuarios',
+    subtitle: 'Crea cuentas, edita perfiles y controla permisos',
+    icon: Icons.manage_accounts_rounded,
+  );
+
   @override
   Widget build(BuildContext context) {
+    final compacta = MediaQuery.sizeOf(context).width < 800;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFFF4F8FC),
-              Color(0xFFEAF0F5),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      // Fondo plano de la app: era la unica vista con un gradiente propio
+      // (#F4F8FC -> #EAF0F5), asi que al pasar de Trabajadores a Usuarios el
+      // fondo cambiaba de tono sin motivo.
+      body: ColoredBox(
+        color: AppColors.background,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const PageHeader(
-              title: 'Administracion de usuarios',
-              subtitle: 'Crea cuentas, edita perfiles y controla permisos',
-              icon: Icons.manage_accounts_rounded,
-            ),
+            if (!compacta) _cabecera,
             Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: db.collection('Usuarios').snapshots(),
-                builder: (context, usersSnapshot) {
-                  if (!usersSnapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+              // Mismo tope de ancho que el resto de las vistas.
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints:
+                      const BoxConstraints(maxWidth: kDashboardMaxWidth),
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: db.collection('Usuarios').snapshots(),
+                    builder: (context, usersSnapshot) {
+                      if (!usersSnapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                  final docs = usersSnapshot.data!.docs.toList();
-                  docs.sort((a, b) {
-                    final aData = a.data() as Map<String, dynamic>? ?? {};
-                    final bData = b.data() as Map<String, dynamic>? ?? {};
-                    return _displayName(aData)
-                        .toLowerCase()
-                        .compareTo(_displayName(bData).toLowerCase());
-                  });
+                      final docs = usersSnapshot.data!.docs.toList();
+                      docs.sort((a, b) {
+                        final aData = a.data() as Map<String, dynamic>? ?? {};
+                        final bData = b.data() as Map<String, dynamic>? ?? {};
+                        return _displayName(aData)
+                            .toLowerCase()
+                            .compareTo(_displayName(bData).toLowerCase());
+                      });
 
-                  final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                  final activeCount = docs.where((doc) {
-                    final data = doc.data() as Map<String, dynamic>? ?? {};
-                    return UserAccess.fromUserData(data).active;
-                  }).length;
-                  final search = _searchQuery.trim().toLowerCase();
-                  final filteredDocs = docs.where((doc) {
-                    if (search.isEmpty) return true;
-                    final data = doc.data() as Map<String, dynamic>? ?? {};
-                    final name = _displayName(data).toLowerCase();
-                    final email =
-                        (data['email'] ?? '').toString().toLowerCase();
-                    return name.contains(search) || email.contains(search);
-                  }).toList();
+                      final currentUserId =
+                          FirebaseAuth.instance.currentUser?.uid;
+                      final activeCount = docs.where((doc) {
+                        final data = doc.data() as Map<String, dynamic>? ?? {};
+                        return UserAccess.fromUserData(data).active;
+                      }).length;
+                      final search = _searchQuery.trim().toLowerCase();
+                      final filteredDocs = docs.where((doc) {
+                        if (search.isEmpty) return true;
+                        final data = doc.data() as Map<String, dynamic>? ?? {};
+                        final name = _displayName(data).toLowerCase();
+                        final email =
+                            (data['email'] ?? '').toString().toLowerCase();
+                        return name.contains(search) || email.contains(search);
+                      }).toList();
 
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      final hasTwoColumns = constraints.maxWidth >= 980;
-                      final cardWidth = hasTwoColumns
-                          ? (constraints.maxWidth - 12) / 2
-                          : constraints.maxWidth;
-                      final toolbarInline = constraints.maxWidth >= 900;
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          final hasTwoColumns = constraints.maxWidth >= 980;
+                          final cardWidth = hasTwoColumns
+                              ? (constraints.maxWidth - 12) / 2
+                              : constraints.maxWidth;
+                          final toolbarInline = constraints.maxWidth >= 900;
 
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _UsersSummaryCard(
-                              totalUsers: docs.length,
-                              activeUsers: activeCount,
-                              visibleUsers: filteredDocs.length,
-                            ),
-                            const SizedBox(height: 14),
-                            _GlassPanel(
-                              padding: const EdgeInsets.all(12),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (toolbarInline)
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: TextField(
-                                            controller: _searchController,
-                                            onChanged: (value) {
-                                              setState(
-                                                  () => _searchQuery = value);
-                                            },
-                                            style: const TextStyle(
-                                              fontSize: 13.5,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                            decoration: InputDecoration(
-                                              hintText:
-                                                  'Buscar por nombre o correo...',
-                                              hintStyle: const TextStyle(
-                                                color: AppColors.textFaint,
-                                                fontSize: 13.5,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                              prefixIcon: const Icon(
-                                                Icons.search_rounded,
-                                                color: AppColors.iconMuted,
-                                                size: 20,
-                                              ),
-                                              suffixIcon: _searchQuery.isEmpty
-                                                  ? null
-                                                  : IconButton(
-                                                      onPressed: () {
-                                                        _searchController
-                                                            .clear();
+                          return SingleChildScrollView(
+                            // Sin padding propio: la cabecera compacta va a
+                            // sangre y el margen lo pone el contenido.
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (compacta) _cabecera,
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _UsersSummaryCard(
+                                        totalUsers: docs.length,
+                                        activeUsers: activeCount,
+                                        visibleUsers: filteredDocs.length,
+                                      ),
+                                      const SizedBox(height: 14),
+                                      _GlassPanel(
+                                        padding: const EdgeInsets.all(12),
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            if (toolbarInline)
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: TextField(
+                                                      controller:
+                                                          _searchController,
+                                                      onChanged: (value) {
                                                         setState(() =>
-                                                            _searchQuery = '');
+                                                            _searchQuery =
+                                                                value);
                                                       },
-                                                      icon: Icon(
-                                                        Icons.close_rounded,
-                                                        color: Colors
-                                                            .blueGrey.shade500,
-                                                        size: 19,
+                                                      style: const TextStyle(
+                                                        fontSize: 13.5,
+                                                        fontWeight:
+                                                            FontWeight.w600,
                                                       ),
-                                                      tooltip: 'Limpiar',
+                                                      decoration:
+                                                          InputDecoration(
+                                                        hintText:
+                                                            'Buscar por nombre o correo...',
+                                                        hintStyle:
+                                                            const TextStyle(
+                                                          color: AppColors
+                                                              .textFaint,
+                                                          fontSize: 13.5,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                        ),
+                                                        prefixIcon: const Icon(
+                                                          Icons.search_rounded,
+                                                          color: AppColors
+                                                              .iconMuted,
+                                                          size: 20,
+                                                        ),
+                                                        suffixIcon: _searchQuery
+                                                                .isEmpty
+                                                            ? null
+                                                            : IconButton(
+                                                                onPressed: () {
+                                                                  _searchController
+                                                                      .clear();
+                                                                  setState(() =>
+                                                                      _searchQuery =
+                                                                          '');
+                                                                },
+                                                                icon: Icon(
+                                                                  Icons
+                                                                      .close_rounded,
+                                                                  color: Colors
+                                                                      .blueGrey
+                                                                      .shade500,
+                                                                  size: 19,
+                                                                ),
+                                                                tooltip:
+                                                                    'Limpiar',
+                                                              ),
+                                                        filled: true,
+                                                        fillColor: Colors.white
+                                                            .withOpacity(0.62),
+                                                        contentPadding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 14,
+                                                          vertical: 13,
+                                                        ),
+                                                        enabledBorder:
+                                                            OutlineInputBorder(
+                                                          borderSide:
+                                                              BorderSide(
+                                                            color: Colors.white
+                                                                .withOpacity(
+                                                                    0.9),
+                                                          ),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(14),
+                                                        ),
+                                                        focusedBorder:
+                                                            OutlineInputBorder(
+                                                          borderSide: BorderSide(
+                                                              color: primario
+                                                                  .withOpacity(
+                                                                      0.7)),
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(14),
+                                                        ),
+                                                      ),
                                                     ),
-                                              filled: true,
-                                              fillColor: Colors.white
-                                                  .withOpacity(0.62),
-                                              contentPadding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 14,
-                                                vertical: 13,
-                                              ),
-                                              enabledBorder: OutlineInputBorder(
-                                                borderSide: BorderSide(
-                                                  color: Colors.white
-                                                      .withOpacity(0.9),
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                              ),
-                                              focusedBorder: OutlineInputBorder(
-                                                borderSide: BorderSide(
-                                                    color: primario
-                                                        .withOpacity(0.7)),
-                                                borderRadius:
-                                                    BorderRadius.circular(14),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        SizedBox(
-                                          width: 230,
-                                          child: CustomButton(
-                                            funcion: widget.canManageUsers
-                                                ? _openCreateUserSheet
-                                                : () {
-                                                    AnimatedSnackBar.material(
-                                                      'No tienes permiso para crear usuarios.',
-                                                      type: AnimatedSnackBarType
-                                                          .warning,
-                                                    ).show(context);
-                                                  },
-                                            texto: 'Nuevo usuario',
-                                            icon:
-                                                Icons.person_add_alt_1_rounded,
-                                            width: double.infinity,
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  else ...[
-                                    TextField(
-                                      controller: _searchController,
-                                      onChanged: (value) {
-                                        setState(() => _searchQuery = value);
-                                      },
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      decoration: InputDecoration(
-                                        hintText:
-                                            'Buscar por nombre o correo...',
-                                        hintStyle: const TextStyle(
-                                          color: AppColors.textFaint,
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        prefixIcon: const Icon(
-                                          Icons.search_rounded,
-                                          color: AppColors.iconMuted,
-                                          size: 20,
-                                        ),
-                                        suffixIcon: _searchQuery.isEmpty
-                                            ? null
-                                            : IconButton(
-                                                onPressed: () {
-                                                  _searchController.clear();
-                                                  setState(
-                                                      () => _searchQuery = '');
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  SizedBox(
+                                                    width: 230,
+                                                    child: CustomButton(
+                                                      funcion: widget
+                                                              .canManageUsers
+                                                          ? _openCreateUserSheet
+                                                          : () {
+                                                              AnimatedSnackBar
+                                                                  .material(
+                                                                'No tienes permiso para crear usuarios.',
+                                                                type:
+                                                                    AnimatedSnackBarType
+                                                                        .warning,
+                                                              ).show(context);
+                                                            },
+                                                      texto: 'Nuevo usuario',
+                                                      icon: Icons
+                                                          .person_add_alt_1_rounded,
+                                                      width: double.infinity,
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            else ...[
+                                              TextField(
+                                                controller: _searchController,
+                                                onChanged: (value) {
+                                                  setState(() =>
+                                                      _searchQuery = value);
                                                 },
-                                                icon: const Icon(
-                                                  Icons.close_rounded,
-                                                  color: AppColors.iconMuted,
-                                                  size: 19,
+                                                style: const TextStyle(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
-                                                tooltip: 'Limpiar',
+                                                decoration: InputDecoration(
+                                                  hintText:
+                                                      'Buscar por nombre o correo...',
+                                                  hintStyle: const TextStyle(
+                                                    color: AppColors.textFaint,
+                                                    fontSize: 13.5,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                  prefixIcon: const Icon(
+                                                    Icons.search_rounded,
+                                                    color: AppColors.iconMuted,
+                                                    size: 20,
+                                                  ),
+                                                  suffixIcon: _searchQuery
+                                                          .isEmpty
+                                                      ? null
+                                                      : IconButton(
+                                                          onPressed: () {
+                                                            _searchController
+                                                                .clear();
+                                                            setState(() =>
+                                                                _searchQuery =
+                                                                    '');
+                                                          },
+                                                          icon: const Icon(
+                                                            Icons.close_rounded,
+                                                            color: AppColors
+                                                                .iconMuted,
+                                                            size: 19,
+                                                          ),
+                                                          tooltip: 'Limpiar',
+                                                        ),
+                                                  filled: true,
+                                                  fillColor: Colors.white,
+                                                  contentPadding:
+                                                      const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 14,
+                                                          vertical: 13),
+                                                  enabledBorder:
+                                                      OutlineInputBorder(
+                                                    borderSide: BorderSide(
+                                                        color: Colors.white
+                                                            .withOpacity(0.9)),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            14),
+                                                  ),
+                                                  focusedBorder:
+                                                      OutlineInputBorder(
+                                                    borderSide: BorderSide(
+                                                        color: primario
+                                                            .withOpacity(0.7)),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            14),
+                                                  ),
+                                                ),
                                               ),
-                                        filled: true,
-                                        fillColor: Colors.white,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                                horizontal: 14, vertical: 13),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                              color: Colors.white
-                                                  .withOpacity(0.9)),
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderSide: BorderSide(
-                                              color: primario.withOpacity(0.7)),
-                                          borderRadius:
-                                              BorderRadius.circular(14),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      width: double.maxFinite,
-                                      child: CustomButton(
-                                        funcion: widget.canManageUsers
-                                            ? _openCreateUserSheet
-                                            : () {
-                                                AnimatedSnackBar.material(
-                                                  'No tienes permiso para crear usuarios.',
-                                                  type: AnimatedSnackBarType
-                                                      .warning,
-                                                ).show(context);
-                                              },
-                                        texto: 'Nuevo usuario',
-                                        icon: Icons.person_add_alt_1_rounded,
-                                        width: double.infinity,
-                                      ),
-                                    ),
-                                  ],
-                                  if (!widget.canManageUsers) ...[
-                                    const SizedBox(height: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.amber.shade100
-                                            .withOpacity(0.5),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        border: Border.all(
-                                            color: Colors.amber.shade200),
-                                      ),
-                                      child: Text(
-                                        'Modo lectura: sin permisos de gestion',
-                                        style: TextStyle(
-                                          color: Colors.amber.shade900,
-                                          fontSize: 11.8,
-                                          fontWeight: FontWeight.w700,
+                                              const SizedBox(height: 12),
+                                              SizedBox(
+                                                width: double.maxFinite,
+                                                child: CustomButton(
+                                                  funcion: widget.canManageUsers
+                                                      ? _openCreateUserSheet
+                                                      : () {
+                                                          AnimatedSnackBar
+                                                              .material(
+                                                            'No tienes permiso para crear usuarios.',
+                                                            type:
+                                                                AnimatedSnackBarType
+                                                                    .warning,
+                                                          ).show(context);
+                                                        },
+                                                  texto: 'Nuevo usuario',
+                                                  icon: Icons
+                                                      .person_add_alt_1_rounded,
+                                                  width: double.infinity,
+                                                ),
+                                              ),
+                                            ],
+                                            if (!widget.canManageUsers) ...[
+                                              const SizedBox(height: 10),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber.shade100
+                                                      .withOpacity(0.5),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          999),
+                                                  border: Border.all(
+                                                      color: Colors
+                                                          .amber.shade200),
+                                                ),
+                                                child: Text(
+                                                  'Modo lectura: sin permisos de gestion',
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.amber.shade900,
+                                                    fontSize: 11.8,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            if (docs.isEmpty)
-                              const _NoUsersCard(
-                                message: 'No hay usuarios para mostrar.',
-                              )
-                            else if (filteredDocs.isEmpty)
-                              const _NoUsersCard(
-                                message:
-                                    'No se encontraron usuarios para ese criterio de busqueda.',
-                              )
-                            else
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 12,
-                                children: filteredDocs.map((userDoc) {
-                                  final data =
-                                      userDoc.data() as Map<String, dynamic>? ??
-                                          {};
-                                  final access = UserAccess.fromUserData(data);
-                                  final displayName = _displayName(data);
-                                  final email =
-                                      (data['email'] ?? '--').toString().trim();
-                                  final isCurrentUser =
-                                      currentUserId == userDoc.id;
-                                  final isActive = access.active;
+                                      const SizedBox(height: 14),
+                                      if (docs.isEmpty)
+                                        const _NoUsersCard(
+                                          message:
+                                              'No hay usuarios para mostrar.',
+                                        )
+                                      else if (filteredDocs.isEmpty)
+                                        const _NoUsersCard(
+                                          message:
+                                              'No se encontraron usuarios para ese criterio de busqueda.',
+                                        )
+                                      else
+                                        Wrap(
+                                          spacing: 12,
+                                          runSpacing: 12,
+                                          children: filteredDocs.map((userDoc) {
+                                            final data = userDoc.data()
+                                                    as Map<String, dynamic>? ??
+                                                {};
+                                            final access =
+                                                UserAccess.fromUserData(data);
+                                            final displayName =
+                                                _displayName(data);
+                                            final email =
+                                                (data['email'] ?? '--')
+                                                    .toString()
+                                                    .trim();
+                                            final isCurrentUser =
+                                                currentUserId == userDoc.id;
+                                            final isActive = access.active;
 
-                                  return SizedBox(
-                                    width: cardWidth,
-                                    child: _UserCard(
-                                      displayName: displayName,
-                                      email: email,
-                                      initials: _initialsFrom(displayName),
-                                      isActive: isActive,
-                                      isCurrentUser: isCurrentUser,
-                                      canManageUsers: widget.canManageUsers,
-                                      enabledViews: _enabledCount(access.views),
-                                      enabledActions:
-                                          _enabledCount(access.actions),
-                                      updatedAt: _updatedLabel(data),
-                                      onEdit: () => _openEditUserSheet(
-                                        userDoc.id,
-                                        data,
-                                      ),
-                                      onToggleActive: () => _toggleUserActive(
-                                        userDoc.id,
-                                        !isActive,
-                                        isCurrentUser,
-                                      ),
-                                      onDelete: () => _confirmDeleteProfile(
-                                        userId: userDoc.id,
-                                        userName: displayName,
-                                        isCurrentUser: isCurrentUser,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                          ],
-                        ),
+                                            return SizedBox(
+                                              width: cardWidth,
+                                              child: _UserCard(
+                                                displayName: displayName,
+                                                email: email,
+                                                initials:
+                                                    _initialsFrom(displayName),
+                                                isActive: isActive,
+                                                isCurrentUser: isCurrentUser,
+                                                canManageUsers:
+                                                    widget.canManageUsers,
+                                                enabledViews:
+                                                    _enabledCount(access.views),
+                                                enabledActions: _enabledCount(
+                                                    access.actions),
+                                                updatedAt: _updatedLabel(data),
+                                                onEdit: () =>
+                                                    _openEditUserSheet(
+                                                  userDoc.id,
+                                                  data,
+                                                ),
+                                                onToggleActive: () =>
+                                                    _toggleUserActive(
+                                                  userDoc.id,
+                                                  !isActive,
+                                                  isCurrentUser,
+                                                ),
+                                                onDelete: () =>
+                                                    _confirmDeleteProfile(
+                                                  userId: userDoc.id,
+                                                  userName: displayName,
+                                                  isCurrentUser: isCurrentUser,
+                                                ),
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ],
@@ -591,36 +610,16 @@ class _GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final radius = borderRadius ?? BorderRadius.circular(14);
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          width: double.infinity,
-          padding: padding,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                Colors.white,
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: radius,
-            border: Border.all(color: AppColors.border),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blueGrey.shade900.withOpacity(0.08),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: child,
-        ),
+    // Ya no es "glass": el BackdropFilter y el gradiente blanco-a-blanco eran
+    // restos del glassmorphism. Usa la misma decoracion que todas las tarjetas.
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: appCardDecoration(
+        radius: borderRadius?.topLeft.x ?? kCardRadius,
       ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 }
@@ -1074,19 +1073,6 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
     };
   }
 
-  Future<FirebaseApp> _getSecondaryApp() async {
-    const appName = 'user-admin-secondary';
-    for (final app in Firebase.apps) {
-      if (app.name == appName) {
-        return app;
-      }
-    }
-    return Firebase.initializeApp(
-      name: appName,
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  }
-
   Future<void> _save() async {
     if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -1094,32 +1080,23 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
 
     try {
       if (widget.isCreate) {
-        final app = await _getSecondaryApp();
-        final secondaryAuth = FirebaseAuth.instanceFor(app: app);
-        final credential = await secondaryAuth.createUserWithEmailAndPassword(
-          email: _emailController.text.trim().toLowerCase(),
-          password: _passwordController.text.trim(),
-        );
-
-        final uid = credential.user?.uid;
-        if (uid == null) {
-          throw Exception('No fue posible obtener el uid del nuevo usuario.');
-        }
-
-        await db.collection('Usuarios').doc(uid).set({
-          'uid': uid,
+        // La cuenta la crea el servidor, no el navegador.
+        //
+        // Antes esto levantaba una segunda instancia de Firebase y llamaba a
+        // `createUserWithEmailAndPassword` desde el cliente. Funcionaba, pero
+        // significaba que crear cuentas era una capacidad del navegador y no
+        // un permiso del servidor: las reglas de Firestore no pueden impedirlo
+        // porque ocurre en Auth, antes de tocar Firestore.
+        await funciones.httpsCallable('crearUsuario')
+            .call({
           'email': _emailController.text.trim().toLowerCase(),
+          'password': _passwordController.text.trim(),
           'nombre': _nameController.text.trim(),
           'apellido': _lastNameController.text.trim(),
-          'permissions': _permissionsPayload(),
-          'activo': _active,
           'telefono': _phoneController.text.trim(),
           'ocupacion': _occupationController.text.trim(),
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        await secondaryAuth.signOut();
+          'permissions': _permissionsPayload(),
+        });
       } else {
         await db.collection('Usuarios').doc(widget.userId).set(
           {
@@ -1143,6 +1120,15 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
             : 'Usuario actualizado con exito.',
         type: AnimatedSnackBarType.success,
       ).show(context);
+    } on FirebaseFunctionsException catch (e) {
+      // La funcion devuelve mensajes ya redactados para el usuario.
+      if (!mounted) return;
+      setState(() => _saving = false);
+      AnimatedSnackBar.material(
+        e.message ?? 'No se pudo crear el usuario.',
+        type: AnimatedSnackBarType.error,
+      ).show(context);
+      return;
     } catch (e) {
       if (!mounted) return;
       AnimatedSnackBar.material(
@@ -1158,153 +1144,153 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InputTextField(
-                textController: _nameController,
-                hint: 'Nombres',
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? 'Ingresa los nombres.'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              InputTextField(
-                textController: _lastNameController,
-                hint: 'Apellidos',
-                validator: (value) => (value ?? '').trim().isEmpty
-                    ? 'Ingresa los apellidos.'
-                    : null,
-              ),
-              const SizedBox(height: 12),
-              InputTextField(
-                textController: _emailController,
-                hint: 'Correo',
-                teclado: TextInputType.emailAddress,
-                readOnly: !widget.isCreate,
-                validator: (value) {
-                  final current = (value ?? '').trim().toLowerCase();
-                  final regex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                  if (current.isEmpty) return 'Ingresa un correo.';
-                  if (!regex.hasMatch(current)) return 'Correo no valido.';
-                  return null;
-                },
-              ),
-              if (widget.isCreate) ...[
-                const SizedBox(height: 12),
-                InputTextField(
-                  textController: _passwordController,
-                  hint: 'Contrasena temporal',
-                  passwordField: true,
-                  validator: (value) {
-                    final current = (value ?? '').trim();
-                    if (current.isEmpty) return 'Ingresa una contrasena.';
-                    if (current.length < 6) return 'Minimo 6 caracteres.';
-                    return null;
-                  },
-                ),
-              ],
-              const SizedBox(height: 12),
-              InputTextField(
-                textController: _phoneController,
-                hint: 'Telefono',
-                teclado: TextInputType.phone,
-              ),
-              const SizedBox(height: 12),
-              InputTextField(
-                textController: _occupationController,
-                hint: 'Ocupacion',
-              ),
-              const SizedBox(height: 6),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: _active,
-                activeColor: primario,
-                title: const Text('Usuario activo'),
-                subtitle: const Text(
-                  'Si se desactiva, el usuario no podra ingresar.',
-                  style: TextStyle(fontSize: 12),
-                ),
-                onChanged: (value) => setState(() => _active = value),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Vistas con acceso',
-                  style: TextStyle(
-                    color: Colors.blueGrey.shade800,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              ...UserViewKeys.all.map(
-                (key) => SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _views[key] ?? false,
-                  activeColor: primario,
-                  title: Text(userViewLabels[key] ?? key),
-                  onChanged: (value) {
-                    setState(() => _views[key] = value);
-                  },
-                ),
-              ),
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Funciones habilitadas',
-                  style: TextStyle(
-                    color: Colors.blueGrey.shade800,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              ...UserActionKeys.all.map(
-                (key) => SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: _actions[key] ?? false,
-                  activeColor: primario,
-                  title: Text(userActionLabels[key] ?? key),
-                  onChanged: (value) {
-                    setState(() => _actions[key] = value);
-                  },
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: AppModalBody(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: CustomButton(
-                      funcion: () => Navigator.pop(context),
-                      texto: 'Cancelar',
-                      cancelar: true,
-                      icon: Icons.close_rounded,
-                      width: double.infinity,
+                  AppFormSection(
+                    title: 'Datos del usuario',
+                    icon: Icons.badge_outlined,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // En el modal ancho los datos entran en dos columnas;
+                        // apilados en una sola dejaban el formulario larguisimo
+                        // y los permisos quedaban fuera de pantalla.
+                        AppModalFieldGrid(
+                          minItemWidth: 260,
+                          maxColumns: 2,
+                          children: [
+                            InputTextField(
+                              textController: _nameController,
+                              hint: 'Nombres',
+                              validator: (value) => (value ?? '').trim().isEmpty
+                                  ? 'Ingresa los nombres.'
+                                  : null,
+                            ),
+                            InputTextField(
+                              textController: _lastNameController,
+                              hint: 'Apellidos',
+                              validator: (value) => (value ?? '').trim().isEmpty
+                                  ? 'Ingresa los apellidos.'
+                                  : null,
+                            ),
+                            InputTextField(
+                              textController: _emailController,
+                              hint: 'Correo',
+                              teclado: TextInputType.emailAddress,
+                              readOnly: !widget.isCreate,
+                              validator: (value) {
+                                final current =
+                                    (value ?? '').trim().toLowerCase();
+                                final regex =
+                                    RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                                if (current.isEmpty) {
+                                  return 'Ingresa un correo.';
+                                }
+                                if (!regex.hasMatch(current)) {
+                                  return 'Correo no valido.';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (widget.isCreate)
+                              InputTextField(
+                                textController: _passwordController,
+                                hint: 'Contrasena temporal',
+                                passwordField: true,
+                                validator: (value) {
+                                  final current = (value ?? '').trim();
+                                  if (current.isEmpty) {
+                                    return 'Ingresa una contrasena.';
+                                  }
+                                  if (current.length < 6) {
+                                    return 'Minimo 6 caracteres.';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            InputTextField(
+                              textController: _phoneController,
+                              hint: 'Telefono',
+                              teclado: TextInputType.phone,
+                            ),
+                            InputTextField(
+                              textController: _occupationController,
+                              hint: 'Ocupacion',
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        AppSwitchRow(
+                          title: 'Usuario activo',
+                          subtitle:
+                              'Si se desactiva, el usuario no podra ingresar.',
+                          value: _active,
+                          onChanged: (value) => setState(() => _active = value),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: CustomButton(
-                      funcion: _saving ? () {} : _save,
-                      texto: _saving ? 'Guardando...' : 'Guardar',
-                      icon: Icons.check_rounded,
-                      width: double.infinity,
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Vistas con acceso',
+                    icon: Icons.view_quilt_rounded,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final key in UserViewKeys.all) ...[
+                          if (key != UserViewKeys.all.first)
+                            const SizedBox(height: 8),
+                          AppSwitchRow(
+                            title: userViewLabels[key] ?? key,
+                            value: _views[key] ?? false,
+                            onChanged: (value) =>
+                                setState(() => _views[key] = value),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Funciones habilitadas',
+                    icon: Icons.tune_rounded,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final key in UserActionKeys.all) ...[
+                          if (key != UserActionKeys.all.first)
+                            const SizedBox(height: 8),
+                          AppSwitchRow(
+                            title: userActionLabels[key] ?? key,
+                            value: _actions[key] ?? false,
+                            onChanged: (value) =>
+                                setState(() => _actions[key] = value),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        AppFormFooter(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: _saving ? () {} : _save,
+          confirmText: _saving ? 'Guardando...' : 'Guardar',
+          confirmIcon: Icons.check_rounded,
+        ),
+      ],
     );
   }
 }

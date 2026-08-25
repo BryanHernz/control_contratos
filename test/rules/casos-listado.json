@@ -1,0 +1,47 @@
+[
+  {
+    "_nombre": "L1. Usuarios: LISTAR la coleccion con views.users -> permitido",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "admin1", "token": {} }, "path": "/databases/(default)/documents/Usuarios/cualquiera", "method": "list", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "users": true }, "actions": { "manageUsers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "L2. Usuarios: LISTAR sin views.users -> denegado (no basta con ser uno mismo)",
+    "expectation": "DENY",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Usuarios/cualquiera", "method": "list", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true, "users": false } } } } } }
+    ]
+  },
+  {
+    "_nombre": "L3. Trabajadores: LISTAR con views.workers -> permitido (lo hace la vista y la paginacion)",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Trabajadores/cualquiera", "method": "list", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "L4. Asistencias: LISTAR con views.attendance -> permitido (export mensual)",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Asistencias/cualquiera", "method": "list", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "attendance": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "L5. Auditoria: LISTAR con views.dashboard -> permitido (Actividad reciente)",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Auditoria/cualquiera", "method": "list", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "dashboard": true } } } } } }
+    ]
+  }
+]

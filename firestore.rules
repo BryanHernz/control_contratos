@@ -1,9 +1,192 @@
 rules_version = '2';
 
+// Reglas de Firestore de control_contratos.
+//
+// Reemplazan a la regla unica que habia antes:
+//
+//     allow read, write: if request.auth != null;
+//
+// que dejaba a cualquier usuario autenticado leer y escribir todos los
+// documentos. Los permisos de `lib/utils/user_access.dart` viven solo en el
+// cliente: quien abra la consola del navegador los rodea.
+//
+// La fuente de verdad es el propio documento del usuario en `Usuarios/{uid}`,
+// que es lo que la app ya usa:
+//
+//     Usuarios/{uid} = {
+//       activo: bool,
+//       permissions: {
+//         views:   { dashboard, workers, attendance, users, settings },
+//         actions: { manageUsers },
+//       },
+//     }
+//
+// Regla de oro: todo falla cerrado. Un campo ausente niega, nunca concede.
+// (El cliente hace lo contrario -- ver la nota al pie.)
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- helpers
+
+    function perfilRef() {
+      return /databases/$(database)/documents/Usuarios/$(request.auth.uid);
+    }
+
+    // `get()` sobre un documento inexistente devuelve null y acceder a `.data`
+    // revienta la evaluacion, asi que el `exists()` no es opcional.
+    function tienePerfil() {
+      return request.auth != null && exists(perfilRef());
+    }
+
+    function perfil() {
+      return get(perfilRef()).data;
+    }
+
+    // Sin `activo` explicito, no entra. El cliente asume `true` cuando falta;
+    // aqui el default es el contrario a proposito.
+    function activo() {
+      return tienePerfil() && perfil().get('activo', false) == true;
+    }
+
+    function puedeVer(vista) {
+      return activo()
+          && perfil().get(['permissions', 'views', vista], false) == true;
+    }
+
+    function puedeGestionarUsuarios() {
+      return activo()
+          && perfil().get(['permissions', 'actions', 'manageUsers'], false)
+             == true;
+    }
+
+    function puedeEditarPlantillas() {
+      return activo()
+          && perfil().get(['permissions', 'actions', 'manageTemplates'], false)
+             == true;
+    }
+
+    // ------------------------------------------------------------- Usuarios
+    //
+    // Leer el propio documento tiene que estar permitido siempre: es lo que la
+    // app consulta al arrancar para saber que puede mostrar. Sin esto la
+    // sesion queda sin permisos y la app se ve vacia.
+    //
+    // Escribir es solo para quien tiene `manageUsers`. En particular nadie
+    // puede tocar su propio `activo` ni su propio `permissions`, que es el
+    // agujero que abria la regla anterior: bastaba con escribir tu documento
+    // sin el campo `permissions` para que el cliente te diera las cinco vistas.
+    match /Usuarios/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid
+                  || puedeVer('users');
+      allow create, update, delete: if puedeGestionarUsuarios();
+    }
+
+    // --------------------------------------------------------- Trabajadores
+    //
+    // Lo lee mas gente de la que lo edita: Asistencia lo consulta para buscar
+    // trabajadores y el dashboard para contarlos.
+    match /Trabajadores/{trabajadorId} {
+      allow read: if puedeVer('workers')
+                  || puedeVer('attendance')
+                  || puedeVer('dashboard');
+      allow create, update, delete: if puedeVer('workers');
+    }
+
+    // ---------------------------------------------------------- Asistencias
+    //
+    // Un documento por dia, con clave `yyyy-MM-dd`. Sin subcolecciones: los
+    // presentes y las listas activas viven en campos del mismo documento.
+    match /Asistencias/{dia} {
+      allow read: if puedeVer('attendance') || puedeVer('dashboard');
+      allow create, update: if puedeVer('attendance');
+      // Borrar un dia entero de asistencia no lo hace la app y no deberia
+      // poder hacerse desde el cliente.
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------- Otros
+    //
+    // Catalogos: comunas, AFP, previsiones, labores, nacionalidades, estados
+    // civiles, lugares y sus horarios. Los lee cualquiera con sesion activa,
+    // porque son los desplegables de los formularios de trabajador.
+    //
+    // `listas-asistencia` es la excepcion de escritura: los tipos de lista los
+    // crea y borra la vista de Asistencia, no Ajustes.
+    match /Otros/listas-asistencia {
+      allow read: if activo();
+      allow write: if puedeVer('attendance') || puedeVer('settings');
+    }
+
+    match /Otros/{documento} {
+      allow read: if activo();
+      allow write: if puedeVer('settings');
+    }
+
+    // ------------------------------------------------------------ Auditoria
+    //
+    // Registro de acciones. Lo lee el dashboard ("Actividad reciente"), asi
+    // que no puede ser de solo escritura.
+    //
+    // Sin update ni delete: un registro de auditoria que se puede editar o
+    // borrar desde el cliente no sirve como registro de auditoria.
+    match /Auditoria/{registroId} {
+      allow read: if puedeVer('dashboard');
+      allow create: if activo();
+      allow update, delete: if false;
+    }
+
+    // ----------------------------------------------------------- Plantillas
+    //
+    // Las plantillas de contrato, finiquito y demas. Las lee cualquiera con
+    // sesion activa, porque generar un documento exige leer su plantilla; las
+    // edita solo quien tenga `manageTemplates`.
+    //
+    // La cabecera guarda cual es la version vigente. Es lo unico que se puede
+    // actualizar: cambiar el puntero es publicar o restaurar.
+    match /Plantillas/{tipo} {
+      allow read: if activo();
+      allow create, update: if puedeEditarPlantillas();
+      // Borrar el tipo dejaria huerfanas a las versiones y a los documentos
+      // ya emitidos que las referencian.
+      allow delete: if false;
+
+      // Las versiones son inmutables. Se pueden crear y leer, nunca cambiar ni
+      // borrar: un contrato firmado tiene que poder reimprimirse identico, y
+      // eso solo se sostiene si la version con que se genero no se puede tocar
+      // despues -- ni siquiera por quien la escribio.
+      match /versiones/{versionId} {
+        allow read: if activo();
+        allow create: if puedeEditarPlantillas();
+        allow update, delete: if false;
+      }
+    }
+
+    // ------------------------------------------------------------ Resumenes
+    //
+    // Contadores que mantiene una funcion de servidor para el dashboard. El
+    // cliente solo los lee: si pudiera escribirlos, las cifras del dashboard
+    // dejarian de ser un hecho.
+    match /Resumenes/{documento} {
+      allow read: if activo();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------ por defecto
+    //
+    // Cualquier coleccion que no este arriba queda cerrada. Si manana aparece
+    // una nueva, la app fallara con permission-denied en vez de quedar abierta
+    // en silencio, que es justo lo que queremos que pase.
     match /{document=**} {
-      allow read, write:  if request.auth != null;
+      allow read, write: if false;
     }
   }
 }
+
+// ---------------------------------------------------------------------------
+// Nota de arranque en frio
+//
+// Crear usuarios exige `manageUsers`. Si ningun documento de `Usuarios` lo
+// tiene, nadie podra crear el primero y habra que ponerlo a mano en la consola
+// de Firebase.
+// ---------------------------------------------------------------------------

@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
+import 'package:flutter_quill/flutter_quill.dart'
+    show FlutterQuillLocalizations;
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -64,6 +66,10 @@ class _MyAppState extends State<MyApp> {
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
+        // Sin esto el editor de plantillas revienta con
+        // "FlutterQuillLocalizations instance is required" y la barra de
+        // herramientas no se dibuja.
+        FlutterQuillLocalizations.delegate,
       ],
       supportedLocales: const [
         Locale('es', ''),
@@ -153,7 +159,9 @@ class _MyAppState extends State<MyApp> {
           child: usandoBaseDePruebas
               ? Banner(
                   message: kFirestoreDatabaseId.toUpperCase(),
-                  location: BannerLocation.topStart,
+                  // Arriba a la derecha: la esquina superior izquierda la ocupa
+                  // el logo del drawer.
+                  location: BannerLocation.topEnd,
                   color: const Color(0xFFB3382B),
                   child: child!,
                 )

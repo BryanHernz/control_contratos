@@ -23,10 +23,18 @@ android {
 
     defaultConfig {
         applicationId = "cl.controlcontratos.app"
-        minSdk = 23 // Increased to 23 for Firebase Auth compatibility
+        minSdk = flutter.minSdkVersion // Increased to 23 for Firebase Auth compatibility
         targetSdk = 36
-        versionCode = 2 // Hardcoded to bypass flutter.versionCode issue
-        versionName = "1.0.1" // Hardcoded to bypass flutter.versionName issue
+        // Sale de `version:` en pubspec.yaml (`1.0.2+3` -> nombre 1.0.2,
+        // codigo 3). Estaba escrito a mano en 1.0.1, asi que cualquier
+        // compilacion nueva se anunciaba con la misma version que la ya
+        // instalada: `UpdateService` comparaba local con remoto, nunca veia
+        // una mayor, y la app no podia actualizarse sola nunca.
+        //
+        // Publicar una version es ahora subir el numero en pubspec.yaml y
+        // dejar ese mismo numero en `updates/version.json` de Storage.
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     compileOptions {

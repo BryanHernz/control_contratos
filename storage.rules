@@ -1,10 +1,56 @@
- rules_version = '2';
+rules_version = '2';
 
+// Reglas de Storage de control_contratos.
+//
+// Reemplazan a `allow read, write: if request.auth != null`, que dejaba a
+// cualquier autenticado leer, sobreescribir y borrar cualquier archivo del
+// bucket -- incluido el APK que la app se instala sola.
+//
+// Storage no puede consultar Firestore, asi que aqui no hay permisos por
+// vista: lo unico que se puede exigir es sesion iniciada. La proteccion real
+// es que cada prefijo permita solo lo que la app necesita hacer con el.
 
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // --------------------------------------------------- fotos de carnet
+    //
+    // `WorkersIdImages/{rut}_front` y `{rut}_back`. Las sube y borra la ficha
+    // del trabajador.
+    //
+    // Limites: solo imagenes y hasta 10 MB. Sin esto cualquier usuario podia
+    // dejar un archivo de cualquier tipo y tamano en el bucket -- que es, muy
+    // probablemente, parte de los 486 MB ocupados.
+    match /WorkersIdImages/{archivo} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null;
+    }
+
+    // ------------------------------------------------------ actualizaciones
+    //
+    // `updates/version.json` y el APK al que apunta. La app los LEE; nunca los
+    // escribe: las versiones se suben a mano desde la consola.
+    //
+    // OJO: `UpdateService.checkForUpdate()` corre en el primer frame de
+    // `MyApp.initState()`, antes de cualquier login. Con `request.auth != null`
+    // el chequeo solo funciona si ya hay sesion guardada; en una instalacion
+    // nueva falla en silencio. Se deja asi para no cambiar el alcance actual:
+    // abrir esto a lectura publica significa dejar el APK descargable por
+    // cualquiera, y esa es una decision aparte.
+    match /updates/{archivo=**} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------- por defecto
+    //
+    // Todo lo demas cerrado. Una ruta nueva tiene que declararse aqui antes de
+    // poder usarse.
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

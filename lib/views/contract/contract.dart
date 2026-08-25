@@ -2,7 +2,6 @@
 
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -10,10 +9,14 @@ import 'package:rut_utils/rut_utils.dart';
 import 'package:spelling_number/spelling_number.dart';
 
 import '../../customs/app_colors.dart';
+import '../home/dashboard_page.dart' show kDashboardMaxWidth;
+import '../../customs/widgets/app_form.dart';
 import '../../customs/widgets/app_modal.dart';
 import '../../customs/constants_values.dart';
 import '../../customs/widgets_custom.dart';
 import '../../customs/widgets/page_header.dart';
+import '../plantillas/plantilla_editor.dart';
+import '../../services/plantilla_service.dart';
 import '../widgets/settings_dialogs.dart';
 import '../../services/firestore_db.dart';
 
@@ -47,963 +50,250 @@ class _ContractPageState extends State<ContractPage> {
     );
   }
 
+  /// Cabecera de la vista.
+  ///
+  /// En escritorio va fija arriba; en el telefono entra al scroll, porque la
+  /// pantalla es corta y no vale gastar espacio permanente en repetir donde
+  /// estas.
+  static const _cabecera = PageHeader(
+    title: 'Ajustes y Parámetros',
+    subtitle: 'Configuración de datos base del sistema',
+    icon: Icons.settings_rounded,
+  );
+
   @override
   Widget build(BuildContext context) {
+    final compacta = MediaQuery.sizeOf(context).width < 800;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const PageHeader(
-            title: 'Ajustes y Parámetros',
-            subtitle: 'Configuración de datos base del sistema',
-            icon: Icons.settings_rounded,
-          ),
+          if (!compacta) _cabecera,
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: StreamBuilder(
-                stream: db.collection('Otros').where('nombre', whereIn: [
-                  'contratosmont',
-                  'empresadata',
-                  'lugares',
-                  'lugaresHoras',
-                  'labores',
-                  'afps',
-                  'previsiones',
-                  'comunas',
-                  'estadosciviles',
-                  'nacionalidades'
-                ]).snapshots(),
-                builder: (BuildContext context,
-                    AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (!snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossCount = constraints.maxWidth >= 800
-                          ? 3
-                          : (constraints.maxWidth >= 600 ? 2 : 1);
-                      final validDocs = snapshot.data!.docs
-                          .where((doc) => doc['nombre'] != 'lugaresHoras')
-                          .toList();
+            // Mismo tope de ancho que el resto de las vistas.
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: kDashboardMaxWidth),
+                child: SingleChildScrollView(
+                  // Sin padding propio: la cabecera compacta va a sangre y el
+                  // margen lo pone el contenido. Con el padding aqui, el
+                  // header quedaba con dos franjas claras a los lados.
+                  padding: EdgeInsets.zero,
+                  child: StreamBuilder(
+                    stream: db.collection('Otros').where('nombre', whereIn: [
+                      'contratosmont',
+                      'empresadata',
+                      'lugares',
+                      'lugaresHoras',
+                      'labores',
+                      'afps',
+                      'previsiones',
+                      'comunas',
+                      'estadosciviles',
+                      'nacionalidades'
+                    ]).snapshots(),
+                    builder: (BuildContext context,
+                        AsyncSnapshot<QuerySnapshot> snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          final crossCount = constraints.maxWidth >= 800
+                              ? 3
+                              : (constraints.maxWidth >= 600 ? 2 : 1);
+                          final validDocs = snapshot.data!.docs
+                              .where((doc) => doc['nombre'] != 'lugaresHoras')
+                              .toList();
 
-                      final order = [
-                        'empresadata',
-                        'contratosmont',
-                        'lugares',
-                        'labores',
-                        'afps',
-                        'previsiones',
-                        'comunas',
-                        'estadosciviles',
-                        'nacionalidades'
-                      ];
-                      validDocs.sort((a, b) => order
-                          .indexOf(a['nombre'])
-                          .compareTo(order.indexOf(b['nombre'])));
+                          final order = [
+                            'empresadata',
+                            'contratosmont',
+                            'lugares',
+                            'labores',
+                            'afps',
+                            'previsiones',
+                            'comunas',
+                            'estadosciviles',
+                            'nacionalidades'
+                          ];
+                          validDocs.sort((a, b) => order
+                              .indexOf(a['nombre'])
+                              .compareTo(order.indexOf(b['nombre'])));
 
-                      final List<Widget> settingCards =
-                          validDocs.map<Widget>((doc) {
-                        if (doc['nombre'] == 'empresadata') {
-                          return _SettingsCard(
-                            icon: Icons.business,
-                            title: doc['nombreempresa'],
-                            subtitle: 'RUT: ' + doc['rut'],
-                            fraction: 1 / crossCount,
-                            maxWidth: constraints.maxWidth,
-                            onTap: () {
-                              _openStyledSettingsSheet(
-                                context: context,
-                                title: 'Empresa',
-                                icon: Icons.business_rounded,
-                                hint:
-                                    'Actualiza la razon social y el RUT de la empresa.',
-                                child: const NewEnterpriseData(),
+                          final List<Widget> settingCards =
+                              validDocs.map<Widget>((doc) {
+                            if (doc['nombre'] == 'empresadata') {
+                              return _SettingsCard(
+                                icon: Icons.business,
+                                title: doc['nombreempresa'],
+                                subtitle: 'RUT: ' + doc['rut'],
+                                fraction: 1 / crossCount,
+                                maxWidth: constraints.maxWidth,
+                                onTap: () {
+                                  _openStyledSettingsSheet(
+                                    context: context,
+                                    title: 'Empresa',
+                                    icon: Icons.business_rounded,
+                                    hint:
+                                        'Actualiza la razon social y el RUT de la empresa.',
+                                    child: const NewEnterpriseData(),
+                                  );
+                                },
                               );
-                            },
-                          );
-                        } else if (doc['nombre'] == 'contratosmont') {
-                          return _SettingsCard(
-                            icon: Icons.attach_money,
-                            title: 'Monto diario',
-                            subtitle: numfor.format(doc['montonum']),
-                            fraction: 1 / crossCount,
-                            maxWidth: constraints.maxWidth,
-                            onTap: () {
-                              _openStyledSettingsSheet(
-                                context: context,
+                            } else if (doc['nombre'] == 'contratosmont') {
+                              return _SettingsCard(
+                                icon: Icons.attach_money,
                                 title: 'Monto diario',
-                                icon: Icons.attach_money_rounded,
-                                hint:
-                                    'Define el monto base diario para los documentos.',
-                                child: const NewAmount(),
+                                subtitle: numfor.format(doc['montonum']),
+                                fraction: 1 / crossCount,
+                                maxWidth: constraints.maxWidth,
+                                onTap: () {
+                                  _openStyledSettingsSheet(
+                                    context: context,
+                                    title: 'Monto diario',
+                                    icon: Icons.attach_money_rounded,
+                                    hint:
+                                        'Define el monto base diario para los documentos.',
+                                    child: const NewAmount(),
+                                  );
+                                },
                               );
-                            },
-                          );
-                        } else if (doc['nombre'] == 'labores') {
-                          final labores = doc['tipos'] as List<dynamic>;
-                          return _SettingsCard(
-                            icon: Icons.work_outline,
-                            title: 'Labores',
-                            subtitle: '${labores.length} opciones registradas',
-                            fraction: 1 / crossCount,
-                            maxWidth: constraints.maxWidth,
-                            onTap: () {
-                              _manageGenericCategory(
-                                  context, 'labores', 'Labores');
-                            },
-                          );
-                        } else if (doc['nombre'] == 'lugares') {
-                          final lugares = doc['tipos'] as List<dynamic>;
-                          return _SettingsCard(
-                            icon: Icons.location_on,
-                            title: 'Establecimientos',
-                            subtitle: '${lugares.length} sedes registradas',
-                            fraction: 1 / crossCount,
-                            maxWidth: constraints.maxWidth,
-                            onTap: () {
-                              _openStyledSettingsSheet(
-                                context: context,
+                            } else if (doc['nombre'] == 'labores') {
+                              final labores = doc['tipos'] as List<dynamic>;
+                              return _SettingsCard(
+                                icon: Icons.work_outline,
+                                title: 'Labores',
+                                subtitle:
+                                    '${labores.length} opciones registradas',
+                                fraction: 1 / crossCount,
+                                maxWidth: constraints.maxWidth,
+                                onTap: () {
+                                  _manageGenericCategory(
+                                      context, 'labores', 'Labores');
+                                },
+                              );
+                            } else if (doc['nombre'] == 'lugares') {
+                              final lugares = doc['tipos'] as List<dynamic>;
+                              return _SettingsCard(
+                                icon: Icons.location_on,
                                 title: 'Establecimientos',
-                                icon: Icons.location_on_rounded,
-                                hint:
-                                    'Administra lugares, horarios y horas semanales.',
-                                maxWidth:
-                                    MediaQuery.of(context).size.width > 800
-                                        ? 900
-                                        : MediaQuery.of(context).size.width,
-                                child: _buildPlacesManagerContent(context),
+                                subtitle: '${lugares.length} sedes registradas',
+                                fraction: 1 / crossCount,
+                                maxWidth: constraints.maxWidth,
+                                onTap: () {
+                                  _openStyledSettingsSheet(
+                                    context: context,
+                                    title: 'Establecimientos',
+                                    icon: Icons.location_on_rounded,
+                                    hint:
+                                        'Administra lugares, horarios y horas semanales.',
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width > 800
+                                            ? 900
+                                            : MediaQuery.of(context).size.width,
+                                    child: _buildPlacesManagerContent(context),
+                                  );
+                                },
                               );
-                            },
-                          );
-                        } else {
-                          final tipos = doc['tipos'] as List<dynamic>;
-                          final nombreMap = {
-                            'afps': 'AFPs',
-                            'previsiones': 'Previsiones',
-                            'comunas': 'Comunas',
-                            'estadosciviles': 'Estados Civiles',
-                            'nacionalidades': 'Nacionalidades'
-                          };
-                          final iconMap = {
-                            'afps': Icons.account_balance,
-                            'previsiones': Icons.health_and_safety,
-                            'comunas': Icons.map,
-                            'estadosciviles': Icons.family_restroom,
-                            'nacionalidades': Icons.flag,
-                          };
-                          final label = nombreMap[doc['nombre']] ?? 'Otros';
-                          return _SettingsCard(
-                            icon: iconMap[doc['nombre']] ?? Icons.category,
-                            title: label,
-                            subtitle: '${tipos.length} opciones disponibles',
-                            fraction: 1 / crossCount,
-                            maxWidth: constraints.maxWidth,
-                            onTap: () {
-                              _manageGenericCategory(
-                                  context, doc['nombre'], label);
-                            },
-                          );
-                        }
-                      }).toList();
+                            } else {
+                              final tipos = doc['tipos'] as List<dynamic>;
+                              final nombreMap = {
+                                'afps': 'AFPs',
+                                'previsiones': 'Previsiones',
+                                'comunas': 'Comunas',
+                                'estadosciviles': 'Estados Civiles',
+                                'nacionalidades': 'Nacionalidades'
+                              };
+                              final iconMap = {
+                                'afps': Icons.account_balance,
+                                'previsiones': Icons.health_and_safety,
+                                'comunas': Icons.map,
+                                'estadosciviles': Icons.family_restroom,
+                                'nacionalidades': Icons.flag,
+                              };
+                              final label = nombreMap[doc['nombre']] ?? 'Otros';
+                              return _SettingsCard(
+                                icon: iconMap[doc['nombre']] ?? Icons.category,
+                                title: label,
+                                subtitle:
+                                    '${tipos.length} opciones disponibles',
+                                fraction: 1 / crossCount,
+                                maxWidth: constraints.maxWidth,
+                                onTap: () {
+                                  _manageGenericCategory(
+                                      context, doc['nombre'], label);
+                                },
+                              );
+                            }
+                          }).toList();
 
-                      return Wrap(
-                        spacing: 16,
-                        runSpacing: 16,
-                        children: settingCards,
+                          // Las plantillas no viven en `Otros`, asi que se
+                          // agregan aparte y quedan en su propia seccion: son
+                          // el texto de documentos laborales, no un catalogo
+                          // de opciones como las comunas o las AFP.
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (compacta) _cabecera,
+                              Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    _tituloSeccion(
+                                      'Datos base',
+                                      'Catalogos que alimentan los formularios.',
+                                    ),
+                                    Wrap(
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: settingCards,
+                                    ),
+                                    const SizedBox(height: 32),
+                                    _tituloSeccion(
+                                      'Plantillas de documentos',
+                                      'El texto de cada documento que emite el '
+                                          'sistema. Publicar crea una version nueva '
+                                          'y conserva las anteriores.',
+                                    ),
+                                    Wrap(
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: [
+                                        for (final tipo in TipoPlantilla.todos)
+                                          _SettingsCard(
+                                            icon: Icons.description_outlined,
+                                            title: tipo.nombre,
+                                            subtitle: tipo.descripcion,
+                                            fraction: 1 / crossCount,
+                                            maxWidth: constraints.maxWidth,
+                                            onTap: () => abrirEditorDePlantilla(
+                                                context, tipo),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  static const List<String> _fallbackUserTypes = [
-    'ADMINISTRADOR',
-    'SUPERVISOR',
-    'OPERADOR',
-  ];
-
-  List<String> _extractUserTypes(Map<String, dynamic>? data) {
-    final raw = (data?['tipos'] as List?)?.cast<dynamic>() ?? <dynamic>[];
-    final normalized = raw
-        .map((e) => e.toString().trim().toUpperCase())
-        .where((e) => e.isNotEmpty)
-        .toSet()
-        .toList();
-
-    if (normalized.isEmpty) {
-      return List<String>.from(_fallbackUserTypes);
-    }
-
-    normalized.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return normalized;
-  }
-
-  String _safeString(dynamic value, {String fallback = '--'}) {
-    final text = value?.toString().trim() ?? '';
-    if (text.isEmpty) return fallback;
-    return text;
-  }
-
-  String _displayUserName(Map<String, dynamic> userData) {
-    final name = _safeString(userData['nombre'], fallback: '');
-    final lastName = _safeString(userData['apellido'], fallback: '');
-    final fullName = '$name $lastName'.trim();
-    if (fullName.isNotEmpty) return fullName.toUpperCase();
-    return _safeString(userData['email']).toUpperCase();
-  }
-
-  String _resolveUserType(dynamic rawType, List<String> availableTypes) {
-    if (availableTypes.isEmpty) {
-      return _fallbackUserTypes.first;
-    }
-
-    if (rawType is num) {
-      final index = rawType.toInt() - 1;
-      if (index >= 0 && index < availableTypes.length) {
-        return availableTypes[index];
-      }
-    }
-
-    final rawText = _safeString(rawType, fallback: '');
-    if (rawText.isNotEmpty) {
-      final normalized = rawText.toUpperCase();
-      for (final type in availableTypes) {
-        if (type.toUpperCase() == normalized) {
-          return type;
-        }
-      }
-    }
-
-    return availableTypes.first;
-  }
-
-  String _buildUserInitials(String displayName, String email) {
-    final words = displayName
-        .split(' ')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    if (words.isNotEmpty) {
-      final first = words.first.substring(0, 1);
-      final second = words.length > 1 ? words[1].substring(0, 1) : first;
-      return '$first$second'.toUpperCase();
-    }
-
-    final safeEmail = email.trim();
-    if (safeEmail.isNotEmpty) {
-      return safeEmail.substring(0, 1).toUpperCase();
-    }
-    return 'U';
-  }
-
-  Future<void> _ensureUserTypesDocument() async {
-    final ref = db.collection('Otros').doc(
-          'tipos_usuarios',
-        );
-    final snap = await ref.get();
-    final existingTypes = _extractUserTypes(snap.data());
-
-    await ref.set(
-      {
-        'nombre': 'tipos_usuarios',
-        'tipos': existingTypes,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
-  }
-
-  Future<void> _openUsersManager(BuildContext context) async {
-    await _ensureUserTypesDocument();
-    if (!mounted) return;
-
-    await _openStyledSettingsSheet(
-      context: context,
-      title: 'Usuarios',
-      icon: Icons.manage_accounts_rounded,
-      hint:
-          'Gestiona los datos de cada usuario y define su tipo de acceso en el sistema.',
-      child: _buildUsersManagerContent(context),
-    );
-  }
-
-  Future<void> _openUserTypesManager(BuildContext context) async {
-    await _ensureUserTypesDocument();
-    if (!mounted) return;
-
-    await _openStyledSettingsSheet(
-      context: context,
-      title: 'Tipos de usuario',
-      icon: Icons.admin_panel_settings_rounded,
-      hint:
-          'Crea y organiza los tipos de usuario que podras asignar al administrar cuentas.',
-      child: _buildUserTypesManagerContent(context),
-    );
-  }
-
-  void _showAddUserTypeSheet(BuildContext context) {
-    _openStyledSettingsSheet(
-      context: context,
-      title: 'Nuevo tipo de usuario',
-      icon: Icons.person_add_alt_1_rounded,
-      hint: 'Crea un nuevo tipo para la administracion de usuarios.',
-      child: const NewUserType(),
-    );
-  }
-
-  Widget _buildUsersManagerContent(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: db.collection('Otros').doc('tipos_usuarios').snapshots(),
-      builder: (context, typesSnapshot) {
-        final userTypes = _extractUserTypes(
-          typesSnapshot.data?.data() as Map<String, dynamic>?,
-        );
-
-        return StreamBuilder<QuerySnapshot>(
-          stream: db.collection('Usuarios').snapshots(),
-          builder: (context, usersSnapshot) {
-            if (!usersSnapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final usersDocs = usersSnapshot.data!.docs.toList();
-            usersDocs.sort((a, b) {
-              final aData = a.data() as Map<String, dynamic>? ?? {};
-              final bData = b.data() as Map<String, dynamic>? ?? {};
-              final aName = _displayUserName(aData).toLowerCase();
-              final bName = _displayUserName(bData).toLowerCase();
-              return aName.compareTo(bName);
-            });
-
-            final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (usersDocs.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.blueGrey.shade100),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.info_outline_rounded,
-                            color: AppColors.iconMuted,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'No hay usuarios registrados en la coleccion.',
-                              style: TextStyle(
-                                color: Colors.blueGrey.shade700,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: usersDocs.length,
-                        itemBuilder: (context, index) {
-                          final doc = usersDocs[index];
-                          final userData =
-                              doc.data() as Map<String, dynamic>? ?? {};
-                          final displayName = _displayUserName(userData);
-                          final email = _safeString(userData['email']);
-                          final typeName =
-                              _resolveUserType(userData['tipo'], userTypes);
-                          final isCurrentUser = currentUserId == doc.id;
-                          final initials =
-                              _buildUserInitials(displayName, email);
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border:
-                                  Border.all(color: Colors.blueGrey.shade100),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.04),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    color: primario.withOpacity(0.14),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      initials,
-                                      style: TextStyle(
-                                        color: primario,
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        displayName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14.5,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        email,
-                                        style: TextStyle(
-                                          color: Colors.blueGrey.shade700,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 12.5,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 10,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: primario.withOpacity(0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(999),
-                                            ),
-                                            child: Text(
-                                              typeName,
-                                              style: TextStyle(
-                                                color: primario,
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ),
-                                          if (isCurrentUser)
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                horizontal: 10,
-                                                vertical: 6,
-                                              ),
-                                              decoration: BoxDecoration(
-                                                color: Colors.green
-                                                    .withOpacity(0.1),
-                                                borderRadius:
-                                                    BorderRadius.circular(999),
-                                              ),
-                                              child: Text(
-                                                'USUARIO ACTUAL',
-                                                style: TextStyle(
-                                                  color: Colors.green.shade700,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      tooltip: 'Editar usuario',
-                                      icon: const Icon(
-                                        Icons.edit_rounded,
-                                        color: Colors.blueGrey,
-                                        size: 21,
-                                      ),
-                                      onPressed: () {
-                                        _openStyledSettingsSheet(
-                                          context: context,
-                                          title: 'Editar usuario',
-                                          icon: Icons.person_rounded,
-                                          hint:
-                                              'Actualiza nombre, contacto y tipo de acceso del usuario.',
-                                          maxWidth: 760,
-                                          child: EditSystemUser(
-                                            userId: doc.id,
-                                            userData: userData,
-                                            availableTypes: userTypes,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    IconButton(
-                                      tooltip: isCurrentUser
-                                          ? 'No puedes eliminar tu propia ficha'
-                                          : 'Eliminar usuario',
-                                      icon: Icon(
-                                        Icons.delete_outline_rounded,
-                                        color: isCurrentUser
-                                            ? Colors.blueGrey.shade200
-                                            : Colors.redAccent,
-                                        size: 21,
-                                      ),
-                                      onPressed: () {
-                                        _showDeleteUserSheet(
-                                          context,
-                                          userId: doc.id,
-                                          displayName: displayName,
-                                          isCurrentUser: isCurrentUser,
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildUserTypesManagerContent(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: db.collection('Otros').doc('tipos_usuarios').snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final docData = snapshot.data?.data() as Map<String, dynamic>?;
-        final types = _extractUserTypes(docData);
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: types.length,
-                  itemBuilder: (context, index) {
-                    final currentType = types[index];
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blueGrey.shade100),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 6,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 4,
-                        ),
-                        leading: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: primario.withOpacity(0.12),
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: primario,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          currentType,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14.5,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Editar tipo',
-                              icon: const Icon(
-                                Icons.edit_outlined,
-                                color: Colors.blueGrey,
-                                size: 21,
-                              ),
-                              onPressed: () {
-                                _openStyledSettingsSheet(
-                                  context: context,
-                                  title: 'Editar tipo de usuario',
-                                  icon: Icons.edit_rounded,
-                                  hint:
-                                      'Modifica el nombre del tipo para mantener el catalogo actualizado.',
-                                  maxWidth: 620,
-                                  child: EditGenericCategory(
-                                    docId: 'tipos_usuarios',
-                                    existingItem: currentType,
-                                    title: 'Editar tipo de usuario',
-                                  ),
-                                );
-                              },
-                            ),
-                            IconButton(
-                              tooltip: 'Eliminar tipo',
-                              icon: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.redAccent,
-                                size: 21,
-                              ),
-                              onPressed: () {
-                                _showDeleteUserTypeSheet(
-                                  context,
-                                  typeName: currentType,
-                                  currentTypes: types,
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primario,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    Get.back();
-                    _showAddUserTypeSheet(context);
-                  },
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Agregar nuevo tipo'),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDeleteUserSheet(
-    BuildContext context, {
-    required String userId,
-    required String displayName,
-    required bool isCurrentUser,
-  }) {
-    if (isCurrentUser) {
-      AnimatedSnackBar.material(
-        'No puedes eliminar tu propia ficha de usuario.',
-        type: AnimatedSnackBarType.warning,
-      ).show(context);
-      return;
-    }
-
-    _openStyledSettingsSheet(
-      context: context,
-      title: 'Eliminar usuario',
-      icon: Icons.delete_outline_rounded,
-      hint:
-          'Esta accion elimina la ficha del usuario en la coleccion Usuarios.',
-      danger: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Se eliminara la ficha de $displayName.',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    funcion: () => Get.back(),
-                    texto: 'Cancelar',
-                    cancelar: true,
-                    icon: Icons.close_rounded,
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () async {
-                      try {
-                        await db.collection('Usuarios').doc(userId).delete();
-
-                        if (!mounted) return;
-                        Get.back();
-                        AnimatedSnackBar.material(
-                          'Usuario eliminado con exito.',
-                          type: AnimatedSnackBarType.success,
-                        ).show(context);
-                      } catch (e) {
-                        if (!mounted) return;
-                        AnimatedSnackBar.material(
-                          'No se pudo eliminar el usuario: $e',
-                          type: AnimatedSnackBarType.error,
-                        ).show(context);
-                      }
-                    },
-                    icon: const Icon(Icons.delete_rounded, size: 18),
-                    label: const Text('Eliminar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showDeleteUserTypeSheet(
-    BuildContext context, {
-    required String typeName,
-    required List<String> currentTypes,
-  }) {
-    if (currentTypes.length <= 1) {
-      AnimatedSnackBar.material(
-        'Debe existir al menos un tipo de usuario.',
-        type: AnimatedSnackBarType.warning,
-      ).show(context);
-      return;
-    }
-
-    _openStyledSettingsSheet(
-      context: context,
-      title: 'Eliminar tipo de usuario',
-      icon: Icons.delete_outline_rounded,
-      hint:
-          'Si hay usuarios con este tipo, se reasignaran al primer tipo disponible.',
-      danger: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Se eliminara el tipo ${typeName.toUpperCase()} del catalogo.',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    funcion: () => Get.back(),
-                    texto: 'Cancelar',
-                    cancelar: true,
-                    icon: Icons.close_rounded,
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () async {
-                      final remainingTypes = currentTypes
-                          .where(
-                            (e) => e.toUpperCase() != typeName.toUpperCase(),
-                          )
-                          .toList();
-                      final replacementType = remainingTypes.first;
-
-                      try {
-                        final typesRef =
-                            db.collection('Otros').doc('tipos_usuarios');
-                        await typesRef.set(
-                          {
-                            'nombre': 'tipos_usuarios',
-                            'tipos': remainingTypes,
-                            'updatedAt': FieldValue.serverTimestamp(),
-                          },
-                          SetOptions(merge: true),
-                        );
-
-                        final usersSnapshot =
-                            await db.collection('Usuarios').get();
-
-                        final batch = db.batch();
-                        var hasUpdates = false;
-                        for (final userDoc in usersSnapshot.docs) {
-                          final userType = _resolveUserType(
-                            userDoc.data()['tipo'],
-                            currentTypes,
-                          );
-                          if (userType.toUpperCase() ==
-                              typeName.toUpperCase()) {
-                            batch.update(userDoc.reference, {
-                              'tipo': replacementType,
-                              'updatedAt': FieldValue.serverTimestamp(),
-                            });
-                            hasUpdates = true;
-                          }
-                        }
-
-                        if (hasUpdates) {
-                          await batch.commit();
-                        }
-
-                        if (!mounted) return;
-                        Get.back();
-                        AnimatedSnackBar.material(
-                          'Tipo eliminado y usuarios reasignados.',
-                          type: AnimatedSnackBarType.success,
-                        ).show(context);
-                      } catch (e) {
-                        if (!mounted) return;
-                        AnimatedSnackBar.material(
-                          'No se pudo eliminar el tipo: $e',
-                          type: AnimatedSnackBarType.error,
-                        ).show(context);
-                      }
-                    },
-                    icon: const Icon(Icons.delete_rounded, size: 18),
-                    label: const Text('Eliminar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1202,109 +492,39 @@ class _ContractPageState extends State<ContractPage> {
         stream: db.collection('Otros').doc(docId).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator()),
+            );
           }
 
-          final items = snapshot.data!['tipos'] as List<dynamic>;
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          final items = List<String>.from(
+            (data?['tipos'] as List<dynamic>? ?? const [])
+                .map((e) => e.toString()),
+          );
 
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: items.length,
-                    itemBuilder: (context, i) {
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 4),
-                          leading: CircleAvatar(
-                            radius: 18,
-                            backgroundColor: primario.withOpacity(0.12),
-                            child: Text('${i + 1}',
-                                style: TextStyle(
-                                    color: primario,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14)),
-                          ),
-                          title: Text('${items[i]}',
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 15)),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit_outlined,
-                                    color: Colors.blueGrey, size: 22),
-                                onPressed: () {
-                                  _openStyledSettingsSheet(
-                                    context: context,
-                                    title: 'Editar $title',
-                                    icon: Icons.edit_rounded,
-                                    hint:
-                                        'Actualiza el nombre del elemento seleccionado.',
-                                    child: EditGenericCategory(
-                                      docId: docId,
-                                      existingItem: items[i].toString(),
-                                      title: 'Editar $title',
-                                    ),
-                                  );
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.redAccent, size: 22),
-                                onPressed: () {
-                                  _showDeleteCategoryItemSheet(
-                                      context, docId, items[i], title);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: primario,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      Get.back();
-                      _showAddCategoryItemSheet(context, docId);
-                    },
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: Text('Agregar nuevo a $title'),
-                  ),
-                ),
-              ],
+          return _CategoryManagerBody(
+            title: title,
+            items: items,
+            onEdit: (item) => _openStyledSettingsSheet(
+              context: context,
+              title: 'Editar $title',
+              icon: Icons.edit_rounded,
+              hint: 'Actualiza el nombre del elemento seleccionado.',
+              maxWidth: 620,
+              child: EditGenericCategory(
+                docId: docId,
+                existingItem: item,
+                title: 'Editar $title',
+              ),
             ),
+            onDelete: (item) =>
+                _showDeleteCategoryItemSheet(context, docId, item, title),
+            // Sin `Get.back()` antes de abrir: cerraba el gestor, asi que tras
+            // agregar un elemento habia que volver a entrar para ver el
+            // resultado. El listado es un stream, se refresca solo.
+            onAdd: () => _showAddCategoryItemSheet(context, docId),
           );
         },
       ),
@@ -1372,6 +592,7 @@ class _ContractPageState extends State<ContractPage> {
       title: modalTitle,
       icon: modalIcon,
       hint: modalHint,
+      maxWidth: 620,
       child: addWidget,
     );
   }
@@ -1384,91 +605,31 @@ class _ContractPageState extends State<ContractPage> {
       icon: Icons.delete_outline_rounded,
       hint: 'Esta accion eliminara el elemento seleccionado de $title.',
       danger: true,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.warning_amber_rounded,
-                    color: Colors.redAccent,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Se eliminara ${item.toUpperCase()} de forma permanente.',
-                      style: TextStyle(
-                        color: Colors.red.shade700,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    funcion: () => Get.back(),
-                    texto: 'Cancelar',
-                    cancelar: true,
-                    icon: Icons.close_rounded,
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () async {
-                      try {
-                        await db.collection('Otros').doc(docId).update({
-                          'tipos': FieldValue.arrayRemove([item])
-                        });
-                        if (!mounted) return;
-                        Get.back();
-                        AnimatedSnackBar.material(
-                          'Eliminado con exito',
-                          type: AnimatedSnackBarType.success,
-                        ).show(context);
-                      } catch (e) {
-                        if (!mounted) return;
-                        AnimatedSnackBar.material(
-                          'Error al eliminar: $e',
-                          type: AnimatedSnackBarType.error,
-                        ).show(context);
-                      }
-                    },
-                    icon: const Icon(Icons.delete_rounded, size: 18),
-                    label: const Text('Eliminar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      maxWidth: 620,
+      child: AppDangerConfirmBody(
+        message: 'Se eliminara ${item.toUpperCase()} de forma permanente.',
+        onCancel: () => Get.back(),
+        confirmText: 'Eliminar',
+        confirmIcon: Icons.delete_rounded,
+        onConfirm: () async {
+          try {
+            await db.collection('Otros').doc(docId).update({
+              'tipos': FieldValue.arrayRemove([item])
+            });
+            if (!mounted) return;
+            Get.back();
+            AnimatedSnackBar.material(
+              'Eliminado con exito',
+              type: AnimatedSnackBarType.success,
+            ).show(context);
+          } catch (e) {
+            if (!mounted) return;
+            AnimatedSnackBar.material(
+              'Error al eliminar: $e',
+              type: AnimatedSnackBarType.error,
+            ).show(context);
+          }
+        },
       ),
     );
   }
@@ -2071,121 +1232,202 @@ class NewEnterpriseData extends StatefulWidget {
   State<NewEnterpriseData> createState() => _NewEnterpriseDataState();
 }
 
+/// Datos de la empresa que salen impresos en todos los documentos.
+///
+/// Antes solo pedia razon social y RUT. El representante legal, su RUT, el
+/// domicilio y el correo estaban **escritos a mano dentro del generador de
+/// PDF** -- cambiarlos significaba tocar el codigo y publicar la app. Ahora
+/// viven aqui, que es de donde los toman las plantillas.
 class _NewEnterpriseDataState extends State<NewEnterpriseData> {
-  final TextEditingController _empresaController = TextEditingController();
-  final TextEditingController _rutController = TextEditingController();
+  final _empresaController = TextEditingController();
+  final _rutController = TextEditingController();
+  final _representanteController = TextEditingController();
+  final _representanteRutController = TextEditingController();
+  final _domicilioController = TextEditingController();
+  final _correoController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
+  bool _cargando = true;
 
-  void saveNewEnterpriseData() {
+  @override
+  void initState() {
+    super.initState();
+    _cargar();
+  }
+
+  @override
+  void dispose() {
+    _empresaController.dispose();
+    _rutController.dispose();
+    _representanteController.dispose();
+    _representanteRutController.dispose();
+    _domicilioController.dispose();
+    _correoController.dispose();
+    super.dispose();
+  }
+
+  /// Trae lo que ya esta guardado.
+  ///
+  /// El formulario anterior abria en blanco y guardaba encima, asi que editar
+  /// solo el RUT borraba la razon social.
+  Future<void> _cargar() async {
+    final snap = await db.collection('Otros').doc('empresadata').get();
+    if (!mounted) return;
+    final d = snap.data() ?? const <String, dynamic>{};
+    String texto(String k) => (d[k] ?? '').toString();
+
+    _empresaController.text = texto('nombreempresa');
+    _rutController.text = texto('rut');
+    _representanteController.text = texto('representante');
+    _representanteRutController.text = texto('representante_rut');
+    _domicilioController.text = texto('domicilio');
+    _correoController.text = texto('correo');
+    setState(() => _cargando = false);
+  }
+
+  Future<void> _guardar() async {
+    if (!_formKey.currentState!.validate()) return;
     try {
-      db.collection('Otros').doc('empresadata').update({
-        'nombreempresa': _empresaController.text,
-        'rut': _rutController.text,
-      });
+      await db.collection('Otros').doc('empresadata').set({
+        'nombreempresa': _empresaController.text.trim(),
+        'rut': _rutController.text.trim(),
+        'representante': _representanteController.text.trim(),
+        'representante_rut': _representanteRutController.text.trim(),
+        'domicilio': _domicilioController.text.trim(),
+        'correo': _correoController.text.trim(),
+      }, SetOptions(merge: true));
+      if (!mounted) return;
       Get.back();
       AnimatedSnackBar.material(
-        'Datos de la empresa modificados con éxito',
+        'Datos de la empresa actualizados.',
         mobileSnackBarPosition: MobileSnackBarPosition.top,
         desktopSnackBarPosition: DesktopSnackBarPosition.bottomRight,
         type: AnimatedSnackBarType.success,
       ).show(context);
-    } catch (e) {}
+    } catch (e) {
+      if (!mounted) return;
+      AnimatedSnackBar.material(
+        'No se pudo guardar: $e',
+        type: AnimatedSnackBarType.error,
+      ).show(context);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 2),
-              InputTextField(
-                textController: _empresaController,
-                hint: 'Nombre de la empresa',
-                onFieldSubmitted: (_) {
-                  if (_formKey.currentState!.validate()) {
-                    saveNewEnterpriseData();
-                  }
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Por favor ingrese el nombre de la empresa';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: InputTextField(
-                    teclado: TextInputType.text,
-                    textController: _rutController,
-                    hint: 'Rut',
-                    onFieldSubmitted: (_) {
-                      if (_formKey.currentState!.validate()) {
-                        _formKey.currentState!.save();
-                        saveNewEnterpriseData();
-                      }
-                    },
-                    formater: RutFormatter(),
-                    validator: (value) {
-                      if (value == '') {
-                        return 'Por favor ingrese un rut';
-                      }
-                      if (value!.length < 11) {
-                        return 'Por favor ingrese un rut válido';
-                      }
-                      if (isRutValid(value.toString()) == false) {
-                        return 'Por favor ingrese un rut válido';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 15.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: CustomButton(
-                        funcion: () {
-                          Get.back();
-                        },
-                        texto: 'Cancelar',
-                        cancelar: true,
-                        icon: Icons.close_rounded,
-                        width: double.infinity,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomButton(
-                          funcion: () {
-                            if (_formKey.currentState!.validate()) {
-                              _formKey.currentState!.save();
-                              saveNewEnterpriseData();
-                            }
+    if (_cargando) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 48),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: AppModalBody(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppFormSection(
+                    title: 'Identificacion',
+                    icon: Icons.business_rounded,
+                    child: AppModalFieldGrid(
+                      minItemWidth: 260,
+                      maxColumns: 2,
+                      children: [
+                        InputTextField(
+                          textController: _empresaController,
+                          hint: 'Razon social',
+                          validator: (v) => (v ?? '').trim().isEmpty
+                              ? 'Ingresa la razon social'
+                              : null,
+                        ),
+                        InputTextField(
+                          textController: _rutController,
+                          hint: 'RUT de la empresa',
+                          formater: RutFormatter(),
+                          validator: (v) {
+                            final t = (v ?? '').trim();
+                            if (t.isEmpty) return 'Ingresa el RUT';
+                            if (!isRutValid(t)) return 'RUT no valido';
+                            return null;
                           },
-                          texto: 'Guardar',
-                          cancelar: false,
-                          icon: Icons.check_rounded,
-                          width: double.infinity),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Representante legal',
+                    icon: Icons.badge_outlined,
+                    child: AppModalFieldGrid(
+                      minItemWidth: 260,
+                      maxColumns: 2,
+                      children: [
+                        InputTextField(
+                          textController: _representanteController,
+                          hint: 'Nombre completo',
+                          validator: (v) => (v ?? '').trim().isEmpty
+                              ? 'Sale impreso en contratos y finiquitos'
+                              : null,
+                        ),
+                        InputTextField(
+                          textController: _representanteRutController,
+                          hint: 'RUT del representante',
+                          formater: RutFormatter(),
+                          validator: (v) {
+                            final t = (v ?? '').trim();
+                            if (t.isEmpty) return 'Sale impreso en documentos';
+                            if (!isRutValid(t)) return 'RUT no valido';
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  AppFormSection(
+                    title: 'Contacto',
+                    icon: Icons.place_outlined,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        InputTextField(
+                          textController: _domicilioController,
+                          hint: 'Domicilio',
+                          help: 'Sale al pie de cada hoja y en la '
+                              'comparecencia del contrato.',
+                          helper: true,
+                          validator: (v) => (v ?? '').trim().isEmpty
+                              ? 'Sale al pie de cada documento'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        InputTextField(
+                          textController: _correoController,
+                          hint: 'Correo',
+                          teclado: TextInputType.emailAddress,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        AppFormFooter(
+          onCancel: () => Get.back(),
+          onConfirm: _guardar,
+          confirmText: 'Guardar',
+          confirmIcon: Icons.check_rounded,
+        ),
+      ],
     );
   }
 }
@@ -2293,6 +1535,36 @@ class _NewAmountState extends State<NewAmount> {
   }
 }
 
+/// Encabezado de un grupo de tarjetas en Ajustes.
+Widget _tituloSeccion(String titulo, String bajada) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 14),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          titulo.toUpperCase(),
+          style: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          bajada,
+          style: const TextStyle(
+            color: AppColors.textFaint,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _SettingsCard extends StatelessWidget {
   const _SettingsCard({
     required this.icon,
@@ -2317,16 +1589,18 @@ class _SettingsCard extends StatelessWidget {
         : (maxWidth - (16 * (1 / fraction).round())) * fraction;
     return SizedBox(
       width: width,
+      // Material y no Container porque necesita el InkWell del tap, pero con
+      // el mismo color, radio y borde que appCardDecoration().
       child: Material(
         elevation: 0,
-        color: Colors.white,
+        color: AppColors.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(kCardRadius),
           side: BorderSide(color: Colors.black.withOpacity(0.05), width: 1),
         ),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(kCardRadius),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -2375,6 +1649,269 @@ class _SettingsCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Listado editable de una categoria de ajustes (comunas, AFP, labores...).
+///
+/// Antes cada fila era un `ListTile` con avatar de radio 18 y botones de 22:
+/// unos 66px por un texto de una linea, asi que con quince comunas el modal ya
+/// era todo scroll. Aqui la fila mide ~50 y, pasadas ocho, aparece un buscador:
+/// con listas largas recorrerlas a ojo era el unico camino.
+class _CategoryManagerBody extends StatefulWidget {
+  const _CategoryManagerBody({
+    required this.title,
+    required this.items,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onAdd,
+  });
+
+  final String title;
+  final List<String> items;
+  final ValueChanged<String> onEdit;
+  final ValueChanged<String> onDelete;
+  final VoidCallback onAdd;
+
+  /// A partir de aqui buscar sale mas a cuenta que recorrer.
+  static const int umbralBuscador = 8;
+
+  @override
+  State<_CategoryManagerBody> createState() => _CategoryManagerBodyState();
+}
+
+class _CategoryManagerBodyState extends State<_CategoryManagerBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  /// Sin tildes y en minusculas: buscar "curico" tiene que encontrar "Curico"
+  /// escrito con acento.
+  String _normalizar(String texto) => texto
+      .toLowerCase()
+      .replaceAll('á', 'a')
+      .replaceAll('é', 'e')
+      .replaceAll('í', 'i')
+      .replaceAll('ó', 'o')
+      .replaceAll('ú', 'u')
+      .replaceAll('ü', 'u')
+      .replaceAll('ñ', 'n');
+
+  @override
+  Widget build(BuildContext context) {
+    final conBuscador =
+        widget.items.length >= _CategoryManagerBody.umbralBuscador;
+
+    // El indice que se muestra es el de la lista completa, no el del filtro: si
+    // busco "temuco" quiero ver que es el 10, no el 1.
+    final visibles = <MapEntry<int, String>>[
+      for (var i = 0; i < widget.items.length; i++)
+        if (_query.isEmpty ||
+            _normalizar(widget.items[i]).contains(_normalizar(_query)))
+          MapEntry(i, widget.items[i]),
+    ];
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (conBuscador)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => setState(() => _query = value),
+              style: const TextStyle(
+                color: AppColors.textStrong,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'Buscar en ${widget.title.toLowerCase()}',
+                hintStyle: const TextStyle(
+                  color: AppColors.textFaint,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                ),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: AppColors.iconMuted,
+                ),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 18),
+                        color: AppColors.iconMuted,
+                        tooltip: 'Limpiar',
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: const BorderSide(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: primario, width: 1.6),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ),
+        Flexible(
+          child: AppModalBody(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+            child: visibles.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Center(
+                      child: Text(
+                        'Sin resultados para "$_query".',
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final entry in visibles) ...[
+                        if (entry != visibles.first) const SizedBox(height: 8),
+                        _CategoryItemRow(
+                          index: entry.key + 1,
+                          label: entry.value,
+                          onEdit: () => widget.onEdit(entry.value),
+                          onDelete: () => widget.onDelete(entry.value),
+                        ),
+                      ],
+                    ],
+                  ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: SizedBox(
+            width: double.infinity,
+            child: CustomButton(
+              funcion: widget.onAdd,
+              texto: 'Agregar a ${widget.title.toLowerCase()}',
+              icon: Icons.add_rounded,
+              width: double.infinity,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryItemRow extends StatelessWidget {
+  const _CategoryItemRow({
+    required this.index,
+    required this.label,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final int index;
+  final String label;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // Sin sombra propia: sobre el fondo hundido del modal la sombra que traia
+      // se leia como un halo alrededor de cada fila.
+      decoration: appCardDecoration(radius: 12),
+      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+      child: Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: primario.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$index',
+              style: TextStyle(
+                color: primario,
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.textStrong,
+                fontWeight: FontWeight.w600,
+                fontSize: 14.5,
+              ),
+            ),
+          ),
+          _RowIconButton(
+            icon: Icons.edit_outlined,
+            color: AppColors.iconMuted,
+            tooltip: 'Editar',
+            onPressed: onEdit,
+          ),
+          _RowIconButton(
+            icon: Icons.delete_outline_rounded,
+            color: Colors.red.shade400,
+            tooltip: 'Eliminar',
+            onPressed: onDelete,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RowIconButton extends StatelessWidget {
+  const _RowIconButton({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, size: 19),
+      color: color,
+      tooltip: tooltip,
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.all(6),
+      constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
     );
   }
 }

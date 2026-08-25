@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:animated_snack_bar/animated_snack_bar.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:date_picker_timeline/date_picker_timeline.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
@@ -22,12 +23,16 @@ import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_form.dart';
 import '../../customs/widgets/app_modal.dart';
+import '../../customs/widgets/app_skeleton.dart';
 import '../../customs/widgets_custom.dart';
 import '../../customs/widgets/page_header.dart';
+import '../home/dashboard_page.dart' show kDashboardMaxWidth;
 import '../../services/attendance_service.dart';
 import '../../utils/normalize.dart';
 import '../../services/firestore_db.dart';
+import '../../services/trabajadores_repo.dart';
 
 DateTime normalizeDay(DateTime d) => DateTime(d.year, d.month, d.day);
 
@@ -45,8 +50,14 @@ class AttendancePageState extends State<AttendancePage> {
 
   StreamSubscription<List<String>>? _dayActiveListsSub;
 
-  List<_Worker> _all = [];
+  /// Resultados de la busqueda del autocompletado.
+  ///
+  /// Antes habia ademas una lista `_all` con los 675 trabajadores, cargada en
+  /// vivo con `.snapshots()` cada vez que se abria Asistencia, solo para poder
+  /// filtrarla en memoria. Ahora se consulta al escribir.
   List<_Worker> _filtered = [];
+  bool _buscando = false;
+  Timer? _debounceBusqueda;
 
   String _group = 'GENERAL';
   List<String> _activeLists = []; // always UPPERCASE
@@ -55,7 +66,6 @@ class AttendancePageState extends State<AttendancePage> {
   void initState() {
     super.initState();
     _search.addListener(_onSearch);
-    _listenWorkers();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _dpCtrl.animateToDate(_selectedDate.subtract(const Duration(days: 1)));
@@ -83,6 +93,7 @@ class AttendancePageState extends State<AttendancePage> {
 
   @override
   void dispose() {
+    _debounceBusqueda?.cancel();
     _search.removeListener(_onSearch);
     _search.dispose();
 
@@ -90,23 +101,15 @@ class AttendancePageState extends State<AttendancePage> {
     super.dispose();
   }
 
-  String _displayNameFor(Map<String, dynamic> e) {
-    final wid = (e['workerId'] ?? '').toString().trim();
-    if (wid.isNotEmpty) {
-      final byId = _all.where((w) => w.id == wid);
-      if (byId.isNotEmpty) {
-        return '${byId.first.nombres} ${byId.first.apellidos}'.trim();
-      }
-    }
-    final rut = (e['rut'] ?? '').toString().trim();
-    if (rut.isNotEmpty) {
-      final byRut = _all.where((w) => w.rut.trim() == rut);
-      if (byRut.isNotEmpty) {
-        return '${byRut.first.nombres} ${byRut.first.apellidos}'.trim();
-      }
-    }
-    return (e['name'] ?? '').toString().trim();
-  }
+  /// Nombre con que quedo registrada la asistencia.
+  ///
+  /// Antes se buscaba el trabajador en la lista completa para mostrar su
+  /// nombre actual, y solo si no aparecia se usaba el guardado. Ahora se usa
+  /// directamente el guardado -- que ademas es lo correcto para un registro
+  /// historico: si a alguien le corrigen el nombre en marzo, la asistencia de
+  /// enero debe seguir diciendo lo que decia en enero.
+  String _displayNameFor(Map<String, dynamic> e) =>
+      (e['name'] ?? '').toString().trim();
 
   String _sortKeyFor(Map<String, dynamic> e) => normalize(_displayNameFor(e));
 
@@ -140,42 +143,74 @@ class AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  void _listenWorkers() {
-    db
-        .collection('Trabajadores')
-        .orderBy('apellidos')
-        .snapshots()
-        .listen((snap) {
-      final list = snap.docs.map((d) {
-        final m = d.data();
-        final nombres = (m['nombres'] ?? m['name'] ?? '').toString();
-        final apellidos = (m['apellidos'] ?? m['lastName'] ?? '').toString();
-        final rut = (m['rut'] ?? '').toString();
-        return _Worker(
-            id: d.id, nombres: nombres, apellidos: apellidos, rut: rut);
-      }).toList();
-      if (!mounted) return;
-      setState(() {
-        _all = list;
-        _filtered = list;
-      });
-    });
+  void _onSearch() {
+    _debounceBusqueda?.cancel();
+    if (_search.text.trim().isEmpty) {
+      if (mounted) setState(() => _filtered = []);
+      return;
+    }
+    // Con retardo: cada tecla seria una consulta.
+    _debounceBusqueda = Timer(const Duration(milliseconds: 350), _buscar);
   }
 
-  void _onSearch() {
-    final q = normalize(_search.text.trim());
-    if (!mounted) return;
-    setState(() {
-      if (q.isEmpty) {
-        _filtered = _all;
-      } else {
-        _filtered = _all.where((w) {
-          final name = normalize('${w.nombres} ${w.apellidos}');
-          final rut = normalize(w.rut);
-          return name.contains(q) || rut.contains(q);
-        }).toList();
-      }
-    });
+  Future<void> _buscar() async {
+    final texto = _search.text.trim();
+    if (texto.isEmpty) return;
+    setState(() => _buscando = true);
+    try {
+      final pagina = await TrabajadoresRepo.pagina(
+        FiltrosTrabajadores(busqueda: texto),
+        limite: 20,
+      );
+      if (!mounted) return;
+      setState(() {
+        _filtered = [
+          for (final w in pagina.trabajadores)
+            _Worker(
+              id: w.id ?? '',
+              nombres: w.name ?? '',
+              apellidos: w.lastName ?? '',
+              rut: w.rut ?? '',
+            ),
+        ];
+        _buscando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _filtered = [];
+        _buscando = false;
+      });
+    }
+  }
+
+  /// Todos los trabajadores, para el libro mensual.
+  ///
+  /// Es la unica parte que de verdad los necesita a todos, y es una accion
+  /// explicita: no se paga al entrar a la pantalla.
+  Future<List<_Worker>> _todosLosTrabajadores() async {
+    final todos = <_Worker>[];
+    DocumentSnapshot? cursor;
+    var quedan = true;
+    while (quedan && todos.length < 5000) {
+      final pagina = await TrabajadoresRepo.pagina(
+        const FiltrosTrabajadores(),
+        desde: cursor,
+        limite: 200,
+      );
+      todos.addAll([
+        for (final w in pagina.trabajadores)
+          _Worker(
+            id: w.id ?? '',
+            nombres: w.name ?? '',
+            apellidos: w.lastName ?? '',
+            rut: w.rut ?? '',
+          ),
+      ]);
+      cursor = pagina.ultimo;
+      quedan = pagina.hayMas && cursor != null;
+    }
+    return todos;
   }
 
   Future<void> _addToList(_Worker w, String listName) async {
@@ -210,130 +245,20 @@ class AttendancePageState extends State<AttendancePage> {
         normalizeDay(_selectedDate), workerId);
   }
 
-  // ignore: unused_element
-  Future<bool> _confirmRemoveSheetLegacy(String displayName) async {
-    final r = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(2)),
-                ),
-                Text('Quitar de asistencia',
-                    style: Theme.of(ctx)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(
-                    '¿Estás seguro de quitar a:\n${displayName.toUpperCase()}?',
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancelar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style:
-                            ElevatedButton.styleFrom(backgroundColor: primario),
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Sí, quitar',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    return r == true;
-  }
-
   Future<bool> _confirmRemoveSheet(String displayName) async {
     final r = await _openAttendanceSheet<bool>(
       title: 'Quitar asistencia',
       icon: Icons.person_remove_alt_1_rounded,
       hint: 'Confirma para quitar al trabajador de la asistencia del dia.',
       danger: true,
-      maxWidth: 640,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Text(
-                'Se quitara a ${displayName.toUpperCase()} de la lista actual.',
-                style: TextStyle(
-                  color: Colors.red.shade700,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    funcion: () => Navigator.pop(context, false),
-                    texto: 'Cancelar',
-                    cancelar: true,
-                    icon: Icons.close_rounded,
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(context, true),
-                    icon:
-                        const Icon(Icons.person_remove_alt_1_rounded, size: 18),
-                    label: const Text('Quitar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      maxWidth: 620,
+      child: AppDangerConfirmBody(
+        message: 'Se quitara a ${displayName.toUpperCase()} de la lista '
+            'actual.',
+        onCancel: () => Navigator.pop(context, false),
+        onConfirm: () => Navigator.pop(context, true),
+        confirmText: 'Quitar',
+        confirmIcon: Icons.person_remove_alt_1_rounded,
       ),
     );
     return r == true;
@@ -367,539 +292,23 @@ class AttendancePageState extends State<AttendancePage> {
     Get.back();
   }
 
-  // ignore: unused_element
-  Future<bool> _confirmDeleteListTypeLegacy(String listName) async {
-    final r = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                      color: Colors.black12,
-                      borderRadius: BorderRadius.circular(2)),
-                ),
-                Text('Eliminar tipo de lista',
-                    style: Theme.of(ctx)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(
-                    '¿Estás seguro de eliminar el tipo de lista:\n${listName.toUpperCase()}?',
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                const Text(
-                    'Esto no eliminará la asistencia histórica asociada.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancelar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red),
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Sí, eliminar',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    return r == true;
-  }
-
   Future<bool> _confirmDeleteListType(String listName) async {
     final r = await _openAttendanceSheet<bool>(
       title: 'Eliminar tipo de lista',
       icon: Icons.delete_outline_rounded,
       hint: 'Esta accion elimina el tipo del catalogo general.',
       danger: true,
-      maxWidth: 640,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Se eliminara ${listName.toUpperCase()} del listado.',
-                    style: TextStyle(
-                      color: Colors.red.shade700,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'La asistencia historica no se eliminara.',
-                    style: TextStyle(
-                      color: Colors.red.shade600,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    funcion: () => Navigator.pop(context, false),
-                    texto: 'Cancelar',
-                    cancelar: true,
-                    icon: Icons.close_rounded,
-                    width: double.infinity,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(context, true),
-                    icon: const Icon(Icons.delete_rounded, size: 18),
-                    label: const Text('Eliminar'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+      maxWidth: 620,
+      child: AppDangerConfirmBody(
+        message: 'Se eliminara ${listName.toUpperCase()} del listado.',
+        detail: 'La asistencia historica no se eliminara.',
+        onCancel: () => Navigator.pop(context, false),
+        onConfirm: () => Navigator.pop(context, true),
+        confirmText: 'Eliminar',
+        confirmIcon: Icons.delete_rounded,
       ),
     );
     return r == true;
-  }
-
-  // ignore: unused_element
-  Future<void> _showActivateListsSheetLegacy() async {
-    final picked = <String>{};
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width > 800
-              ? 900
-              : MediaQuery.of(context).size.width * 0.95),
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setSt) {
-            return SingleChildScrollView(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.black12,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Center(
-                          child: Text(
-                            'Agregar listas al día',
-                            style: TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        StreamBuilder<List<String>>(
-                          stream: AttendanceService.listenAllListTypes(),
-                          builder: (context, snap) {
-                            final tipos = (snap.data ?? [])
-                                .map((t) => t.toUpperCase())
-                                .toList();
-                            tipos.sort((a, b) =>
-                                a.toLowerCase().compareTo(b.toLowerCase()));
-                            final activeSet = _activeLists
-                                .map((e) => e.toUpperCase())
-                                .toSet();
-                            final candidates = tipos
-                                .where((t) => !activeSet.contains(t))
-                                .toList();
-
-                            if (candidates.isEmpty) {
-                              return Container(
-                                constraints:
-                                    const BoxConstraints(minHeight: 180),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(top: 12),
-                                  child: Text(
-                                    'No hay más tipos disponibles. Usa "Nuevo tipo" para crear uno.',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            return Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              alignment: WrapAlignment.center,
-                              children: candidates.map((text) {
-                                final isSelected = picked.contains(text);
-                                return GestureDetector(
-                                  onLongPress: () async {
-                                    final confirm =
-                                        await _confirmDeleteListType(text);
-                                    if (confirm) {
-                                      await AttendanceService.removeListType(
-                                          text);
-                                      // Force refresh is handled by stream builder
-                                      if (context.mounted) {
-                                        AnimatedSnackBar.material(
-                                          'Lista "$text" eliminada correctamente.',
-                                          type: AnimatedSnackBarType.success,
-                                          mobileSnackBarPosition:
-                                              MobileSnackBarPosition.bottom,
-                                        ).show(context);
-                                      }
-                                    }
-                                  },
-                                  child: ChoiceChip(
-                                    label: Text(text),
-                                    selected: isSelected,
-                                    selectedColor: primario,
-                                    labelStyle: TextStyle(
-                                      color: isSelected
-                                          ? Colors.white
-                                          : Colors.black,
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                    ),
-                                    backgroundColor: Colors.grey.shade200,
-                                    onSelected: (selected) {
-                                      setSt(() {
-                                        if (selected) {
-                                          picked.add(text);
-                                        } else {
-                                          picked.remove(text);
-                                        }
-                                      });
-                                    },
-                                  ),
-                                );
-                              }).toList(),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            CustomButton2(
-                              funcion: () async {
-                                await _showCreateTypeSheet();
-                                setSt(() {}); // refresh visual
-                              },
-                              texto: 'Nuevo tipo',
-                              cancelar: true,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            CustomButton(
-                              funcion: () {
-                                Navigator.of(ctx).pop();
-                              },
-                              texto: 'Cerrar',
-                              cancelar: true,
-                            ),
-                            CustomButton(
-                              funcion: () {
-                                if (picked.isNotEmpty) {
-                                  _activatePickedLists(picked);
-                                }
-                              },
-                              texto: 'Activar',
-                              cancelar: false,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ignore: unused_element
-  Future<String?> _showPickActiveListSheetLegacy() async {
-    String? picked;
-
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width > 800
-              ? 900
-              : MediaQuery.of(context).size.width * 0.95),
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                child: StatefulBuilder(
-                  builder: (ctx, setSt) {
-                    final actives = [..._activeLists]..sort(
-                        (a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Selecciona lista',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
-                        ),
-                        const SizedBox(height: 12),
-                        if (actives.isEmpty)
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            child: Text(
-                                'No hay listas activas hoy. Agrega alguna.'),
-                          ),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final t in actives)
-                              ChoiceChip(
-                                label: Text(t.toUpperCase()),
-                                selected: picked == t,
-                                selectedColor: primario.withOpacity(0.15),
-                                onSelected: (sel) =>
-                                    setSt(() => picked = sel ? t : null),
-                              ),
-                            ActionChip(
-                              avatar: const Icon(Icons.add, size: 18),
-                              label: const Text('Agregar listas del día'),
-                              onPressed: () async {
-                                await _showActivateListsSheet();
-                                setSt(() {});
-                              },
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            CustomButton(
-                              funcion: () {
-                                Navigator.pop(ctx, null);
-                              },
-                              texto: 'Cancelar',
-                              cancelar: true,
-                            ),
-                            CustomButton(
-                              funcion: () {
-                                if (picked != null) {
-                                  Navigator.pop(ctx, picked);
-                                }
-                              },
-                              texto: 'Usar esta lista',
-                              cancelar: false,
-                            ),
-                          ],
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ignore: unused_element
-  Future<void> _showCreateTypeSheetLegacy() async {
-    final ctrl = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    await showModalBottomSheet<bool>(
-        context: context,
-        isScrollControlled: true,
-        useSafeArea: true,
-        constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width > 800
-                ? 900
-                : MediaQuery.of(context).size.width * 0.95),
-        backgroundColor: Colors.transparent,
-        builder: (context) {
-          return SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(16.0)),
-                ),
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.black12,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Center(
-                        child: Text(
-                          'Nuevo tipo de lista',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      InputTextField(
-                        textController: ctrl,
-                        hint: 'Nombre (EJ: PODA, COSECHA)',
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return 'Ingresa un nombre';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          CustomButton(
-                            funcion: () {
-                              Get.back(result: false);
-                            },
-                            texto: 'Cancelar',
-                            cancelar: true,
-                          ),
-                          CustomButton(
-                            funcion: () {
-                              if (formKey.currentState!.validate()) {
-                                formKey.currentState!.save();
-                                _submitCreateType(formKey, ctrl);
-                              }
-                            },
-                            texto: 'Agregar',
-                            cancelar: false,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
-        });
   }
 
   Future<void> _showActivateListsSheet() async {
@@ -908,16 +317,15 @@ class AttendancePageState extends State<AttendancePage> {
       title: 'Activar listas del dia',
       icon: Icons.playlist_add_check_circle_outlined,
       hint: 'Selecciona una o mas listas para dejarlas activas en esta fecha.',
+      maxWidth: 760,
       child: StatefulBuilder(
         builder: (context, setSt) {
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  StreamBuilder<List<String>>(
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: AppModalBody(
+                  child: StreamBuilder<List<String>>(
                     stream: AttendanceService.listenAllListTypes(),
                     builder: (context, snap) {
                       final tipos = (snap.data ?? [])
@@ -931,130 +339,134 @@ class AttendancePageState extends State<AttendancePage> {
                           tipos.where((t) => !activeSet.contains(t)).toList();
 
                       if (candidates.isEmpty) {
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.blueGrey.shade100),
-                          ),
-                          child: Text(
-                            'No hay mas tipos disponibles. Crea uno nuevo para continuar.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.blueGrey.shade600,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        return const AppEmptyNotice(
+                          icon: Icons.playlist_add_rounded,
+                          message: 'No hay mas tipos disponibles.',
+                          detail: 'Crea uno nuevo para continuar.',
                         );
                       }
 
-                      return Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        alignment: WrapAlignment.center,
-                        children: candidates.map((text) {
-                          final isSelected = picked.contains(text);
-                          return GestureDetector(
-                            onLongPress: () async {
-                              final confirm =
-                                  await _confirmDeleteListType(text);
-                              if (confirm) {
-                                await AttendanceService.removeListType(text);
-                                if (context.mounted) {
-                                  AnimatedSnackBar.material(
-                                    'Lista "$text" eliminada correctamente.',
-                                    type: AnimatedSnackBarType.success,
-                                    mobileSnackBarPosition:
-                                        MobileSnackBarPosition.bottom,
-                                  ).show(context);
-                                }
-                              }
-                            },
-                            child: ChoiceChip(
-                              label: Text(text),
-                              selected: isSelected,
-                              selectedColor: primario,
-                              backgroundColor: Colors.white,
-                              side: BorderSide(
-                                color: isSelected
-                                    ? primario
-                                    : Colors.blueGrey.shade100,
-                              ),
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.blueGrey.shade700,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              onSelected: (selected) {
-                                setSt(() {
-                                  if (selected) {
-                                    picked.add(text);
-                                  } else {
-                                    picked.remove(text);
-                                  }
-                                });
-                              },
+                      return AppFormSection(
+                        title: 'Tipos disponibles',
+                        icon: Icons.list_alt_rounded,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final text in candidates)
+                                  _listTypeChip(
+                                    label: text,
+                                    selected: picked.contains(text),
+                                    onSelected: (selected) => setSt(() {
+                                      if (selected) {
+                                        picked.add(text);
+                                      } else {
+                                        picked.remove(text);
+                                      }
+                                    }),
+                                    onLongPress: () async {
+                                      final confirm =
+                                          await _confirmDeleteListType(text);
+                                      if (!confirm) return;
+                                      await AttendanceService.removeListType(
+                                          text);
+                                      if (!context.mounted) return;
+                                      AnimatedSnackBar.material(
+                                        'Lista "$text" eliminada correctamente.',
+                                        type: AnimatedSnackBarType.success,
+                                        mobileSnackBarPosition:
+                                            MobileSnackBarPosition.bottom,
+                                      ).show(context);
+                                    },
+                                  ),
+                              ],
                             ),
-                          );
-                        }).toList(),
+                            const SizedBox(height: 12),
+                            // Borrar un tipo solo se podia con pulsacion larga
+                            // y nada lo decia: con mouse era invisible.
+                            const Text(
+                              'Manten pulsado un tipo para eliminarlo del '
+                              'catalogo.',
+                              style: TextStyle(
+                                color: AppColors.textFaint,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      funcion: () async {
-                        await _showCreateTypeSheet();
-                        setSt(() {});
-                      },
-                      texto: 'Crear nuevo tipo',
-                      cancelar: true,
-                      icon: Icons.add_rounded,
-                      width: double.infinity,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          funcion: () => Navigator.of(context).pop(),
-                          texto: 'Cerrar',
-                          cancelar: true,
-                          icon: Icons.close_rounded,
-                          width: double.infinity,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CustomButton(
-                          funcion: () {
-                            if (picked.isNotEmpty) {
-                              _activatePickedLists(picked);
-                            } else {
-                              Navigator.of(context).pop();
-                            }
-                          },
-                          texto: 'Activar',
-                          cancelar: false,
-                          icon: Icons.check_rounded,
-                          width: double.infinity,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                child: CustomButton(
+                  funcion: () async {
+                    await _showCreateTypeSheet();
+                    setSt(() {});
+                  },
+                  texto: 'Crear nuevo tipo',
+                  cancelar: true,
+                  icon: Icons.add_rounded,
+                  width: double.infinity,
+                ),
+              ),
+              AppFormFooter(
+                cancelText: 'Cerrar',
+                onCancel: () => Navigator.of(context).pop(),
+                onConfirm: () {
+                  if (picked.isNotEmpty) {
+                    _activatePickedLists(picked);
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+                confirmText: 'Activar',
+                confirmIcon: Icons.check_rounded,
+              ),
+            ],
           );
         },
       ),
     );
+  }
+
+  /// Chip de tipo de lista. Esquinas apenas suavizadas y sin contorno, igual
+  /// que el chip de estado del detalle de trabajador y el badge del modal.
+  ///
+  /// Sin seleccionar necesita fondo propio: al quitarle el borde, un chip
+  /// blanco sobre la tarjeta dejaria de leerse como chip.
+  Widget _listTypeChip({
+    required String label,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+    VoidCallback? onLongPress,
+  }) {
+    final chip = ChoiceChip(
+      label: Text(label.toUpperCase()),
+      selected: selected,
+      selectedColor: primario,
+      backgroundColor: selected ? primario : AppColors.surfaceSunken,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(4)),
+      ),
+      side: BorderSide.none,
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : AppColors.textBody,
+        fontWeight: FontWeight.w700,
+        fontSize: 12.5,
+      ),
+      onSelected: onSelected,
+    );
+
+    if (onLongPress == null) return chip;
+    return GestureDetector(onLongPress: onLongPress, child: chip);
   }
 
   Future<String?> _showPickActiveListSheet() async {
@@ -1070,101 +482,57 @@ class AttendancePageState extends State<AttendancePage> {
           final actives = [..._activeLists]
             ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (actives.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 16,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.blueGrey.shade100),
-                      ),
-                      child: Text(
-                        'No hay listas activas para hoy. Agrega al menos una lista.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.blueGrey.shade600,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  if (actives.isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final t in actives)
-                          ChoiceChip(
-                            label: Text(t.toUpperCase()),
-                            selected: picked == t,
-                            selectedColor: primario,
-                            backgroundColor: Colors.white,
-                            side: BorderSide(
-                              color: picked == t
-                                  ? primario
-                                  : Colors.blueGrey.shade100,
-                            ),
-                            labelStyle: TextStyle(
-                              color: picked == t
-                                  ? Colors.white
-                                  : Colors.blueGrey.shade700,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            onSelected: (sel) =>
-                                setSt(() => picked = sel ? t : null),
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: AppModalBody(
+                  child: actives.isEmpty
+                      ? const AppEmptyNotice(
+                          icon: Icons.playlist_remove_rounded,
+                          message: 'No hay listas activas para hoy.',
+                          detail: 'Agrega al menos una para poder registrar '
+                              'asistencia.',
+                        )
+                      : AppFormSection(
+                          title: 'Listas activas del dia',
+                          icon: Icons.playlist_play_rounded,
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final t in actives)
+                                _listTypeChip(
+                                  label: t,
+                                  selected: picked == t,
+                                  onSelected: (sel) =>
+                                      setSt(() => picked = sel ? t : null),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton(
-                      funcion: () async {
-                        await _showActivateListsSheet();
-                        setSt(() {});
-                      },
-                      texto: 'Agregar listas del dia',
-                      cancelar: true,
-                      icon: Icons.add_rounded,
-                      width: double.infinity,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          funcion: () => Navigator.pop(context, null),
-                          texto: 'Cancelar',
-                          cancelar: true,
-                          icon: Icons.close_rounded,
-                          width: double.infinity,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CustomButton(
-                          funcion: () => Navigator.pop(context, picked),
-                          texto: 'Usar lista',
-                          cancelar: false,
-                          icon: Icons.check_rounded,
-                          width: double.infinity,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                child: CustomButton(
+                  funcion: () async {
+                    await _showActivateListsSheet();
+                    setSt(() {});
+                  },
+                  texto: 'Agregar listas del dia',
+                  cancelar: true,
+                  icon: Icons.add_rounded,
+                  width: double.infinity,
+                ),
+              ),
+              AppFormFooter(
+                onCancel: () => Navigator.pop(context, null),
+                onConfirm: () => Navigator.pop(context, picked),
+                confirmText: 'Usar lista',
+                confirmIcon: Icons.check_rounded,
+              ),
+            ],
           );
         },
       ),
@@ -1179,18 +547,23 @@ class AttendancePageState extends State<AttendancePage> {
       title: 'Nuevo tipo de lista',
       icon: Icons.add_box_outlined,
       hint: 'Crea un nuevo tipo para usarlo en la asistencia diaria.',
-      maxWidth: 760,
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InputTextField(
+      maxWidth: 620,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: AppModalBody(
+              child: Form(
+                key: formKey,
+                child: InputTextField(
                   textController: ctrl,
                   hint: 'Nombre (ej: PODA, COSECHA)',
+                  onFieldSubmitted: (_) {
+                    if (formKey.currentState!.validate()) {
+                      formKey.currentState!.save();
+                      _submitCreateType(formKey, ctrl);
+                    }
+                  },
                   validator: (v) {
                     if (v == null || v.trim().isEmpty) {
                       return 'Ingresa un nombre';
@@ -1198,39 +571,21 @@ class AttendancePageState extends State<AttendancePage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: CustomButton(
-                        funcion: () => Navigator.pop(context),
-                        texto: 'Cancelar',
-                        cancelar: true,
-                        icon: Icons.close_rounded,
-                        width: double.infinity,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomButton(
-                        funcion: () {
-                          if (formKey.currentState!.validate()) {
-                            formKey.currentState!.save();
-                            _submitCreateType(formKey, ctrl);
-                          }
-                        },
-                        texto: 'Agregar',
-                        cancelar: false,
-                        icon: Icons.add_rounded,
-                        width: double.infinity,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          AppFormFooter(
+            onCancel: () => Navigator.pop(context),
+            onConfirm: () {
+              if (formKey.currentState!.validate()) {
+                formKey.currentState!.save();
+                _submitCreateType(formKey, ctrl);
+              }
+            },
+            confirmText: 'Agregar',
+            confirmIcon: Icons.add_rounded,
+          ),
+        ],
       ),
     );
   }
@@ -1439,8 +794,6 @@ class AttendancePageState extends State<AttendancePage> {
 
   // --- EXPORTAR ASISTENCIA MENSUAL A PDF ---
   Future<void> exportMonthlyAttendanceToPDF() async {
-    if (_all.isEmpty) return; // Validación de seguridad
-
     // Mostrar modal decarga porque esto tomará unos segundos consultando 30/31 días
     showDialog(
       context: context,
@@ -1468,7 +821,8 @@ class AttendancePageState extends State<AttendancePage> {
 
       Map<String, List<dynamic>> monthlyData = {};
 
-      for (var w in _all) {
+      final todos = await _todosLosTrabajadores();
+      for (var w in todos) {
         List<dynamic> row = [
           '${w.nombres} ${w.apellidos}'.toUpperCase(),
           w.rut.toUpperCase()
@@ -1634,31 +988,39 @@ class AttendancePageState extends State<AttendancePage> {
   }
 
   Widget _groupDropdown() {
-    bool isDesktop = MediaQuery.of(context).size.width >= 800;
     final items = <String>['GENERAL', ..._activeLists];
+    // Antes el menu se pintaba invertido en movil (blanco sobre `primario`) y
+    // normal en escritorio: el mismo control se veia distinto segun el ancho.
+    const itemStyle = TextStyle(
+      color: AppColors.textStrong,
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
+    );
+
     return DropdownButtonHideUnderline(
       child: DropdownButton<String>(
         value: _group.toUpperCase(),
-        dropdownColor: isDesktop ? Colors.white : primario,
-        icon: Icon(
+        isDense: true,
+        dropdownColor: Colors.white,
+        icon: const Icon(
           CupertinoIcons.chevron_down,
-          size: 18,
-          color: isDesktop ? primario : Colors.white,
+          size: 16,
+          color: AppColors.iconMuted,
         ),
-        iconEnabledColor: isDesktop ? primario : Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(10)),
-        style: TextStyle(color: isDesktop ? primario : Colors.white),
+        borderRadius: const BorderRadius.all(Radius.circular(14)),
+        style: itemStyle,
         items: [
           for (final g in items)
             DropdownMenuItem(
               value: g.toUpperCase(),
-              child: Text(g.toUpperCase(),
-                  style: TextStyle(color: isDesktop ? primario : Colors.white)),
+              child: Text(g.toUpperCase(), style: itemStyle),
             ),
           DropdownMenuItem(
             value: '__add__',
-            child: Text('+ AGREGAR NUEVA LISTA',
-                style: TextStyle(color: isDesktop ? primario : Colors.white)),
+            child: Text(
+              '+ AGREGAR NUEVA LISTA',
+              style: itemStyle.copyWith(color: primario),
+            ),
           ),
         ],
         onChanged: (v) async {
@@ -1673,43 +1035,84 @@ class AttendancePageState extends State<AttendancePage> {
     );
   }
 
+  /// Alto comun de los tres controles de la barra. Antes cada uno media lo que
+  /// le salia -- el buscador por su TextField, el selector por su padding y el
+  /// boton de exportar por su icono -- y quedaban escalonados.
+  static const double _kControlHeight = 52;
+
+  BoxDecoration get _controlDecoration => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      );
+
   // Extraemos los controles que antes estaban en el AppBar
   Widget _buildControls(bool isDesktop) {
     final searchBox = Container(
+      height: _kControlHeight,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.shade100),
-      ),
-      child: TextField(
-        controller: _search,
-        style: const TextStyle(color: Colors.black87, fontSize: 16),
-        decoration: const InputDecoration(
-          hintText: 'Buscar por nombre o apellido...',
-          hintStyle: TextStyle(color: AppColors.textFaint),
-          border: InputBorder.none,
-          icon: Icon(CupertinoIcons.search, color: AppColors.iconMuted),
-        ),
+      decoration: _controlDecoration,
+      // El icono y el boton de limpiar van en una Row propia, no como
+      // `prefixIcon`/`suffixIcon`. Dejarselos al InputDecorator obligaba a
+      // pelear con su padding vertical interno -- el texto quedaba apoyado
+      // arriba del campo en vez de centrado. Con `isCollapsed` el TextField
+      // mide exactamente lo que mide su texto y quien centra es la Row.
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.search,
+            size: 20,
+            color: AppColors.iconMuted,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              controller: _search,
+              textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(
+                color: AppColors.textStrong,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+              decoration: const InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: 'Buscar por nombre o apellido...',
+                hintStyle: TextStyle(
+                  color: AppColors.textFaint,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          if (_search.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 18),
+              color: AppColors.iconMuted,
+              tooltip: 'Limpiar',
+              onPressed: () => _search.clear(),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            ),
+        ],
       ),
     );
 
     final groupBox = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blueGrey.shade100),
-      ),
+      height: _kControlHeight,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: _controlDecoration,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
+          const Icon(
             CupertinoIcons.list_bullet_below_rectangle,
-            color: primario,
+            color: AppColors.iconMuted,
             size: 18,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           _groupDropdown(),
         ],
       ),
@@ -1718,18 +1121,24 @@ class AttendancePageState extends State<AttendancePage> {
     final exportButton = StreamBuilder<List<Map<String, dynamic>>>(
       stream: AttendanceService.listenPresents(_selectedDate, _group),
       builder: (context, snap) {
+        final data = snap.data ?? const <Map<String, dynamic>>[];
+        // Sin asistentes no hay nada que exportar: antes el boton se veia
+        // igual de activo y al pulsarlo no pasaba nada.
+        final habilitado = data.isNotEmpty;
+
         return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blueGrey.shade100),
-          ),
+          width: _kControlHeight,
+          height: _kControlHeight,
+          decoration: _controlDecoration,
           child: PopupMenuButton<String>(
-            tooltip: 'Exportar',
-            icon: Icon(CupertinoIcons.arrow_down_doc, color: primario),
+            tooltip: habilitado ? 'Exportar' : 'No hay asistentes que exportar',
+            enabled: habilitado,
+            icon: Icon(
+              CupertinoIcons.arrow_down_doc,
+              size: 20,
+              color: habilitado ? primario : AppColors.border,
+            ),
             onSelected: (v) async {
-              final data = snap.data ?? const [];
-              if (data.isEmpty) return;
               if (v == 'download') {
                 await _exportPdf(data, mode: 'download');
               } else {
@@ -1748,259 +1157,90 @@ class AttendancePageState extends State<AttendancePage> {
     return Container(
       color: AppColors.background,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.blueGrey.shade50),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              height: 90,
-              child: ScrollConfiguration(
-                behavior: const MaterialScrollBehavior().copyWith(
-                  dragDevices: {
-                    PointerDeviceKind.touch,
-                    PointerDeviceKind.mouse,
-                    PointerDeviceKind.trackpad,
-                    PointerDeviceKind.stylus,
-                    PointerDeviceKind.unknown,
-                  },
+      // El panel de controles respeta el mismo tope que el listado de abajo,
+      // o en un monitor ancho quedaba estirado sobre una tabla mas angosta.
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: kDashboardMaxWidth - 32),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: appCardDecoration(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 90,
+                  child: ScrollConfiguration(
+                    behavior: const MaterialScrollBehavior().copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                        PointerDeviceKind.stylus,
+                        PointerDeviceKind.unknown,
+                      },
+                    ),
+                    child: DatePicker(
+                      DateTime.now().subtract(const Duration(days: 10)),
+                      controller: _dpCtrl,
+                      initialSelectedDate: _selectedDate,
+                      selectionColor: primario,
+                      selectedTextColor: Colors.white,
+                      locale: "es_CL",
+                      daysCount: 365 * 2,
+                      onDateChange: (d) {
+                        setState(() => _selectedDate = normalizeDay(d));
+                        _subscribeDayActiveLists();
+                      },
+                      dayTextStyle: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      monthTextStyle: const TextStyle(
+                        color: AppColors.textFaint,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      dateTextStyle: const TextStyle(
+                        color: AppColors.textStrong,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ),
-                child: DatePicker(
-                  DateTime.now().subtract(const Duration(days: 10)),
-                  controller: _dpCtrl,
-                  initialSelectedDate: _selectedDate,
-                  selectionColor: primario,
-                  selectedTextColor: Colors.white,
-                  locale: "es_CL",
-                  daysCount: 365 * 2,
-                  onDateChange: (d) {
-                    setState(() => _selectedDate = normalizeDay(d));
-                    _subscribeDayActiveLists();
-                  },
-                  dayTextStyle: TextStyle(color: Colors.blueGrey.shade700),
-                  monthTextStyle: TextStyle(color: Colors.blueGrey.shade700),
-                  dateTextStyle:
-                      TextStyle(color: Colors.blueGrey.shade900, fontSize: 18),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (isDesktop)
-              Row(
-                children: [
-                  Expanded(child: searchBox),
-                  const SizedBox(width: 12),
-                  groupBox,
-                  const SizedBox(width: 8),
-                  exportButton,
-                ],
-              ),
-            if (!isDesktop)
-              Column(
-                children: [
-                  searchBox,
-                  const SizedBox(height: 10),
+                const SizedBox(height: 12),
+                if (isDesktop)
                   Row(
                     children: [
-                      Expanded(child: groupBox),
+                      Expanded(child: searchBox),
+                      const SizedBox(width: 12),
+                      groupBox,
                       const SizedBox(width: 8),
                       exportButton,
                     ],
                   ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ignore: unused_element
-  Widget _buildLegacyLayout(BuildContext context) {
-    bool isDesktop = MediaQuery.of(context).size.width >= 800;
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
-        children: [
-          PageHeader(
-            title: 'Asistencia',
-            subtitle: 'Registro y control diario de personal',
-            icon: CupertinoIcons.calendar_today,
-            rightWidget: IconButton(
-              icon: const Icon(CupertinoIcons.doc_chart, color: Colors.white),
-              tooltip: 'Exportar Reporte Mensual (PDF)',
-              onPressed: () => exportMonthlyAttendanceToPDF(),
-            ),
-          ),
-          _buildControls(isDesktop),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  if (_search.text.isNotEmpty)
-                    SizedBox(
-                      height: _suggestionsHeight(context),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                            color: isDesktop ? Colors.white : primario),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: ListView.separated(
-                              padding: EdgeInsets.zero,
-                              physics: _filtered.length <= 8
-                                  ? const NeverScrollableScrollPhysics()
-                                  : const ClampingScrollPhysics(),
-                              itemCount: _filtered.length,
-                              separatorBuilder: (_, __) => const Divider(
-                                  height: 1,
-                                  thickness: 0.2,
-                                  color: Colors.white24,
-                                  indent: 12,
-                                  endIndent: 12),
-                              itemBuilder: (_, i) {
-                                final w = _filtered[i];
-                                return ListTile(
-                                  onTap: () async {
-                                    await _add(w);
-                                  },
-                                  hoverColor: isDesktop
-                                      ? primario.withOpacity(0.08)
-                                      : Colors.white.withOpacity(0.08),
-                                  textColor:
-                                      isDesktop ? primario : Colors.white,
-                                  dense: true,
-                                  visualDensity: const VisualDensity(
-                                      horizontal: -2, vertical: -2),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
-                                  title: Text(
-                                    '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
-                                  ),
-                                  subtitle: Text(
-                                    w.rut.toUpperCase(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
-                                  ),
-                                  trailing: IconButton(
-                                    tooltip: 'Agregar a asistencia',
-                                    onPressed: () async {
-                                      await _add(w);
-                                      _search.clear();
-                                      if (mounted) setState(() {});
-                                    },
-                                    icon: Icon(Icons.add_outlined,
-                                        color: isDesktop
-                                            ? primario
-                                            : Colors.white),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
+                if (!isDesktop)
+                  Column(
+                    children: [
+                      searchBox,
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(child: groupBox),
+                          const SizedBox(width: 8),
+                          exportButton,
+                        ],
                       ),
-                    ),
-                  StreamBuilder<List<Map<String, dynamic>>>(
-                    stream:
-                        AttendanceService.listenPresents(_selectedDate, _group),
-                    builder: (context, snap) {
-                      if (snap.hasError) {
-                        return const Center(
-                            child: Text('Error cargando asistencia'));
-                      }
-                      if (!snap.hasData) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      final entries = snap.data!;
-                      if (entries.isEmpty) {
-                        return const Center(
-                            child:
-                                Text('Aún no hay asistentes para esta lista.'));
-                      }
-                      entries.sort(
-                          (a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)));
-
-                      return Material(
-                        color: Colors.white,
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: entries.length,
-                          separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              indent: 20,
-                              endIndent: 20,
-                              color: primario.withOpacity(0.2),
-                              thickness: 0.2),
-                          itemBuilder: (_, i) {
-                            final e = entries[i];
-                            final name = _displayNameFor(e).toUpperCase();
-                            final rut =
-                                (e['rut'] ?? '').toString().toUpperCase();
-                            final lst =
-                                (e['list'] ?? '').toString().toUpperCase();
-                            return ListTile(
-                              onTap: () {},
-                              hoverColor: primario.withOpacity(0.06),
-                              dense: true,
-                              visualDensity: const VisualDensity(
-                                  horizontal: -2, vertical: -2),
-                              minLeadingWidth: 28,
-                              isThreeLine: true,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              leading: CircleAvatar(child: Text('${i + 1}')),
-                              title: Text(name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: false),
-                              subtitle: Text(
-                                  _group == 'GENERAL' ? '$rut · $lst' : rut,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: false),
-                              trailing: IconButton(
-                                tooltip: 'Quitar',
-                                onPressed: () async {
-                                  final ok = await _confirmRemoveSheet(name);
-                                  if (ok) {
-                                    await _remove(
-                                        (e['workerId'] ?? '').toString());
-                                  }
-                                },
-                                icon:
-                                    Icon(Icons.delete_outline, color: primario),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
+                    ],
                   ),
-                ],
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -2024,195 +1264,276 @@ class AttendancePageState extends State<AttendancePage> {
           ),
           _buildControls(isDesktop),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.blueGrey.shade50),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 14,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                clipBehavior: Clip.hardEdge,
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      if (_search.text.isNotEmpty)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.blueGrey.shade100),
-                          ),
-                          child: SizedBox(
-                            height: _suggestionsHeight(context),
-                            child: ListView.separated(
-                              padding: EdgeInsets.zero,
-                              physics: _filtered.length <= 8
-                                  ? const NeverScrollableScrollPhysics()
-                                  : const ClampingScrollPhysics(),
-                              itemCount: _filtered.length,
-                              separatorBuilder: (_, __) => Divider(
-                                height: 1,
-                                thickness: 0.2,
-                                color: Colors.blueGrey.shade100,
-                                indent: 12,
-                                endIndent: 12,
+            // Mismo tope de ancho que el dashboard y Trabajadores.
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: kDashboardMaxWidth),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: Container(
+                    decoration: appCardDecoration(),
+                    clipBehavior: Clip.antiAlias,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          if (_search.text.isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+                              decoration: BoxDecoration(
+                                // Fondo hundido: es un panel flotante sobre la
+                                // tarjeta, no otra tarjeta blanca encima.
+                                color: AppColors.surfaceSunken,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: AppColors.border),
                               ),
-                              itemBuilder: (_, i) {
-                                final w = _filtered[i];
-                                return ListTile(
-                                  onTap: () async => _add(w),
-                                  hoverColor: primario.withOpacity(0.08),
-                                  textColor: Colors.blueGrey.shade800,
-                                  dense: true,
-                                  visualDensity: const VisualDensity(
-                                      horizontal: -2, vertical: -2),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
-                                  title: Text(
-                                    '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
-                                  ),
-                                  subtitle: Text(
-                                    w.rut.toUpperCase(),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    softWrap: false,
-                                  ),
-                                  trailing: IconButton(
-                                    tooltip: 'Agregar a asistencia',
-                                    onPressed: () async {
-                                      await _add(w);
-                                      _search.clear();
-                                      if (mounted) setState(() {});
-                                    },
-                                    icon: Icon(
-                                      Icons.add_outlined,
-                                      color: primario,
-                                    ),
-                                  ),
+                              clipBehavior: Clip.antiAlias,
+                              child: _buscando
+                                  ? const Padding(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 28),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              strokeWidth: 2),
+                                        ),
+                                      ),
+                                    )
+                                  : _filtered.isEmpty
+                                      ? const AppEmptyNotice(
+                                          decorated: false,
+                                          icon: Icons.search_off_rounded,
+                                          message:
+                                              'Ningun trabajador coincide.',
+                                          detail: 'Se busca por el comienzo '
+                                              'del nombre, apellido o RUT.',
+                                        )
+                                      : SizedBox(
+                                          height: _suggestionsHeight(context),
+                                          child: ListView.separated(
+                                            padding: EdgeInsets.zero,
+                                            physics: _filtered.length <= 8
+                                                ? const NeverScrollableScrollPhysics()
+                                                : const ClampingScrollPhysics(),
+                                            itemCount: _filtered.length,
+                                            separatorBuilder: (_, __) =>
+                                                const Divider(
+                                              height: 1,
+                                              thickness: 1,
+                                              color: AppColors.divider,
+                                              indent: 12,
+                                              endIndent: 12,
+                                            ),
+                                            itemBuilder: (_, i) {
+                                              final w = _filtered[i];
+                                              return ListTile(
+                                                onTap: () async => _add(w),
+                                                hoverColor:
+                                                    primario.withOpacity(0.08),
+                                                dense: true,
+                                                visualDensity:
+                                                    const VisualDensity(
+                                                        horizontal: -2,
+                                                        vertical: -2),
+                                                contentPadding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12),
+                                                title: Text(
+                                                  '${w.apellidos.toUpperCase()} ${w.nombres.toUpperCase()}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                  style: const TextStyle(
+                                                    color: AppColors.textStrong,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                subtitle: Text(
+                                                  w.rut.toUpperCase(),
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  softWrap: false,
+                                                  style: const TextStyle(
+                                                    color: AppColors.textMuted,
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                trailing: IconButton(
+                                                  tooltip:
+                                                      'Agregar a asistencia',
+                                                  onPressed: () async {
+                                                    await _add(w);
+                                                    _search.clear();
+                                                    if (mounted) {
+                                                      setState(() {});
+                                                    }
+                                                  },
+                                                  icon: Icon(
+                                                    Icons.add_rounded,
+                                                    size: 20,
+                                                    color: primario,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                            ),
+                          StreamBuilder<List<Map<String, dynamic>>>(
+                            stream: AttendanceService.listenPresents(
+                                _selectedDate, _group),
+                            builder: (context, snap) {
+                              if (snap.hasError) {
+                                return const AppEmptyNotice(
+                                  decorated: false,
+                                  icon: Icons.cloud_off_rounded,
+                                  message: 'No se pudo cargar la asistencia.',
+                                  detail: 'Revisa la conexion y vuelve a '
+                                      'intentar.',
                                 );
-                              },
-                            ),
-                          ),
-                        ),
-                      StreamBuilder<List<Map<String, dynamic>>>(
-                        stream: AttendanceService.listenPresents(
-                            _selectedDate, _group),
-                        builder: (context, snap) {
-                          if (snap.hasError) {
-                            return const SizedBox(
-                              height: 200,
-                              child: Center(
-                                child: Text('Error cargando asistencia'),
-                              ),
-                            );
-                          }
-                          if (!snap.hasData) {
-                            return const SizedBox(
-                              height: 220,
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          final entries = snap.data!;
-                          if (entries.isEmpty) {
-                            return const SizedBox(
-                              height: 220,
-                              child: Center(
-                                child: Text(
-                                  'Aun no hay asistentes para esta lista.',
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
-                          entries.sort(
-                            (a, b) => _sortKeyFor(a).compareTo(_sortKeyFor(b)),
-                          );
+                              }
+                              if (!snap.hasData) {
+                                return const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  child: SkeletonFilas(filas: 6),
+                                );
+                              }
+                              final entries = snap.data!;
+                              if (entries.isEmpty) {
+                                // Dos vacios distintos: sin listas activas no
+                                // hay donde registrar, y con lista activa lo
+                                // que falta es buscar al trabajador. Antes los
+                                // dos decian lo mismo.
+                                return _activeLists.isEmpty
+                                    ? AppEmptyNotice(
+                                        decorated: false,
+                                        icon: Icons.playlist_remove_rounded,
+                                        message: 'No hay listas activas para '
+                                            'esta fecha.',
+                                        detail: 'Activa al menos una para '
+                                            'poder registrar asistencia.',
+                                        actionLabel: 'Activar listas',
+                                        actionIcon:
+                                            Icons.playlist_add_check_rounded,
+                                        onAction: _showActivateListsSheet,
+                                      )
+                                    : const AppEmptyNotice(
+                                        decorated: false,
+                                        icon: Icons.person_search_rounded,
+                                        message: 'Aun no hay asistentes en '
+                                            'esta lista.',
+                                        detail: 'Busca un trabajador por '
+                                            'nombre o RUT para agregarlo.',
+                                      );
+                              }
+                              entries.sort(
+                                (a, b) =>
+                                    _sortKeyFor(a).compareTo(_sortKeyFor(b)),
+                              );
 
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: entries.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              indent: 20,
-                              endIndent: 20,
-                              color: primario.withOpacity(0.16),
-                              thickness: 0.2,
-                            ),
-                            itemBuilder: (_, i) {
-                              final e = entries[i];
-                              final name = _displayNameFor(e).toUpperCase();
-                              final rut =
-                                  (e['rut'] ?? '').toString().toUpperCase();
-                              final lst =
-                                  (e['list'] ?? '').toString().toUpperCase();
-                              return ListTile(
-                                hoverColor: primario.withOpacity(0.05),
-                                dense: true,
-                                visualDensity: const VisualDensity(
-                                    horizontal: -2, vertical: -2),
-                                minLeadingWidth: 28,
-                                isThreeLine: true,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                leading: CircleAvatar(
-                                  backgroundColor: primario.withOpacity(0.12),
-                                  foregroundColor: primario,
-                                  child: Text('${i + 1}'),
+                              return ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: entries.length,
+                                separatorBuilder: (_, __) => const Divider(
+                                  height: 1,
+                                  indent: 20,
+                                  endIndent: 20,
+                                  color: AppColors.divider,
+                                  thickness: 1,
                                 ),
-                                title: Text(
-                                  name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: false,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  _group == 'GENERAL' ? '$rut · $lst' : rut,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  softWrap: false,
-                                  style: TextStyle(
-                                    color: Colors.blueGrey.shade600,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                trailing: IconButton(
-                                  tooltip: 'Quitar',
-                                  onPressed: () async {
-                                    final ok = await _confirmRemoveSheet(name);
-                                    if (ok) {
-                                      await _remove(
-                                          (e['workerId'] ?? '').toString());
-                                    }
-                                  },
-                                  icon: Icon(Icons.delete_outline,
-                                      color: primario),
-                                ),
+                                itemBuilder: (_, i) {
+                                  final e = entries[i];
+                                  final name = _displayNameFor(e).toUpperCase();
+                                  final rut =
+                                      (e['rut'] ?? '').toString().toUpperCase();
+                                  final lst = (e['list'] ?? '')
+                                      .toString()
+                                      .toUpperCase();
+                                  return ListTile(
+                                    hoverColor: primario.withOpacity(0.05),
+                                    dense: true,
+                                    visualDensity: const VisualDensity(
+                                        horizontal: -2, vertical: -2),
+                                    minLeadingWidth: 28,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 6),
+                                    // Chip cuadrado, igual que el indice de los
+                                    // listados de ajustes. El CircleAvatar
+                                    // anterior era el unico circulo de la app.
+                                    leading: Container(
+                                      width: 28,
+                                      height: 28,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: primario.withOpacity(0.10),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        '${i + 1}',
+                                        style: TextStyle(
+                                          color: primario,
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
+                                      style: const TextStyle(
+                                        color: AppColors.textStrong,
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      _group == 'GENERAL' ? '$rut · $lst' : rut,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      softWrap: false,
+                                      style: const TextStyle(
+                                        color: AppColors.textMuted,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    // Rojo: es la accion destructiva de la
+                                    // fila y venia del mismo color que el
+                                    // resto de los iconos.
+                                    trailing: IconButton(
+                                      tooltip: 'Quitar de la asistencia',
+                                      onPressed: () async {
+                                        final ok =
+                                            await _confirmRemoveSheet(name);
+                                        if (ok) {
+                                          await _remove(
+                                              (e['workerId'] ?? '').toString());
+                                        }
+                                      },
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 20,
+                                        color: Colors.red.shade400,
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
                             },
-                          );
-                        },
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

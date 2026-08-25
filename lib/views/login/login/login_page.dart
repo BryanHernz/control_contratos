@@ -1,5 +1,4 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -86,43 +85,31 @@ class _LoginPageState extends State<LoginPage> {
     ).show(context);
   }
 
+  /// Comprueba que la cuenta autenticada tenga ficha habilitada en `Usuarios`.
+  ///
+  /// **No escribe nada.** Antes hacia dos cosas que no debia:
+  ///
+  ///  1. Si no habia ficha, la creaba con `activo: true` y los permisos por
+  ///     defecto -- que hasta ahora eran TODOS. Cualquier cuenta de Auth que
+  ///     lograra iniciar sesion se auto-otorgaba acceso total, incluido
+  ///     `manageUsers`. Ahora, sin ficha no se entra: las fichas las crea un
+  ///     administrador desde la vista de Usuarios.
+  ///
+  ///  2. Si habia ficha, reescribia `permissions` y `activo` en cada login con
+  ///     lo que hubiera calculado el cliente. Ademas de ser el mismo agujero
+  ///     por otra via, las reglas nuevas prohiben que alguien sin `manageUsers`
+  ///     escriba en `Usuarios`, asi que ese `set` habria fallado con
+  ///     permission-denied y habria dejado a esos usuarios sin poder entrar.
   Future<void> _ensureUserProfile(User user, {required String email}) async {
     final ref = db.collection('Usuarios').doc(user.uid);
     final snap = await ref.get();
 
     if (!snap.exists || snap.data() == null) {
-      final access = UserAccess.fromUserData(null);
-      await ref.set(
-        {
-          'uid': user.uid,
-          'email': email,
-          'nombre': '',
-          'apellido': '',
-          'permissions': access.permissionsPayload(),
-          'activo': true,
-          'telefono': '',
-          'ocupacion': '',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
-      return;
+      await FirebaseAuth.instance.signOut();
+      throw Exception('no-profile');
     }
 
-    final data = snap.data();
-    final access = UserAccess.fromUserData(data);
-    await ref.set(
-      {
-        'uid': user.uid,
-        'email': email,
-        'permissions': access.permissionsPayload(),
-        'activo': access.active,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
-
+    final access = UserAccess.fromUserData(snap.data());
     if (!access.active) {
       await FirebaseAuth.instance.signOut();
       throw Exception('inactive-user');
@@ -162,6 +149,14 @@ class _LoginPageState extends State<LoginPage> {
       if (e.toString().contains('inactive-user')) {
         _showMessage(
           'Tu usuario esta inactivo. Contacta al administrador.',
+          AnimatedSnackBarType.warning,
+        );
+        return;
+      }
+      if (e.toString().contains('no-profile')) {
+        _showMessage(
+          'Tu cuenta no tiene acceso al sistema. Pide a un administrador '
+          'que la habilite.',
           AnimatedSnackBarType.warning,
         );
         return;

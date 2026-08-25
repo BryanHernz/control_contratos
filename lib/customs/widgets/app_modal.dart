@@ -174,7 +174,7 @@ class _AppModalShell extends StatelessWidget {
                     children: [
                       if (hint != null && hint!.trim().isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                           child: AppModalHint(text: hint!),
                         ),
                       Flexible(child: child),
@@ -246,7 +246,7 @@ class AppModalHeader extends StatelessWidget {
             child: Icon(icon, size: 92, color: Colors.white.withOpacity(0.06)),
           ),
           Padding(
-            padding: EdgeInsets.fromLTRB(20, showGrabber ? 12 : 18, 20, 20),
+            padding: EdgeInsets.fromLTRB(24, showGrabber ? 16 : 24, 24, 26),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -270,11 +270,11 @@ class AppModalHeader extends StatelessWidget {
                     Container(
                       width: 50,
                       height: 50,
+                      // Sin borde, como el chip: el contorno blanco translucido
+                      // sobre el gradiente no aportaba y ensuciaba la cabecera.
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(16),
-                        border:
-                            Border.all(color: Colors.white.withOpacity(0.12)),
                       ),
                       child: Icon(icon, color: Colors.white, size: 24),
                     ),
@@ -313,19 +313,20 @@ class AppModalHeader extends StatelessWidget {
                       const SizedBox(width: 12),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
+                            horizontal: 10, vertical: 4),
+                        // Mismo tratamiento que el chip de estado del detalle
+                        // de trabajador: esquinas apenas suavizadas y sin
+                        // borde.
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(14),
-                          border:
-                              Border.all(color: Colors.white.withOpacity(0.14)),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
                           badge!,
-                          style: const TextStyle(
-                            color: AppColors.onDarkStrong,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.85),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -387,7 +388,7 @@ class AppModalBody extends StatelessWidget {
   const AppModalBody({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.fromLTRB(20, 16, 20, 24),
+    this.padding = const EdgeInsets.all(24),
   });
 
   final Widget child;

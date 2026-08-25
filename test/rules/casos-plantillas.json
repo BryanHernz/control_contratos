@@ -1,0 +1,74 @@
+[
+  {
+    "_nombre": "P1. Plantillas: cualquier activo PUEDE leer (generar un documento lo exige)",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato", "method": "get", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P2. Plantillas: sin manageTemplates NO puede editar, aunque vea Ajustes",
+    "expectation": "DENY",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato", "method": "update", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "settings": true }, "actions": { "manageUsers": true, "manageTemplates": false } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P3. Plantillas: con manageTemplates SI puede mover la version vigente",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "editor1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato", "method": "update", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "settings": true }, "actions": { "manageTemplates": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P4. Versiones: con manageTemplates SI puede publicar una nueva",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "editor1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato/versiones/v7", "method": "create", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": { "data": { "activo": true, "permissions": { "actions": { "manageTemplates": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P5. LO IMPORTANTE: una version publicada NO se puede modificar, ni por quien la escribio",
+    "expectation": "DENY",
+    "request": { "auth": { "uid": "editor1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato/versiones/v7", "method": "update", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": { "data": { "activo": true, "permissions": { "actions": { "manageTemplates": true, "manageUsers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P6. Una version publicada tampoco se puede borrar",
+    "expectation": "DENY",
+    "request": { "auth": { "uid": "editor1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato/versiones/v7", "method": "delete", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": { "data": { "activo": true, "permissions": { "actions": { "manageTemplates": true, "manageUsers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P7. Versiones: LISTAR el historial con sesion activa -> permitido",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato/versiones/cualquiera", "method": "list", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "P8. El tipo de plantilla no se puede borrar (dejaria huerfanos los documentos emitidos)",
+    "expectation": "DENY",
+    "request": { "auth": { "uid": "editor1", "token": {} }, "path": "/databases/(default)/documents/Plantillas/contrato", "method": "delete", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/editor1" }], "result": { "value": { "data": { "activo": true, "permissions": { "actions": { "manageTemplates": true } } } } } }
+    ]
+  }
+]

@@ -17,6 +17,8 @@ import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
 import '../widgets/settings_dialogs.dart';
 import '../../services/firestore_db.dart';
+import '../../services/auditoria.dart';
+import '../../services/trabajadores_repo.dart';
 
 class EditWorker extends StatefulWidget {
   const EditWorker({super.key, required this.worker});
@@ -493,7 +495,26 @@ class _EditWorkerState extends State<EditWorker> {
         'afp': worker.afp!.toLowerCase(),
         'prevision': worker.prevision!.toLowerCase(),
         'ingreso': worker.ingress,
+        // Se reescribe junto con el nombre y el RUT: si no, buscar seguiria
+        // encontrando al trabajador por su nombre anterior.
+        'busqueda': TrabajadoresRepo.textoDeBusqueda(
+          nombres: worker.name,
+          apellidos: worker.lastName,
+          rut: worker.rut,
+        ),
+        // Los prefijos de cada palabra: es lo que consulta la busqueda, para
+        // que escribir un apellido o un RUT encuentre igual que un nombre.
+        'busquedaPrefijos': TrabajadoresRepo.prefijosDeBusqueda(
+          nombres: worker.name,
+          apellidos: worker.lastName,
+          rut: worker.rut,
+        ),
       });
+      Auditoria.registrar(
+        Auditoria.editarTrabajador,
+        entidadId: widget.worker.id,
+        detalle: {'rut': worker.rut},
+      );
       Get.back();
       Get.back();
       AnimatedSnackBar.material(
@@ -1211,34 +1232,37 @@ class _EditWorkerState extends State<EditWorker> {
                     return null;
                   },
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(top: 5.0),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton(
-                          funcion: () {
-                            Get.back();
-                          },
-                          texto: 'Cancelar',
-                          cancelar: true,
-                          icon: Icons.close_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: CustomButton(
-                          funcion: _submitForm,
-                          texto: 'Guardar',
-                          cancelar: false,
-                          icon: Icons.check_rounded,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
+          ),
+        ),
+        // El pie va FUERA de la grilla. Estando dentro contaba como un campo
+        // mas y ocupaba una sola columna, asi que los botones salian angostos
+        // y pegados a la izquierda en vez de repartirse el ancho.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(25, 16, 25, 24),
+          child: Row(
+            children: [
+              Expanded(
+                child: CustomButton(
+                  funcion: () {
+                    Get.back();
+                  },
+                  texto: 'Cancelar',
+                  cancelar: true,
+                  icon: Icons.close_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: CustomButton(
+                  funcion: _submitForm,
+                  texto: 'Guardar',
+                  cancelar: false,
+                  icon: Icons.check_rounded,
+                ),
+              ),
+            ],
           ),
         ),
       ],

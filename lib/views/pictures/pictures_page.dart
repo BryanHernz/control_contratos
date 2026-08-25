@@ -18,9 +18,14 @@ import '../../models/worker_model.dart';
 import '../../services/firestore_db.dart';
 
 class PicturesPage extends StatefulWidget {
-  const PicturesPage({super.key, required this.worker});
+  const PicturesPage({super.key, required this.worker, this.onClose});
 
   final WorkerModel worker;
+
+  /// Si viene, esta vista arma el pie completo con Cerrar e Imprimir, para que
+  /// quede igual que el de los demas modales. El boton de imprimir tiene que
+  /// vivir aca porque la accion depende del estado interno de la subida.
+  final VoidCallback? onClose;
 
   @override
   State<PicturesPage> createState() => _PicturesPageState();
@@ -44,7 +49,7 @@ class _PicturesPageState extends State<PicturesPage> {
             bottom: MediaQuery.of(context).viewInsets.bottom,
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.max,
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Padding(
                 padding: EdgeInsets.only(top: 18.0, bottom: 10.0),
@@ -57,48 +62,73 @@ class _PicturesPageState extends State<PicturesPage> {
                   ),
                 ),
               ),
-              Expanded(
+              Flexible(
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 18.0, vertical: 6),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildImageSection(
-                          imageUrl: widget.worker.imageFront,
-                          position: 1,
-                          label: 'frontal',
-                          imageCardHeight: imageCardHeight,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildImageSection(
-                          imageUrl: widget.worker.imageBack,
-                          position: 2,
-                          label: 'trasera',
-                          imageCardHeight: imageCardHeight,
-                        ),
-                      ],
+                    // Siempre en una sola fila: el ancho de cada tarjeta sale
+                    // de repartir el espacio disponible en dos mitades, asi
+                    // que nunca se van a saltar de linea ni se desbordan.
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        const gap = 16.0;
+                        final cardWidth = ((c.maxWidth - gap) / 2)
+                            .clamp(120.0, 460.0)
+                            .toDouble();
+
+                        return Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildImageSection(
+                              imageUrl: widget.worker.imageFront,
+                              position: 1,
+                              label: 'frontal',
+                              imageCardHeight: imageCardHeight,
+                              cardWidth: cardWidth,
+                            ),
+                            const SizedBox(width: gap),
+                            _buildImageSection(
+                              imageUrl: widget.worker.imageBack,
+                              position: 2,
+                              label: 'trasera',
+                              imageCardHeight: imageCardHeight,
+                              cardWidth: cardWidth,
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
               ),
-              if (widget.worker.imageFront != null &&
-                  widget.worker.imageFront != '')
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                        top: 8.0, bottom: 14.0, right: 18.0),
-                    child: SizedBox(
-                      width: 170,
-                      child: _SheetLikeActionButton(
-                        label: 'Imprimir',
-                        icon: Icons.print_outlined,
-                        isPrimary: true,
-                        onPressed: _isUploading ? null : printing,
+              if (widget.onClose != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14.0, bottom: 4.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _SheetLikeActionButton(
+                          label: 'Cerrar',
+                          icon: Icons.close_rounded,
+                          onPressed: widget.onClose,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _SheetLikeActionButton(
+                          label: 'Imprimir',
+                          icon: Icons.print_outlined,
+                          isPrimary: true,
+                          onPressed: (_isUploading ||
+                                  widget.worker.imageFront == null ||
+                                  widget.worker.imageFront == '')
+                              ? null
+                              : printing,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
             ],
@@ -113,14 +143,16 @@ class _PicturesPageState extends State<PicturesPage> {
     required int position,
     required String label,
     required double imageCardHeight,
+    required double cardWidth,
   }) {
     return imageUrl == null || imageUrl.isEmpty
-        ? _buildEmptyCard(position, label, imageCardHeight)
-        : _buildImageCard(imageUrl, position, label, imageCardHeight);
+        ? _buildEmptyCard(position, label, imageCardHeight, cardWidth)
+        : _buildImageCard(
+            imageUrl, position, label, imageCardHeight, cardWidth);
   }
 
-  Widget _buildEmptyCard(int position, String label, double imageCardHeight) {
-    final cardWidth = (imageCardHeight * 1.58).clamp(250.0, 460.0).toDouble();
+  Widget _buildEmptyCard(
+      int position, String label, double imageCardHeight, double cardWidth) {
     final title = position == 1 ? 'Imagen frontal' : 'Imagen trasera';
 
     return Center(
@@ -251,47 +283,59 @@ class _PicturesPageState extends State<PicturesPage> {
     int position,
     String label,
     double imageCardHeight,
+    double cardWidth,
   ) {
-    final cardWidth = (imageCardHeight * 1.58).clamp(250.0, 460.0).toDouble();
-
     return Center(
       child: SizedBox(
         width: cardWidth,
         child: Card(
           elevation: 10,
-          child: Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10.0),
-                child: Image.network(
-                  imageUrl,
-                  width: cardWidth,
-                  fit: BoxFit.fitWidth,
-                  loadingBuilder: (context, child, progress) {
-                    return progress == null
-                        ? child
-                        : AspectRatio(
-                            aspectRatio: 1.58,
-                            child: Container(
-                              color: Colors.black.withOpacity(0.04),
-                              child: const Center(
-                                child: CircularProgressIndicator(),
+          margin: EdgeInsets.zero,
+          // El borde teal va POR FUERA de la imagen: el Card lo dibuja en su
+          // contorno y el padding deja que se vea completo como marco, en vez
+          // de quedar pisado por la foto.
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            // Mismo oscuro que el extremo del gradiente de la cabecera.
+            side: BorderSide(color: Color(0xFF263238), width: 4),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.network(
+                    imageUrl,
+                    width: cardWidth,
+                    fit: BoxFit.fitWidth,
+                    loadingBuilder: (context, child, progress) {
+                      return progress == null
+                          ? child
+                          : AspectRatio(
+                              aspectRatio: 1.58,
+                              child: Container(
+                                color: Colors.black.withOpacity(0.04),
+                                child: const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               ),
-                            ),
-                          );
-                  },
+                            );
+                    },
+                  ),
                 ),
-              ),
-              Positioned(
-                top: 6,
-                right: 6,
-                child: FloatingActionButton.small(
-                  heroTag: 'delete_$position',
-                  onPressed: () => _showDeleteDialog(position),
-                  child: const Icon(Icons.delete_outline_rounded),
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: FloatingActionButton.small(
+                    heroTag: 'delete_$position',
+                    onPressed: () => _showDeleteDialog(position),
+                    child: const Icon(Icons.delete_outline_rounded),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

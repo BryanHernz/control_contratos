@@ -3,11 +3,11 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../customs/constants_values.dart';
+import '../../customs/widgets/menu_lateral.dart';
 import '../../customs/navigation_drawer/navigation_drawer.dart';
 import '../../utils/user_access.dart';
 import '../attendance/attendance_page.dart';
@@ -217,6 +217,11 @@ class _HomePageState extends State<HomePage> {
               _syncPageToSelected();
             });
 
+            // La cabecera de cada vista necesita esta llave para abrir el
+            // menu: cada pantalla arma su propio Scaffold y `Scaffold.of`
+            // encontraria ese, que no tiene drawer.
+            MenuLateral.registrar(_scaffoldKey);
+
             final pages = <Widget>[
               const DashboardPage(),
               WorkersPage(key: workerKey),
@@ -245,22 +250,9 @@ class _HomePageState extends State<HomePage> {
                         context: context,
                       ),
                     ),
-              appBar: isDesktop
-                  ? null
-                  : AppBar(
-                      title: const Text('CONTROL DE CONTRATOS'),
-                      centerTitle: true,
-                      backgroundColor: primario,
-                      foregroundColor: Colors.white,
-                      leading: IconButton(
-                        icon: const Icon(
-                          CupertinoIcons.line_horizontal_3_decrease,
-                        ),
-                        onPressed: () {
-                          _scaffoldKey.currentState!.openDrawer();
-                        },
-                      ),
-                    ),
+              // Sin AppBar: en el telefono convivia con la cabecera de cada
+              // vista y quedaban dos barras oscuras apiladas diciendo lo
+              // mismo. El boton del menu se mudo dentro de `PageHeader`.
               body: SafeArea(
                 child: Stack(
                   children: [

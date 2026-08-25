@@ -1,0 +1,219 @@
+[
+  {
+    "_nombre": "1. Admin activo con manageUsers PUEDE editar a otro usuario",
+    "expectation": "ALLOW",
+    "request": {
+      "auth": { "uid": "admin1", "token": {} },
+      "path": "/databases/(default)/documents/Usuarios/otro1",
+      "method": "update",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "dashboard": true, "workers": true, "attendance": true, "users": true, "settings": true }, "actions": { "manageUsers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "2. EL AGUJERO: usuario sin manageUsers NO puede escribir su propio documento",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "user1", "token": {} },
+      "path": "/databases/(default)/documents/Usuarios/user1",
+      "method": "update",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true }, "actions": { "manageUsers": false } } } } } }
+    ]
+  },
+  {
+    "_nombre": "3. Cualquiera PUEDE leer su propio documento (la app lo necesita al arrancar)",
+    "expectation": "ALLOW",
+    "request": {
+      "auth": { "uid": "user1", "token": {} },
+      "path": "/databases/(default)/documents/Usuarios/user1",
+      "method": "get",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": []
+  },
+  {
+    "_nombre": "4. CASO ANDREA: sin campo activo ni permissions, NO puede leer Trabajadores",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "andrea", "token": {} },
+      "path": "/databases/(default)/documents/Trabajadores/w1",
+      "method": "get",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/andrea" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/andrea" }],
+        "result": { "value": { "data": { "email": "mrl.andrea@live.com" } } } }
+    ]
+  },
+  {
+    "_nombre": "5. Usuario con views.workers PUEDE leer Trabajadores",
+    "expectation": "ALLOW",
+    "request": {
+      "auth": { "uid": "user1", "token": {} },
+      "path": "/databases/(default)/documents/Trabajadores/w1",
+      "method": "get",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "6. Usuario solo con views.attendance NO puede escribir Trabajadores",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "user2", "token": {} },
+      "path": "/databases/(default)/documents/Trabajadores/w1",
+      "method": "update",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "attendance": true, "workers": false } } } } } }
+    ]
+  },
+  {
+    "_nombre": "7. Usuario desactivado (activo=false) NO puede leer Trabajadores",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "user3", "token": {} },
+      "path": "/databases/(default)/documents/Trabajadores/w1",
+      "method": "get",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user3" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user3" }],
+        "result": { "value": { "data": { "activo": false, "permissions": { "views": { "workers": true, "dashboard": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "8. Sin sesion, nada",
+    "expectation": "DENY",
+    "request": {
+      "auth": null,
+      "path": "/databases/(default)/documents/Trabajadores/w1",
+      "method": "get",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": []
+  },
+  {
+    "_nombre": "9. Auditoria: se PUEDE crear",
+    "expectation": "ALLOW",
+    "request": {
+      "auth": { "uid": "user1", "token": {} },
+      "path": "/databases/(default)/documents/Auditoria/r1",
+      "method": "create",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "workers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "10. Auditoria: NO se puede borrar, ni siendo admin total",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "admin1", "token": {} },
+      "path": "/databases/(default)/documents/Auditoria/r1",
+      "method": "delete",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "dashboard": true, "workers": true, "attendance": true, "users": true, "settings": true }, "actions": { "manageUsers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "11. Otros: cualquier activo PUEDE leer los catalogos",
+    "expectation": "ALLOW",
+    "request": {
+      "auth": { "uid": "user2", "token": {} },
+      "path": "/databases/(default)/documents/Otros/comunas",
+      "method": "get",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "attendance": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "12. Otros: sin views.settings NO puede escribir catalogos",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "user2", "token": {} },
+      "path": "/databases/(default)/documents/Otros/comunas",
+      "method": "update",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "attendance": true, "settings": false } } } } } }
+    ]
+  },
+  {
+    "_nombre": "13. Otros/listas-asistencia: SI puede escribirlo quien ve Asistencia",
+    "expectation": "ALLOW",
+    "request": {
+      "auth": { "uid": "user2", "token": {} },
+      "path": "/databases/(default)/documents/Otros/listas-asistencia",
+      "method": "update",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user2" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "attendance": true, "settings": false } } } } } }
+    ]
+  },
+  {
+    "_nombre": "14. Asistencias: no se puede borrar un dia entero",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "admin1", "token": {} },
+      "path": "/databases/(default)/documents/Asistencias/2026-08-25",
+      "method": "delete",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "attendance": true }, "actions": { "manageUsers": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "15. Coleccion no declarada: cerrada aunque seas admin",
+    "expectation": "DENY",
+    "request": {
+      "auth": { "uid": "admin1", "token": {} },
+      "path": "/databases/(default)/documents/ColeccionNueva/x1",
+      "method": "create",
+      "time": "2026-08-25T12:00:00Z"
+    },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }],
+        "result": { "value": { "data": { "activo": true, "permissions": { "views": { "settings": true }, "actions": { "manageUsers": true } } } } } }
+    ]
+  }
+]

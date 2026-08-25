@@ -1,0 +1,20 @@
+[
+  {
+    "_nombre": "R1. Resumenes: cualquier activo PUEDE leer los contadores",
+    "expectation": "ALLOW",
+    "request": { "auth": { "uid": "user1", "token": {} }, "path": "/databases/(default)/documents/Resumenes/trabajadores", "method": "get", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/user1" }], "result": { "value": { "data": { "activo": true, "permissions": { "views": { "dashboard": true } } } } } }
+    ]
+  },
+  {
+    "_nombre": "R2. Resumenes: NADIE los escribe desde el cliente, ni el admin",
+    "expectation": "DENY",
+    "request": { "auth": { "uid": "admin1", "token": {} }, "path": "/databases/(default)/documents/Resumenes/trabajadores", "method": "update", "time": "2026-08-25T12:00:00Z" },
+    "functionMocks": [
+      { "function": "exists", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": true } },
+      { "function": "get", "args": [{ "exactValue": "/databases/(default)/documents/Usuarios/admin1" }], "result": { "value": { "data": { "activo": true, "permissions": { "actions": { "manageUsers": true, "manageTemplates": true } } } } } }
+    ]
+  }
+]

@@ -1,4 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import 'menu_lateral.dart';
 
 class PageHeader extends StatelessWidget {
   final String title;
@@ -18,10 +21,16 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // En el telefono la cabecera se compacta y absorbe el boton del menu.
+    // Antes convivia con un `AppBar` que decia "CONTROL DE CONTRATOS": dos
+    // barras oscuras apiladas que se comian un tercio de la pantalla para
+    // decir dos veces donde estabas.
+    final compacta = MediaQuery.sizeOf(context).width < 800;
+
     return Container(
       width: double.infinity,
-      height: 190,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      height: compacta ? (bottomWidget != null ? 168 : 128) : 190,
+      padding: EdgeInsets.symmetric(horizontal: compacta ? 16 : 24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -55,24 +64,41 @@ class PageHeader extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(12),
+                  if (compacta && MenuLateral.disponible) ...[
+                    IconButton(
+                      icon: const Icon(
+                        CupertinoIcons.line_horizontal_3_decrease,
+                        color: Colors.white,
+                      ),
+                      tooltip: 'Menu',
+                      onPressed: MenuLateral.abrir,
+                      padding: EdgeInsets.zero,
+                      constraints:
+                          const BoxConstraints(minWidth: 40, minHeight: 40),
                     ),
-                    child: Icon(icon, color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(width: 14),
+                    const SizedBox(width: 6),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                  ],
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: compacta ? 18 : 20,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.3,
                           ),
@@ -92,7 +118,7 @@ class PageHeader extends StatelessWidget {
                 ],
               ),
               if (bottomWidget != null) ...[
-                const SizedBox(height: 20),
+                SizedBox(height: compacta ? 14 : 20),
                 bottomWidget!,
               ]
             ],

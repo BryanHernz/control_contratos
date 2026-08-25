@@ -97,30 +97,32 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final now = _now;
 
-    // El header queda FIJO y solo scrollea el cuerpo, igual que Trabajadores
-    // y Asistencia (Column + PageHeader + Expanded). Antes el header vivia
-    // dentro del SingleChildScrollView y se iba con el scroll, que era la
-    // unica vista que se comportaba distinto.
+    // En escritorio el header queda fijo y solo scrollea el cuerpo. En el
+    // telefono se va con el scroll: la pantalla es corta y 128px permanentes
+    // de cabecera son mucho para repetir el nombre de la pagina en la que ya
+    // estas.
+    final compacta = MediaQuery.sizeOf(context).width < 800;
+
     return ColoredBox(
       color: AppColors.background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──────────────────────────────────────────────
-          _DashboardHeader(now: now),
-
+          if (!compacta) _DashboardHeader(now: now),
           Expanded(
             child: SingleChildScrollView(
               // Tope de ancho centrado: en un monitor grande el contenido se
               // estiraba de borde a borde y las tarjetas quedaban con enormes
               // huecos vacios. Bajo ese ancho ocupa todo, como antes.
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints:
                       const BoxConstraints(maxWidth: kDashboardMaxWidth),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (compacta) _DashboardHeader(now: now),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
                         child: Column(
@@ -233,26 +235,16 @@ class _DashboardPageState extends State<DashboardPage> {
                                         ? (constraints.maxWidth - 16) / 2
                                         : constraints.maxWidth;
 
-                                    final renderPlacesData =
-                                        placesData.length <= 1
-                                            ? {
-                                                'Sede Central (Demo)': 45,
-                                                'Sucursal Norte (Demo)': 25,
-                                                'Planta Ind. (Demo)': 15,
-                                                'Oficina Sur (Demo)': 10,
-                                                'Otros (Demo)': 5
-                                              }
-                                            : placesData;
-
-                                    final renderTaskData = taskData.length <= 1
-                                        ? {
-                                            'Temporera (Demo)': 40,
-                                            'Admin. (Demo)': 20,
-                                            'Supervisor (Demo)': 15,
-                                            'Mantención (Demo)': 15,
-                                            'Logística (Demo)': 10
-                                          }
-                                        : taskData;
+                                    // Sin datos reales se muestra un vacio,
+                                    // no una tabla inventada.
+                                    //
+                                    // Antes, cuando habia una entrada o menos,
+                                    // los graficos caian a datos demo -- "Sede
+                                    // Central (Demo)", "Temporera (Demo)" -- y
+                                    // como `activo` solo lo tiene quien tenga
+                                    // contrato vigente, caian SIEMPRE. Quien
+                                    // miraba el dashboard veia ficcion
+                                    // presentada como dato.
 
                                     return Wrap(
                                       spacing: 16,
@@ -263,7 +255,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                           height: 290,
                                           child: GenericPieChart(
                                             title: 'Por Establecimiento',
-                                            data: renderPlacesData,
+                                            data: placesData,
                                           ),
                                         ),
                                         SizedBox(
@@ -271,7 +263,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                           height: 290,
                                           child: GenericPieChart(
                                             title: 'Por Labor',
-                                            data: renderTaskData,
+                                            data: taskData,
                                           ),
                                         ),
                                         SizedBox(
@@ -597,7 +589,7 @@ class _MetricCard extends StatelessWidget {
       child: Container(
         decoration: appCardDecoration(),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(kCardRadius),
           child: Stack(
             children: [
               // El icono ampliado de fondo. Al 6% no existia y al 13% seguia
@@ -744,7 +736,7 @@ class _StyledCard extends StatelessWidget {
       // contenido al borde.
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(kCardRadius),
         child: child,
       ),
     );
@@ -763,7 +755,7 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(kCardRadius),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),

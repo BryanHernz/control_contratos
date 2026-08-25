@@ -35,10 +35,43 @@ class _GenericPieChartState extends State<GenericPieChart> {
   @override
   Widget build(BuildContext context) {
     if (widget.data.isEmpty) {
+      // Un vacio explicado vale mas que un "Sin datos" pelado: aqui vacio no
+      // significa que algo fallo, sino que todavia no se ha generado ningun
+      // contrato desde el sistema.
       return _buildCard(
-          child: const Center(
-              child:
-                  Text('Sin datos.', style: TextStyle(color: Colors.black45))));
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.donut_large_rounded,
+                    size: 30, color: Colors.blueGrey.shade200),
+                const SizedBox(height: 12),
+                Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.blueGrey.shade700,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Se llena a medida que se generan contratos.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.blueGrey.shade400,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     final sorted = widget.data.entries.toList()

@@ -1,4 +1,5 @@
 // ignore_for_file: empty_catches, deprecated_member_use
+import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
@@ -35,30 +36,48 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  /// Alta por cuenta propia.
+  ///
+  /// El enlace que lleva aqui esta comentado en la pantalla de login, asi que
+  /// hoy no se alcanza desde la interfaz, pero la ficha que creaba salia con
+  /// `activo: true` y -- con los defaults viejos -- con TODOS los permisos,
+  /// `manageUsers` incluido. Quien llegara a esta pantalla quedaba de
+  /// administrador.
+  ///
+  /// Ahora nace desactivada y sin permisos: un administrador la habilita desde
+  /// la vista de Usuarios. Ojo que con las reglas nuevas esta escritura sera
+  /// denegada de todos modos (solo `manageUsers` escribe en `Usuarios`); si se
+  /// quiere reactivar el auto-registro, hay que resolverlo en el servidor.
   Future signUp() async {
-    if (passwordConfirmed()) {
-      try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-        final access = UserAccess.fromUserData(null);
-        await db
-            .collection('Usuarios')
-            .doc(FirebaseAuth.instance.currentUser!.uid.toString())
-            .set({
-          'email': _emailController.text.trim(),
-          'nombre': _nameController.text.trim(),
-          'apellido': _lastnameController.text.trim(),
-          'uid': FirebaseAuth.instance.currentUser!.uid.toString(),
-          'permissions': access.permissionsPayload(),
-          'activo': true,
-          'ocupacion': '--',
-          'telefono': '--',
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
-      } catch (e) {}
+    if (!passwordConfirmed()) return;
+    try {
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      await db
+          .collection('Usuarios')
+          .doc(FirebaseAuth.instance.currentUser!.uid.toString())
+          .set({
+        'email': _emailController.text.trim(),
+        'nombre': _nameController.text.trim(),
+        'apellido': _lastnameController.text.trim(),
+        'uid': FirebaseAuth.instance.currentUser!.uid.toString(),
+        'permissions': UserAccess.fromUserData(null).permissionsPayload(),
+        'activo': false,
+        'ocupacion': '--',
+        'telefono': '--',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // El `catch` vacio de antes se tragaba hasta el permission-denied: el
+      // usuario veia que "funciono" y no habia quedado nada.
+      if (!mounted) return;
+      AnimatedSnackBar.material(
+        'No se pudo crear la cuenta. Contacta al administrador.',
+        type: AnimatedSnackBarType.error,
+      ).show(context);
     }
   }
 

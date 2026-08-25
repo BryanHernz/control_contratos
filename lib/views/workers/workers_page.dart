@@ -1,3 +1,6 @@
+import 'package:animated_snack_bar/animated_snack_bar.dart';
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -9,13 +12,18 @@ import 'package:printing/printing.dart';
 
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import '../../customs/app_colors.dart';
+import '../../customs/widgets/app_form.dart';
 import '../../customs/widgets/app_modal.dart';
+import '../../customs/widgets/app_skeleton.dart';
 import '../../customs/constants_values.dart';
 import '../../models/worker_model.dart';
 import '../../customs/widgets/page_header.dart';
+import '../home/dashboard_page.dart' show kDashboardMaxWidth;
 import 'new_worker_page.dart';
 import 'worker_details.dart';
 import '../../services/firestore_db.dart';
+import '../../services/trabajadores_repo.dart';
+import '../../utils/normalize.dart';
 
 class WorkersPage extends StatefulWidget {
   const WorkersPage({super.key});
@@ -25,25 +33,27 @@ class WorkersPage extends StatefulWidget {
 }
 
 class WorkersPageState extends State<WorkersPage> {
-  // Lista completa de trabajadores cargados desde Firestore
-  List<WorkerModel> _allWorkers = [];
-  // Lista de trabajadores que se muestra (filtrada o completa)
-  List<WorkerModel> _displayedWorkers = [];
-  // Controlador para el campo de texto de búsqueda
+  /// Los trabajadores cargados hasta ahora, pagina a pagina.
+  ///
+  /// Antes esto eran DOS listas: `_allWorkers` con los 674 documentos de la
+  /// coleccion completa, y `aExportar` con el resultado de filtrarlos
+  /// en memoria. Cada visita a la pantalla costaba 674 lecturas y, por venir de
+  /// un `.snapshots()`, quedaba escuchando cambios. Ahora se piden de a 50 y
+  /// buscar y filtrar son consultas.
+  List<WorkerModel> _workers = [];
+
   final TextEditingController _searchController = TextEditingController();
 
-  // Controladores para la lista posicionable
   final ItemScrollController itemScrollController = ItemScrollController();
   final ItemPositionsListener itemPositionsListener =
       ItemPositionsListener.create();
 
-  // El alfabeto a mostrar en la barra lateral
   final List<String> alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
 
-  // Letra actualmente visible o seleccionada
+  /// Letra resaltada en la barra lateral.
   String _currentLetter = 'A';
 
-  // Filtros avanzados
+  // Filtros avanzados. `Todas`/`Todos` significa "sin filtrar".
   String _selectedEnterpriseFilter = 'Todas';
   String _selectedLaborFilter = 'Todos';
   String _selectedCommuneFilter = 'Todas';
@@ -51,13 +61,72 @@ class WorkersPageState extends State<WorkersPage> {
   String _selectedAfpFilter = 'Todas';
   String _selectedPrevisionFilter = 'Todas';
 
-  // Almacena los grupos actuales para el listener de scroll
-  List<List<WorkerModel>> _currentGroupedWorkers = [];
+  /// Cursor de la ultima pagina traida.
+  DocumentSnapshot? _cursor;
+  bool _hayMas = true;
+  bool _cargando = true;
+  bool _cargandoMas = false;
+  String? _error;
 
-  // Para evitar que el listener de scroll sobreescriba la letra al hacer tap
-  bool _isManualScrolling = false;
+  /// Cuantos hay en total con los filtros actuales.
+  ///
+  /// Sale de una agregacion `count()`, no de contar la lista: la lista solo
+  /// tiene lo que se ha ido cargando.
+  int? _total;
 
-  late Stream<QuerySnapshot> _workersStream;
+  /// Espera a que el usuario deje de teclear antes de consultar.
+  Timer? _debounce;
+
+  /// Opciones de los desplegables de filtro, por documento de `Otros`.
+  Map<String, List<String>> _catalogos = {};
+
+  /// Trae los catalogos una vez. Son seis documentos, no seiscientos.
+  Future<void> _cargarCatalogos() async {
+    const docs = [
+      'lugares',
+      'labores',
+      'comunas',
+      'nacionalidades',
+      'afps',
+      'previsiones',
+    ];
+    final resultado = <String, List<String>>{};
+    for (final d in docs) {
+      try {
+        final snap = await db.collection('Otros').doc(d).get();
+        final tipos = (snap.data()?['tipos'] as List?) ?? const [];
+        resultado[d] = tipos.map((e) => e.toString()).toList();
+      } catch (_) {
+        resultado[d] = const [];
+      }
+    }
+    if (mounted) setState(() => _catalogos = resultado);
+  }
+
+  FiltrosTrabajadores get _filtros => FiltrosTrabajadores(
+        empresa: _selectedEnterpriseFilter == 'Todas'
+            ? null
+            : _selectedEnterpriseFilter,
+        labor: _selectedLaborFilter == 'Todos' ? null : _selectedLaborFilter,
+        comuna:
+            _selectedCommuneFilter == 'Todas' ? null : _selectedCommuneFilter,
+        nacionalidad: _selectedNacionalityFilter == 'Todas'
+            ? null
+            : _selectedNacionalityFilter,
+        afp: _selectedAfpFilter == 'Todas' ? null : _selectedAfpFilter,
+        prevision: _selectedPrevisionFilter == 'Todas'
+            ? null
+            : _selectedPrevisionFilter,
+        busqueda: _searchController.text,
+      );
+
+  bool get _hayFiltrosActivos =>
+      _selectedEnterpriseFilter != 'Todas' ||
+      _selectedLaborFilter != 'Todos' ||
+      _selectedCommuneFilter != 'Todas' ||
+      _selectedNacionalityFilter != 'Todas' ||
+      _selectedAfpFilter != 'Todas' ||
+      _selectedPrevisionFilter != 'Todas';
 
   Future<void> _openNewWorker() => showAppModal(
         context: context,
@@ -69,133 +138,187 @@ class WorkersPageState extends State<WorkersPage> {
 
   /// El detalle trae su propia cabecera (avatar, editar, eliminar), asi que va
   /// sin `title`: el modal solo lo recorta y lo acota.
+  ///
+  /// Mas angosto que el ancho por defecto (920): con la informacion personal y
+  /// la laboral en dos columnas, el contenido se compacta y 920 dejaba mucho
+  /// blanco.
   Future<void> _openWorkerDetails(WorkerModel worker) => showAppModal(
         context: context,
+        maxWidth: 780,
         child: WorkerDetails(worker: worker),
       );
 
   @override
   void initState() {
     super.initState();
-    // Escuchar cambios en el campo de búsqueda
     _searchController.addListener(_onSearchChanged);
-    itemPositionsListener.itemPositions.addListener(_scrollListener);
-
-    _workersStream =
-        db.collection('Trabajadores').orderBy('nombres').snapshots();
+    itemPositionsListener.itemPositions.addListener(_alVerPosiciones);
+    _recargar();
+    _cargarCatalogos();
   }
 
   @override
   void dispose() {
-    itemPositionsListener.itemPositions.removeListener(_scrollListener);
+    _debounce?.cancel();
+    itemPositionsListener.itemPositions.removeListener(_alVerPosiciones);
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     super.dispose();
   }
 
-  // --- ESCUCHADOR DE SCROLL PARA CAMBIAR LETRA ACTIVA ---
-  void _scrollListener() {
-    if (!mounted || _isManualScrolling) return;
-    final positions = itemPositionsListener.itemPositions.value;
-    if (positions.isNotEmpty) {
-      // Encontrar el primer elemento visible
-      final firstItem = positions
-          .where((ItemPosition position) => position.itemTrailingEdge > 0)
-          .reduce((ItemPosition min, ItemPosition position) =>
-              position.itemLeadingEdge < min.itemLeadingEdge ? position : min);
+  /// Vuelve a empezar: primera pagina con los filtros actuales.
+  ///
+  /// [desdeInclusivo] permite arrancar en un documento concreto, que es lo que
+  /// usa el salto por letra.
+  Future<void> _recargar({DocumentSnapshot? desdeInclusivo}) async {
+    setState(() {
+      _cargando = true;
+      _error = null;
+      _workers = [];
+      _cursor = null;
+      _hayMas = true;
+    });
 
-      int visibleIndex = firstItem.index;
-      if (visibleIndex >= 0 && visibleIndex < _currentGroupedWorkers.length) {
-        // Obtener el primer trabajador de la fila visible
-        WorkerModel firstWorkerInRow =
-            _currentGroupedWorkers[visibleIndex].first;
-        String firstLetter =
-            _normalizeString(firstWorkerInRow.name ?? 'a')[0].toUpperCase();
-
-        if (firstLetter != _currentLetter && alphabet.contains(firstLetter)) {
-          setState(() {
-            _currentLetter = firstLetter;
-          });
-        }
-      }
+    try {
+      final filtros = _filtros;
+      final pagina = await TrabajadoresRepo.pagina(
+        filtros,
+        desdeInclusivo: desdeInclusivo,
+      );
+      final total = await TrabajadoresRepo.total(filtros);
+      if (!mounted) return;
+      setState(() {
+        _workers = pagina.trabajadores;
+        _cursor = pagina.ultimo;
+        _hayMas = pagina.hayMas;
+        _total = total;
+        _cargando = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _cargando = false;
+      });
     }
-  } // --- NUEVA FUNCIÓN: Normaliza una cadena quitando tildes y a minúsculas ---
-
-  String _normalizeString(String text) {
-    return text
-        .toLowerCase()
-        .replaceAll('á', 'a')
-        .replaceAll('é', 'e')
-        .replaceAll('í', 'i')
-        .replaceAll('ó', 'o')
-        .replaceAll('ú', 'u')
-        .replaceAll('ü', 'u') // Para la diéresis
-        .replaceAll('ñ', 'n'); // Para la eñe
   }
 
-  // Método para filtrar la lista de trabajadores
+  /// Trae la pagina siguiente y la agrega al final.
+  Future<void> _cargarMas() async {
+    if (_cargandoMas || !_hayMas || _cursor == null) return;
+    setState(() => _cargandoMas = true);
+
+    try {
+      final pagina = await TrabajadoresRepo.pagina(_filtros, desde: _cursor);
+      if (!mounted) return;
+      setState(() {
+        _workers = [..._workers, ...pagina.trabajadores];
+        _cursor = pagina.ultimo;
+        _hayMas = pagina.hayMas;
+        _cargandoMas = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _cargandoMas = false);
+    }
+  }
+
+  /// Cuantas tarjetas entran por fila. Lo fija el `LayoutBuilder` al construir.
+  int _porFila = 1;
+  int get _filasTotales => (_workers.length / _porFila).ceil();
+
+  /// Reacciona al scroll: resalta la letra visible y pide mas al acercarse al
+  /// final de lo cargado.
+  void _alVerPosiciones() {
+    if (!mounted) return;
+    final posiciones = itemPositionsListener.itemPositions.value;
+    if (posiciones.isEmpty) return;
+
+    final ultimoVisible =
+        posiciones.map((p) => p.index).reduce((a, b) => a > b ? a : b);
+    if (_hayMas && !_cargandoMas && ultimoVisible >= _filasTotales - 3) {
+      _cargarMas();
+    }
+
+    var primero = posiciones.first.index;
+    for (final p in posiciones) {
+      if (p.itemTrailingEdge > 0 && p.index < primero) primero = p.index;
+    }
+
+    final indice = primero * _porFila;
+    if (indice < 0 || indice >= _workers.length) return;
+    final nombre = normalize(_workers[indice].name ?? '');
+    if (nombre.isEmpty) return;
+    final letra = nombre.substring(0, 1).toUpperCase();
+    if (letra != _currentLetter && alphabet.contains(letra)) {
+      setState(() => _currentLetter = letra);
+    }
+  }
+
   void _onSearchChanged() {
-    // Normalizar la consulta de búsqueda
-    final query = _normalizeString(_searchController.text);
-
-    setState(() {
-      if (query.isEmpty) {
-        _displayedWorkers =
-            _allWorkers; // Si la búsqueda está vacía, mostrar todos
-      } else {
-        // Filtrar por nombre o apellido (normalizados)
-        _displayedWorkers = _allWorkers.where((worker) {
-          final normalizedFullName =
-              _normalizeString('${worker.name} ${worker.lastName}');
-          return normalizedFullName.contains(query);
-        }).toList();
-      }
+    // Con retardo: cada tecla seria una consulta a Firestore.
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) _recargar();
     });
   }
 
-  // Función para hacer scroll a una letra
-  void _scrollToLetter(
-      String letter, List<List<WorkerModel>> groupedWorkers) async {
-    setState(() {
-      _currentLetter = letter;
-      _isManualScrolling = true;
-    });
-
-    // Buscar la fila (grupo) que contenga un trabajador cuyo nombre inicie con esa letra
-    for (int i = 0; i < groupedWorkers.length; i++) {
-      // Obtenemos el listado de la fila actual
-      final rowPlayers = groupedWorkers[i];
-
-      // Verificamos si algún trabajador en esta fila empieza por la letra
-      bool found = false;
-      for (var worker in rowPlayers) {
-        final normalizedName = _normalizeString(worker.name ?? '');
-        if (normalizedName.startsWith(letter.toLowerCase())) {
-          found = true;
-          break;
-        }
+  /// Salta a la primera ficha cuyo nombre empieza con [letra].
+  ///
+  /// Antes recorria la lista completa en memoria buscando la posicion. Ahora
+  /// es una consulta de un documento que devuelve el cursor desde donde
+  /// recargar.
+  Future<void> _scrollToLetter(String letra) async {
+    setState(() => _currentLetter = letra);
+    try {
+      final cursor = await TrabajadoresRepo.cursorDeLetra(letra);
+      if (!mounted || cursor == null) return;
+      await _recargar(desdeInclusivo: cursor);
+      if (mounted && itemScrollController.isAttached) {
+        itemScrollController.jumpTo(index: 0);
       }
+    } catch (_) {
+      // Un salto que falla no puede tumbar la pantalla.
+    }
+  }
 
-      // Si lo encontramos, hacemos scroll a ese índice (la fila)
-      if (found) {
-        itemScrollController.jumpTo(index: i);
-        // Esperar un breve momento para reactivar el listener tras el salto
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted) {
-            _isManualScrolling = false;
-          }
-        });
-        return; // Salimos de la función
+  /// Exporta a PDF **todos** los que cumplen los filtros, no solo los que
+  /// estan cargados en pantalla.
+  ///
+  /// Con paginacion, exportar lo que hay en memoria daria un PDF de 50 lineas
+  /// aunque el filtro devuelva 600. Aqui se recorren todas las paginas a
+  /// proposito: es una accion explicita del usuario, no algo que pase al
+  /// entrar a la pantalla.
+  Future<void> exportToPDF() async {
+    if (_workers.isEmpty) return;
+
+    final filtros = _filtros;
+    final todos = <WorkerModel>[];
+    DocumentSnapshot? cursor;
+    var quedan = true;
+
+    try {
+      while (quedan && todos.length < 5000) {
+        final pagina = await TrabajadoresRepo.pagina(
+          filtros,
+          desde: cursor,
+          limite: 200,
+        );
+        todos.addAll(pagina.trabajadores);
+        cursor = pagina.ultimo;
+        quedan = pagina.hayMas && cursor != null;
       }
+    } catch (e) {
+      if (!mounted) return;
+      AnimatedSnackBar.material(
+        'No se pudo armar el listado: $e',
+        type: AnimatedSnackBarType.error,
+      ).show(context);
+      return;
     }
 
-    // Si no encontró la letra, rehabilitar flag
-    _isManualScrolling = false;
-  }
-
-  // --- FUNCIÓN PARA EXPORTAR TRABAJADORES MOSTRADOS A PDF ---
-  Future<void> exportToPDF() async {
-    if (_displayedWorkers.isEmpty) return;
+    if (todos.isEmpty) return;
+    final aExportar = todos;
 
     final pdf = pw.Document();
 
@@ -207,7 +330,7 @@ class WorkersPageState extends State<WorkersPage> {
     // Configurar tabla
     final headers = ["RUT", "Nombres", "Cargo", "Ingreso", "Lugar", "Comuna"];
 
-    final tableData = _displayedWorkers.map((worker) {
+    final tableData = aExportar.map((worker) {
       return [
         worker.rut ?? '',
         '${worker.name ?? ''} ${worker.lastName ?? ''}'.toUpperCase(),
@@ -248,7 +371,7 @@ class WorkersPageState extends State<WorkersPage> {
                       ),
                     ),
                     pw.Text(
-                      'Total de registros activos: ${_displayedWorkers.length}',
+                      'Total de registros activos: ${aExportar.length}',
                       style: pw.TextStyle(
                         font: pw.Font.ttf(calibri),
                         fontSize: 11,
@@ -372,296 +495,268 @@ class WorkersPageState extends State<WorkersPage> {
             bottomWidget: _buildSearchBar(),
           ),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15.0),
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _workersStream,
-                builder: (BuildContext context,
-                    AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                          'Error al cargar trabajadores: ${snapshot.error}'),
-                    );
-                  }
+            // Mismo tope de ancho que el dashboard: en un monitor ancho se
+            // llegaban a poner cinco fichas por fila y el listado se volvia
+            // dificil de recorrer. Bajo ese ancho no cambia nada.
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: kDashboardMaxWidth),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15.0),
+                  child: Builder(
+                    builder: (context) {
+                      if (_cargando) {
+                        // Esqueleto con la forma de las fichas: reserva el
+                        // espacio y evita el salto de un circulito a un
+                        // listado completo.
+                        return const Padding(
+                          padding: EdgeInsets.only(top: 12),
+                          child: SkeletonTarjetas(filas: 5),
+                        );
+                      }
 
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
-                    );
-                  }
+                      if (_error != null) {
+                        // Firestore devuelve un mensaje crudo con un enlace
+                        // para crear el indice; a quien usa la app no le dice
+                        // nada. Se traduce a los dos casos que de verdad
+                        // pasan.
+                        final e = _error!.toLowerCase();
+                        final construyendo = e.contains('currently building') ||
+                            e.contains('being built');
+                        final faltaIndice = e.contains('index');
 
-                  // Cuando llegan nuevos datos, actualizamos _allWorkers incondicionalmente.
-                  final List<WorkerModel> fetchedWorkers = snapshot.data!.docs
-                      .map((doc) => WorkerModel.fromDocumentSnapshot(doc))
-                      .toList();
+                        return AppEmptyNotice(
+                          icon: construyendo
+                              ? Icons.hourglass_top_rounded
+                              : Icons.cloud_off_rounded,
+                          message: construyendo
+                              ? 'La busqueda todavia se esta preparando.'
+                              : faltaIndice
+                                  ? 'Esta combinacion de filtros no esta '
+                                      'disponible.'
+                                  : 'No se pudo cargar el listado.',
+                          detail: construyendo
+                              ? 'Firestore esta construyendo el indice de '
+                                  'busqueda. Suele tardar unos minutos; el '
+                                  'listado sin buscar funciona igual.'
+                              : faltaIndice
+                                  ? 'Falta declarar el indice en '
+                                      'firestore.indexes.json.'
+                                  : 'Revisa la conexion y vuelve a intentar.',
+                          actionLabel: 'Reintentar',
+                          actionIcon: Icons.refresh_rounded,
+                          onAction: _recargar,
+                        );
+                      }
 
-                  // Siempre actualizamos _allWorkers con los datos más recientes
-                  _allWorkers = fetchedWorkers;
+                      if (_workers.isEmpty) {
+                        final buscando = _searchController.text.isNotEmpty;
+                        return AppEmptyNotice(
+                          icon: buscando || _hayFiltrosActivos
+                              ? Icons.search_off_rounded
+                              : Icons.people_outline_rounded,
+                          message: buscando
+                              ? 'Ningun trabajador coincide con la busqueda.'
+                              : _hayFiltrosActivos
+                                  ? 'Ningun trabajador cumple los filtros.'
+                                  : 'Todavia no hay trabajadores.',
+                          detail: buscando
+                              ? 'Se busca por nombre, apellido o RUT, desde '
+                                  'el principio del texto.'
+                              : _hayFiltrosActivos
+                                  ? 'Prueba quitando alguno.'
+                                  : 'Toca el boton + para agregar el primero.',
+                        );
+                      }
 
-                  // Aplicamos los filtros y búsqueda
-                  final query = _normalizeString(_searchController.text);
-
-                  _displayedWorkers = _allWorkers.where((worker) {
-                    // 1. Filtro de búsqueda por texto
-                    bool matchesSearch = true;
-                    if (query.isNotEmpty) {
-                      final normalizedFullName =
-                          _normalizeString('${worker.name} ${worker.lastName}');
-                      matchesSearch = normalizedFullName.contains(query);
-                    }
-
-                    // 2. Filtro de empresa
-                    bool matchesEnterprise =
-                        _selectedEnterpriseFilter == 'Todas' ||
-                            worker.place == _selectedEnterpriseFilter;
-
-                    // 3. Filtro de Cargo
-                    bool matchesLabor = _selectedLaborFilter == 'Todos' ||
-                        worker.labor == _selectedLaborFilter;
-
-                    // 4. Filtro de Comuna
-                    bool matchesCommune = _selectedCommuneFilter == 'Todas' ||
-                        worker.commune == _selectedCommuneFilter;
-
-                    // 5. Filtro de Nacionalidad
-                    bool matchesNacionality =
-                        _selectedNacionalityFilter == 'Todas' ||
-                            worker.nacionality == _selectedNacionalityFilter;
-
-                    // 6. Filtro de AFP
-                    bool matchesAfp = _selectedAfpFilter == 'Todas' ||
-                        worker.afp == _selectedAfpFilter;
-
-                    // 7. Filtro de Previsión
-                    bool matchesPrevision =
-                        _selectedPrevisionFilter == 'Todas' ||
-                            worker.prevision == _selectedPrevisionFilter;
-
-                    return matchesSearch &&
-                        matchesEnterprise &&
-                        matchesLabor &&
-                        matchesCommune &&
-                        matchesNacionality &&
-                        matchesAfp &&
-                        matchesPrevision;
-                  }).toList();
-
-                  if (_displayedWorkers.isEmpty &&
-                      _searchController.text.isNotEmpty) {
-                    return const Center(
-                      child: Text('No existen coincidencias para su búsqueda'),
-                    );
-                  }
-
-                  if (_displayedWorkers.isEmpty &&
-                      _searchController.text.isEmpty) {
-                    return const Center(
-                      child: Text(
-                          'No hay trabajadores registrados. ¡Toca el botón "+" para añadir uno!'),
-                    );
-                  }
-
-                  // AGRUPAR LOS TRABAJADORES EN FILAS (SIMULANDO GRID)
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Center(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total Trabajadores: ${_displayedWorkers.length}',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textBody,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(CupertinoIcons.doc_on_clipboard,
-                                    color: primario),
-                                tooltip: 'Exportar a PDF',
-                                onPressed: () => exportToPDF(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            // Calcular cuantas tarjetas caben (mínimo 400 de ancho)
-                            final double screenWidth = constraints.maxWidth;
-                            int crossAxisCount = (screenWidth / 400).floor();
-                            if (crossAxisCount < 1) crossAxisCount = 1;
-
-                            // Crear filas
-                            List<List<WorkerModel>> groupedWorkers = [];
-                            for (int i = 0;
-                                i < _displayedWorkers.length;
-                                i += crossAxisCount) {
-                              int end = (i + crossAxisCount <
-                                      _displayedWorkers.length)
-                                  ? i + crossAxisCount
-                                  : _displayedWorkers.length;
-                              groupedWorkers
-                                  .add(_displayedWorkers.sublist(i, end));
-                            }
-
-                            // Guardamos la referencia actual para el listener
-                            _currentGroupedWorkers = groupedWorkers;
-
-                            return Stack(
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                // ===== LISTA DE TRABAJADORES =====
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                      left: !isDesktop &&
-                                              _searchController.text.isEmpty &&
-                                              MediaQuery.of(context)
-                                                      .viewInsets
-                                                      .bottom ==
-                                                  0
-                                          ? 20.0
-                                          : 0.0,
-                                      right: isDesktop &&
-                                              _searchController.text.isEmpty &&
-                                              MediaQuery.of(context)
-                                                      .viewInsets
-                                                      .bottom ==
-                                                  0
-                                          ? 20.0
-                                          : 0.0), // Espacio dinámico para barra, solo si está vacía la búsqueda y el teclado cerrado
-                                  child: ScrollablePositionedList.builder(
-                                    itemCount: groupedWorkers.length,
-                                    itemScrollController: itemScrollController,
-                                    itemPositionsListener:
-                                        itemPositionsListener,
-                                    itemBuilder: (context, index) {
-                                      final rowPlayers = groupedWorkers[index];
-
-                                      // Convertir el WorkersMode list a widgets de tarjeta
-                                      List<Widget> rowWidgets =
-                                          rowPlayers.map((worker) {
-                                        return Expanded(
-                                          child: GestureDetector(
-                                            onTap: () =>
-                                                _openWorkerDetails(worker),
-                                            child: _WorkerCard(worker: worker),
-                                          ),
-                                        );
-                                      }).toList();
-
-                                      // Completar la última fila con contenedores vacíos si hace falta (Grid Alignment)
-                                      while (
-                                          rowWidgets.length < crossAxisCount) {
-                                        rowWidgets
-                                            .add(Expanded(child: Container()));
-                                      }
-
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 10.0),
-                                        child: Row(children: rowWidgets),
-                                      );
-                                    },
+                                Text(
+                                  // El total sale de un `count()`, no de la
+                                  // lista: la lista solo tiene lo cargado.
+                                  _total == null
+                                      ? 'Mostrando ${_workers.length}'
+                                      : 'Mostrando ${_workers.length} de '
+                                          '$_total',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textBody,
                                   ),
                                 ),
+                                IconButton(
+                                  icon: Icon(CupertinoIcons.doc_on_clipboard,
+                                      color: primario),
+                                  tooltip: 'Exportar a PDF',
+                                  onPressed: () => exportToPDF(),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                int crossAxisCount =
+                                    (constraints.maxWidth / 400).floor();
+                                if (crossAxisCount < 1) crossAxisCount = 1;
+                                _porFila = crossAxisCount;
 
-                                // ===== BARRA ALFABÉTICA LATERAL =====
-                                if (_searchController.text.isEmpty &&
-                                    MediaQuery.of(context).viewInsets.bottom ==
-                                        0) // Ocultar si hay búsqueda o si el teclado está abierto
-                                  Align(
-                                    alignment: isDesktop
-                                        ? Alignment.centerRight
-                                        : Alignment.centerLeft,
-                                    child: GestureDetector(
-                                      onVerticalDragUpdate:
-                                          (DragUpdateDetails details) {
-                                        // Calcular letra basada en la posición Y
-                                        RenderBox box = context
-                                            .findRenderObject() as RenderBox;
-                                        double localY = box
-                                            .globalToLocal(
-                                                details.globalPosition)
-                                            .dy;
+                                final groupedWorkers = <List<WorkerModel>>[];
+                                for (var i = 0;
+                                    i < _workers.length;
+                                    i += crossAxisCount) {
+                                  final end = (i + crossAxisCount)
+                                      .clamp(0, _workers.length);
+                                  groupedWorkers.add(_workers.sublist(i, end));
+                                }
 
-                                        // Estimamos el tamaño de la lista de letras
-                                        double viewHeight = box.size.height;
-                                        double letterHeight =
-                                            viewHeight / alphabet.length;
+                                // Una fila extra al final para el indicador de
+                                // "cargando mas".
+                                final filas =
+                                    groupedWorkers.length + (_hayMas ? 1 : 0);
 
-                                        int index =
-                                            (localY / letterHeight).floor();
-                                        if (index >= 0 &&
-                                            index < alphabet.length) {
-                                          String draggedLetter =
-                                              alphabet[index];
-                                          if (_currentLetter != draggedLetter) {
-                                            _scrollToLetter(
-                                                draggedLetter, groupedWorkers);
-                                          }
-                                        }
-                                      },
-                                      child: Container(
-                                        width: 15,
-                                        color: Colors
-                                            .transparent, // Captura de gestos invisible encima de letras
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceEvenly,
-                                          children: alphabet.map((letter) {
-                                            bool isActive =
-                                                _currentLetter == letter;
-                                            return GestureDetector(
-                                              onTap: () => _scrollToLetter(
-                                                  letter, groupedWorkers),
-                                              child: Container(
-                                                height: 18,
-                                                width: 18,
-                                                decoration: BoxDecoration(
-                                                  color: isActive
-                                                      ? primario
-                                                      : Colors
-                                                          .transparent, // Resalta en azul si es activa
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: Center(
-                                                  child: Text(
-                                                    letter,
-                                                    style: TextStyle(
-                                                      fontSize: 12.5,
-                                                      fontWeight: isActive
-                                                          ? FontWeight.w800
-                                                          : FontWeight.w700,
-                                                      color: isActive
-                                                          ? Colors.white
-                                                          : AppColors.textMuted,
-                                                    ),
-                                                  ),
+                                return Stack(
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        left: !isDesktop &&
+                                                _searchController.text.isEmpty
+                                            ? 20.0
+                                            : 0.0,
+                                        right: isDesktop &&
+                                                _searchController.text.isEmpty
+                                            ? 20.0
+                                            : 0.0,
+                                      ),
+                                      child: ScrollablePositionedList.builder(
+                                        itemCount: filas,
+                                        itemScrollController:
+                                            itemScrollController,
+                                        itemPositionsListener:
+                                            itemPositionsListener,
+                                        itemBuilder: (context, index) {
+                                          if (index >= groupedWorkers.length) {
+                                            return const Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                  vertical: 20),
+                                              child: Center(
+                                                child: SizedBox(
+                                                  width: 22,
+                                                  height: 22,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2),
                                                 ),
                                               ),
                                             );
-                                          }).toList(),
-                                        ),
+                                          }
+
+                                          final fila = groupedWorkers[index];
+                                          final widgets = <Widget>[
+                                            for (final worker in fila)
+                                              Expanded(
+                                                child: GestureDetector(
+                                                  onTap: () =>
+                                                      _openWorkerDetails(
+                                                          worker),
+                                                  child: _WorkerCard(
+                                                      worker: worker),
+                                                ),
+                                              ),
+                                            for (var i = fila.length;
+                                                i < crossAxisCount;
+                                                i++)
+                                              const Expanded(
+                                                  child: SizedBox.shrink()),
+                                          ];
+
+                                          return Padding(
+                                            padding: const EdgeInsets.only(
+                                                bottom: 10.0),
+                                            child: Row(children: widgets),
+                                          );
+                                        },
                                       ),
                                     ),
-                                  ),
-                              ],
-                            ); // Fin Stack
-                          },
-                        ), // Fin LayoutBuilder
-                      ), // Fin Expanded
-                    ], // Fin children Column
-                  ); // Fin Column
-                }, // Fin builder StreamBuilder
-              ), // Fin StreamBuilder
-            ), // Fin Padding
+
+                                    // ===== BARRA ALFABETICA LATERAL =====
+                                    //
+                                    // Se esconde al buscar: con una busqueda
+                                    // activa el orden es por relevancia de
+                                    // prefijo, no alfabetico, y saltar a una
+                                    // letra no tendria sentido.
+                                    if (_searchController.text.isEmpty &&
+                                        !_hayFiltrosActivos &&
+                                        MediaQuery.of(context)
+                                                .viewInsets
+                                                .bottom ==
+                                            0)
+                                      Align(
+                                        alignment: isDesktop
+                                            ? Alignment.centerRight
+                                            : Alignment.centerLeft,
+                                        child: Container(
+                                          width: 18,
+                                          color: Colors.transparent,
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceEvenly,
+                                            children: alphabet.map((letter) {
+                                              final isActive =
+                                                  _currentLetter == letter;
+                                              return GestureDetector(
+                                                onTap: () =>
+                                                    _scrollToLetter(letter),
+                                                child: Container(
+                                                  height: 18,
+                                                  width: 18,
+                                                  decoration: BoxDecoration(
+                                                    color: isActive
+                                                        ? primario
+                                                        : Colors.transparent,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      letter,
+                                                      style: TextStyle(
+                                                        fontSize: 12.5,
+                                                        fontWeight: isActive
+                                                            ? FontWeight.w800
+                                                            : FontWeight.w700,
+                                                        color: isActive
+                                                            ? Colors.white
+                                                            : AppColors
+                                                                .textMuted,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ), // Fin Builder
+                ), // Fin Padding
+              ), // Fin ConstrainedBox
+            ), // Fin Center
           ), // Fin Expanded
         ], // Fin children Column
       ), // Fin Column
@@ -680,7 +775,7 @@ class WorkersPageState extends State<WorkersPage> {
         controller: _searchController,
         style: const TextStyle(color: Colors.white, fontSize: 18),
         decoration: const InputDecoration(
-          hintText: 'Buscar por nombre o apellido...',
+          hintText: 'Buscar por nombre, apellido o RUT...',
           hintStyle: TextStyle(color: Colors.white70),
           border: InputBorder.none,
           icon: Icon(CupertinoIcons.search, color: Colors.white),
@@ -691,36 +786,21 @@ class WorkersPageState extends State<WorkersPage> {
 
   // --- MODAL DE FILTROS AVANZADOS ---
   void _showFilterSheet() {
-    // Opciones unicas a partir de los datos ya cargados.
-    final allEnterprises = <String>{};
-    final allLabors = <String>{};
-    final allCommunes = <String>{};
-    final allNacionalities = <String>{};
-    final allAfps = <String>{};
-    final allPrevisions = <String>{};
+    // Las opciones salen de los catalogos de Ajustes, no de recorrer los
+    // trabajadores cargados: con paginacion solo habria 50 en memoria y el
+    // desplegable mostraria un puñado de valores al azar. Ademas los catalogos
+    // son la fuente correcta -- ahi es donde se definen.
+    List<String> options(String todos, List<String> values) =>
+        [todos, ...values..sort()];
 
-    void addIf(Set<String> target, String? value) {
-      if (value != null && value.isNotEmpty) target.add(value);
-    }
-
-    for (final worker in _allWorkers) {
-      addIf(allEnterprises, worker.place);
-      addIf(allLabors, worker.labor);
-      addIf(allCommunes, worker.commune);
-      addIf(allNacionalities, worker.nacionality);
-      addIf(allAfps, worker.afp);
-      addIf(allPrevisions, worker.prevision);
-    }
-
-    List<String> options(String todos, Set<String> values) =>
-        [todos, ...values.toList()..sort()];
-
-    final enterpriseList = options('Todas', allEnterprises);
-    final laborList = options('Todos', allLabors);
-    final communeList = options('Todas', allCommunes);
-    final nacionalityList = options('Todas', allNacionalities);
-    final afpList = options('Todas', allAfps);
-    final previsionList = options('Todas', allPrevisions);
+    final enterpriseList = options('Todas', _catalogos['lugares'] ?? const []);
+    final laborList = options('Todos', _catalogos['labores'] ?? const []);
+    final communeList = options('Todas', _catalogos['comunas'] ?? const []);
+    final nacionalityList =
+        options('Todas', _catalogos['nacionalidades'] ?? const []);
+    final afpList = options('Todas', _catalogos['afps'] ?? const []);
+    final previsionList =
+        options('Todas', _catalogos['previsiones'] ?? const []);
 
     void resetAll(StateSetter setModalState) {
       void apply() {
@@ -734,6 +814,9 @@ class WorkersPageState extends State<WorkersPage> {
 
       setModalState(apply);
       setState(apply);
+      // Los filtros ahora son parte de la consulta, no un recorrido en
+      // memoria: cambiarlos exige volver a preguntar.
+      _recargar();
     }
 
     showAppModal(
@@ -780,6 +863,7 @@ class WorkersPageState extends State<WorkersPage> {
                     if (newValue == null) return;
                     setModalState(() => onPick(newValue));
                     setState(() => onPick(newValue));
+                    _recargar();
                   },
                 ),
               ],

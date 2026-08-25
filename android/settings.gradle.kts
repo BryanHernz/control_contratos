@@ -18,7 +18,11 @@ pluginManagement {
 
 plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
-    id("com.android.application") version "8.2.1" apply false // Revertido a una versión más estable
+    // 8.2.1 no alcanzaba: androidx.core 1.17 y androidx.browser 1.9 --que
+    // llegan con el editor de plantillas-- exigen AGP 8.9.1 o mayor, y el
+    // build de Android fallaba en `checkDebugAarMetadata`. Flutter ademas ya
+    // avisaba que dejaria de soportar versiones bajo la 8.6.
+    id("com.android.application") version "8.9.1" apply false
     // START: FlutterFire Configuration
     id("com.google.gms.google-services") version("4.3.15") apply false
     // END: FlutterFire Configuration

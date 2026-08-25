@@ -18,6 +18,8 @@ import '../../customs/widgets_custom.dart';
 import '../../models/worker_model.dart';
 import '../widgets/settings_dialogs.dart';
 import '../../services/firestore_db.dart';
+import '../../services/auditoria.dart';
+import '../../services/trabajadores_repo.dart';
 
 class NewWorker extends StatefulWidget {
   const NewWorker({super.key});
@@ -518,11 +520,16 @@ class _NewWorkerState extends State<NewWorker> {
     });
   }
 
-  void saveNewWorker(WorkerModel worker) {
+  /// Guarda la ficha nueva.
+  ///
+  /// El `set` no llevaba `await` y todo el cuerpo estaba dentro de un
+  /// `catch (e) {}` vacio: si la escritura fallaba, la app avisaba "Trabajador
+  /// registrado con exito" igual y el trabajador no existia.
+  Future<void> saveNewWorker(WorkerModel worker) async {
     try {
       var user = FirebaseAuth.instance.currentUser!;
       final docRef = db.collection('Trabajadores').doc();
-      docRef.set({
+      await docRef.set({
         'nombres': worker.name!.trim().toLowerCase(),
         'apellidos': worker.lastName!.trim().toLowerCase(),
         'userAdd': user.uid,
@@ -540,19 +547,33 @@ class _NewWorkerState extends State<NewWorker> {
         'ingreso': worker.ingress,
         'imagenFront': '',
         'imagenBack': '',
+        // Texto normalizado con que se busca al trabajador. Firestore no sabe
+        // buscar dentro de un texto, solo por prefijo sobre un campo indexado.
+        'busqueda': TrabajadoresRepo.textoDeBusqueda(
+          nombres: worker.name,
+          apellidos: worker.lastName,
+          rut: worker.rut,
+        ),
+        // Los prefijos de cada palabra: es lo que consulta la busqueda, para
+        // que escribir un apellido o un RUT encuentre igual que un nombre.
+        'busquedaPrefijos': TrabajadoresRepo.prefijosDeBusqueda(
+          nombres: worker.name,
+          apellidos: worker.lastName,
+          rut: worker.rut,
+        ),
       });
 
-      // MEJORA 10: Registro de auditoría
-      db.collection('Auditoria').add({
-        'accion': 'CREAR_TRABAJADOR',
-        'usuario': user.email ?? user.uid,
-        'trabajadorId': docRef.id,
-        'rut': worker.rut,
-        'nombre':
-            '${worker.name!.trim()} ${worker.lastName!.trim()}'.toUpperCase(),
-        'timestamp': FieldValue.serverTimestamp(),
-      });
+      await Auditoria.registrar(
+        Auditoria.crearTrabajador,
+        entidadId: docRef.id,
+        detalle: {
+          'rut': worker.rut,
+          'nombre':
+              '${worker.name!.trim()} ${worker.lastName!.trim()}'.toUpperCase(),
+        },
+      );
 
+      if (!mounted) return;
       Get.back();
       AnimatedSnackBar.material(
         'Trabajador registrado con éxito',
@@ -560,7 +581,17 @@ class _NewWorkerState extends State<NewWorker> {
         desktopSnackBarPosition: DesktopSnackBarPosition.bottomRight,
         type: AnimatedSnackBarType.success,
       ).show(context);
-    } catch (e) {}
+    } catch (e) {
+      // Antes este catch estaba vacio y el usuario veia el mensaje de exito
+      // aunque no se hubiera guardado nada.
+      if (!mounted) return;
+      AnimatedSnackBar.material(
+        'No se pudo registrar al trabajador: $e',
+        mobileSnackBarPosition: MobileSnackBarPosition.top,
+        desktopSnackBarPosition: DesktopSnackBarPosition.bottomRight,
+        type: AnimatedSnackBarType.error,
+      ).show(context);
+    }
   }
 
   @override
@@ -1236,56 +1267,64 @@ class _NewWorkerState extends State<NewWorker> {
                       return null;
                     },
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 15.0),
-                    child: Column(
+                ],
+              ),
+            ),
+          ),
+          // El pie va FUERA de la grilla. Estando dentro contaba como un
+          // campo mas y quedaba encajonado en una sola columna.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(25, 16, 25, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_rutExists)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade300),
+                    ),
+                    child: const Row(
                       children: [
-                        if (_rutExists)
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.red.shade300),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded,
-                                    color: Colors.red),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'El RUT ingresado ya se encuentra registrado para otro trabajador. Por favor, verifica e intenta nuevamente.',
-                                    style: TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ],
-                            ),
+                        Icon(Icons.warning_amber_rounded, color: Colors.red),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'El RUT ingresado ya se encuentra registrado para otro trabajador. Por favor, verifica e intenta nuevamente.',
+                            style: TextStyle(
+                                color: Colors.red, fontWeight: FontWeight.w600),
                           ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            CustomButton(
-                              funcion: () {
-                                Get.back();
-                              },
-                              texto: 'Cancelar',
-                              cancelar: true,
-                            ),
-                            CustomButton(
-                                funcion: _submitForm,
-                                texto: 'Guardar',
-                                cancelar: false)
-                          ],
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CustomButton(
+                        funcion: () {
+                          Get.back();
+                        },
+                        texto: 'Cancelar',
+                        cancelar: true,
+                        icon: Icons.close_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        funcion: _submitForm,
+                        texto: 'Guardar',
+                        cancelar: false,
+                        icon: Icons.check_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],

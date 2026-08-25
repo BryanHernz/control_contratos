@@ -1,0 +1,228 @@
+{
+  "indexes": [
+    {
+      "_comentario": "Busqueda: pertenencia al array de prefijos, ordenado por nombres.",
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "_comentario": "Navegacion paginada con un filtro activo: igualdad + orden por nombres.",
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lugar",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "labor",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "comuna",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "nacionalidad",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "afp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "prevision",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "_comentario": "Dashboard: ultimos contratos generados y conteo del mes.",
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "activo",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "lugar",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "labor",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "comuna",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "nacionalidad",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "afp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "Trabajadores",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "prevision",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "busquedaPrefijos",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "nombres",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

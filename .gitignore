@@ -46,3 +46,20 @@ app.*.map.json
 
 android/key.properties
 android/app/upload-keystore.jks
+
+# Cloud Functions
+functions/node_modules/
+functions/package-lock.json
+functions/.firebase/
+
+# Salidas de las herramientas de tool/
+/build/semillas/
+/build/documentos/
+/build/plantilla_pilot/
+/build/pdf_pilot/
+
+# Config local de las funciones (ver .env.example)
+functions/.env
+
+# Cache de despliegue de Firebase Hosting
+.firebase/
