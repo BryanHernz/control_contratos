@@ -11,6 +11,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'auth/auth_pages.dart';
 import 'customs/app_colors.dart';
+import 'customs/widgets/banda_barra_estado.dart';
 import 'customs/constants_values.dart';
 import 'firebase_options.dart';
 import 'services/firestore_db.dart';
@@ -48,13 +49,25 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    // Colores de barra de estado / navegación (afecta Android/iOS nativo; en web es no-op)
+    // Barra de estado y de navegacion.
+    //
+    // `statusBarColor` y `systemNavigationBarColor` **ya no hacen nada** en
+    // Android 15 o superior: con `targetSdk = 36` el sistema fuerza
+    // edge-to-edge y descarta ambos colores. La app dibuja debajo de las
+    // barras y lo que se ve detras es el fondo del Scaffold -- casi blanco --
+    // con los iconos claros encima, o sea invisibles.
+    //
+    // Se dejan igual porque siguen valiendo en Android 14 y anteriores, que es
+    // buena parte de los telefonos en uso. El color de verdad lo pinta el
+    // `builder` de mas abajo, que es lo unico que funciona en ambos casos.
+    //
+    // El BRILLO de los iconos si se respeta en todas las versiones, y por eso
+    // va en claro: la banda que pintamos detras es `primario`, que es oscuro.
     final overlay = SystemUiOverlayStyle(
-      statusBarColor: primario, // fondo barra de estado
-      statusBarIconBrightness:
-          Brightness.light, // iconos/texto blancos (Android)
+      statusBarColor: primario,
+      statusBarIconBrightness: Brightness.light,
       statusBarBrightness: Brightness.dark, // texto blanco en iOS
-      systemNavigationBarColor: primario, // barra navegación Android
+      systemNavigationBarColor: primario,
       systemNavigationBarIconBrightness: Brightness.light,
     );
     SystemChrome.setSystemUIOverlayStyle(overlay);
@@ -147,25 +160,31 @@ class _MyAppState extends State<MyApp> {
         fontFamily: GoogleFonts.rajdhani().fontFamily,
       ),
       builder: (context, child) {
-        // Fija el escalado de texto a 1.0 para consistencia visual
-        final mediaQueryData = MediaQuery.of(context);
+        // Cinta de aviso cuando la app NO apunta a produccion. Sin esto no hay
+        // forma de distinguir de un vistazo si lo que se esta viendo es la
+        // base real o la copia, y las dos tienen los mismos datos.
+        final contenido = usandoBaseDePruebas
+            ? Banner(
+                message: kFirestoreDatabaseId.toUpperCase(),
+                // Arriba a la derecha: la esquina superior izquierda la ocupa
+                // el logo del drawer.
+                location: BannerLocation.topEnd,
+                color: const Color(0xFFB3382B),
+                child: child!,
+              )
+            : child!;
+
+        // El orden importa. `BandaBarraDeEstado` va DENTRO de este MediaQuery,
+        // no fuera: necesita leer el inset real para saber cuanto mide la
+        // franja, y sobre todo necesita ser lo ultimo que toca el padding. Al
+        // reves, este MediaQuery volveria a instalar el padding de arriba y
+        // los `SafeArea` de las vistas dejarian el hueco blanco de nuevo.
         return MediaQuery(
-          data: mediaQueryData.copyWith(
+          // Fija el escalado de texto a 1.0 para consistencia visual.
+          data: MediaQuery.of(context).copyWith(
             textScaler: const TextScaler.linear(1.0),
           ),
-          // Cinta de aviso cuando la app NO apunta a produccion. Sin esto no
-          // hay forma de distinguir de un vistazo si lo que se esta viendo es
-          // la base real o la copia, y las dos tienen los mismos datos.
-          child: usandoBaseDePruebas
-              ? Banner(
-                  message: kFirestoreDatabaseId.toUpperCase(),
-                  // Arriba a la derecha: la esquina superior izquierda la ocupa
-                  // el logo del drawer.
-                  location: BannerLocation.topEnd,
-                  color: const Color(0xFFB3382B),
-                  child: child!,
-                )
-              : child!,
+          child: BandaBarraDeEstado(color: primario, child: contenido),
         );
       },
       home: const MainPage(),
