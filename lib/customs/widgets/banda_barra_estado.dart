@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_colors.dart';
+
 /// Pinta una franja solida detras de la barra de estado del sistema.
 ///
 /// Desde Android 15 (`targetSdk` 35 o mas) el sistema fuerza edge-to-edge y
@@ -21,11 +23,17 @@ import 'package:flutter/material.dart';
 class BandaBarraDeEstado extends StatelessWidget {
   const BandaBarraDeEstado({
     super.key,
-    required this.color,
     required this.child,
+    this.colores = AppColors.chromeOscuro,
   });
 
-  final Color color;
+  /// Los tonos del degradado. Por defecto el del chrome de la app.
+  ///
+  /// Antes era un color plano y se le pasaba `primario`, que es el tono
+  /// **final** del degradado: la banda quedaba mas clara que la superficie de
+  /// abajo, que empieza en el inicial, y el corte se veia.
+  final List<Color> colores;
+
   final Widget child;
 
   @override
@@ -34,7 +42,19 @@ class BandaBarraDeEstado extends StatelessWidget {
 
     return Column(
       children: [
-        Container(height: alto, color: color),
+        Container(
+          height: alto,
+          decoration: BoxDecoration(
+            // El mismo degradado y el mismo sentido que las cabeceras: la
+            // banda toca ese borde y cualquier diferencia se ve como una
+            // costura.
+            gradient: LinearGradient(
+              colors: colores,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         Expanded(
           child: MediaQuery.removePadding(
             context: context,

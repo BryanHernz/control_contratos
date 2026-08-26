@@ -48,7 +48,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  @override
   StreamSubscription<User?>? _sesion;
 
   @override
@@ -215,7 +214,6 @@ class _MyAppState extends State<MyApp> {
             textScaler: const TextScaler.linear(1.0),
           ),
           child: BandaBarraDeEstado(
-            color: primario,
             // En escritorio la barra de titulo es nuestra; en web y en
             // Android `BarraDeTitulo` mide cero y esta Column no cambia nada.
             child: Column(

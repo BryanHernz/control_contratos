@@ -18,7 +18,7 @@ void main() {
         data: MediaQueryData(padding: EdgeInsets.only(top: insetSuperior)),
         child: Directionality(
           textDirection: TextDirection.ltr,
-          child: BandaBarraDeEstado(color: azul, child: hijo),
+          child: BandaBarraDeEstado(colores: const [azul, azul], child: hijo),
         ),
       ),
     );
@@ -30,7 +30,13 @@ void main() {
 
     final franja = tester.widget<Container>(find.byType(Container).first);
     expect(tester.getSize(find.byType(Container).first).height, 48);
-    expect((franja.color ?? (franja.decoration as BoxDecoration?)?.color), azul);
+    final degradado =
+        (franja.decoration! as BoxDecoration).gradient! as LinearGradient;
+    expect(degradado.colors, [azul, azul]);
+    // El sentido importa: es el mismo de las cabeceras, y es lo que hace que
+    // la banda empalme con la superficie de abajo en vez de cortarla.
+    expect(degradado.begin, Alignment.topLeft);
+    expect(degradado.end, Alignment.bottomRight);
   });
 
   testWidgets('el hijo ya no ve el padding superior, para que un SafeArea '
@@ -92,7 +98,7 @@ void main() {
               data: MediaQuery.of(context)
                   .copyWith(textScaler: const TextScaler.linear(1.0)),
               child: BandaBarraDeEstado(
-                color: azul,
+                colores: const [azul, azul],
                 child: SafeArea(child: SizedBox.expand(key: llave)),
               ),
             ),
