@@ -25,6 +25,8 @@ import 'edit_worker_page.dart';
 import '../../services/firestore_db.dart';
 import '../../services/auditoria.dart';
 import '../../services/plantilla_render.dart';
+import '../../customs/widgets/app_form.dart';
+import '../../services/plantilla_campos.dart';
 import '../../services/plantilla_service.dart';
 
 class WorkerDetails extends StatefulWidget {
@@ -770,6 +772,27 @@ class _WorkerDetailsState extends State<WorkerDetails> {
       double baselina = 4;
       double letterSize = 12;
 
+      // Aviso antes de imprimir.
+      //
+      // Un marcador sin valor no desaparece del papel: sale el nombre del
+      // campo entre llaves. Y avisarlo DESPUES de generar no sirve de nada,
+      // porque el documento ya se mando a imprimir.
+      //
+      // Los campos opcionales -- los que la plantilla envuelve en un bloque
+      // `{{si ...}}`, como el correo del trabajador -- no cuentan: que falten
+      // es justamente para lo que existe el bloque.
+      final faltantes = _camposFaltantes(
+        selections: selections,
+        plantillas: plantillas,
+        datos: _datosDePlantilla(empresa, contrato, horasSemanales,
+            txtLunesJueves, txtViernes, txtSabado, txtColacion),
+      );
+      if (faltantes.isNotEmpty) {
+        if (!mounted) return;
+        final seguir = await _confirmarCamposFaltantes(faltantes);
+        if (seguir != true) return;
+      }
+
       if (selections.contains('Contrato')) {
         pdf.addPage(
           pw.MultiPage(
@@ -1281,6 +1304,77 @@ class _WorkerDetailsState extends State<WorkerDetails> {
   /// Las claves son las mismas que ofrece el selector del editor. Agregar un
   /// campo aqui y en `marcadoresDisponibles` es todo lo que hace falta para
   /// poder usarlo en cualquier documento.
+  /// Que documento usa que plantilla.
+  ///
+  /// "EPP + Registro" no es un documento propio: compone los otros dos en una
+  /// hoja para no gastar papel, asi que revisa las dos plantillas.
+  static const Map<String, List<String>> _tiposPorDocumento = {
+    'Contrato': ['contrato'],
+    'Derecho a saber': ['derecho-a-saber'],
+    'EPP': ['epp'],
+    'Registro': ['registro'],
+    'EPP + Registro': ['epp', 'registro'],
+  };
+
+  /// Los campos obligatorios que quedarian sin valor en lo que se va a
+  /// imprimir.
+  ///
+  /// Se calcula con el MISMO analizador que arma el PDF y no con una lista
+  /// escrita aparte: dos listas terminan diciendo cosas distintas, y la que
+  /// avisa seria la equivocada.
+  List<String> _camposFaltantes({
+    required List<String> selections,
+    required Map<String, VersionPlantilla?> plantillas,
+    required Map<String, String> datos,
+  }) {
+    final faltan = <String>{};
+    for (final documento in selections) {
+      for (final tipo in _tiposPorDocumento[documento] ?? const <String>[]) {
+        final version = plantillas[tipo];
+        // Sin plantilla publicada se usa el respaldo en codigo, que no tiene
+        // marcadores que revisar.
+        if (version == null) continue;
+        faltan.addAll(AnalizadorPlantilla(datos: datos)
+            .analizar(version.delta)
+            .marcadoresSinValor);
+      }
+    }
+    return faltan.toList()..sort();
+  }
+
+  /// Nombre legible de un marcador, para no mostrarle `trabajador.afp` a
+  /// quien esta imprimiendo.
+  static String _etiquetaDeCampo(String clave) {
+    for (final grupo in camposDePlantilla.values) {
+      for (final campo in grupo) {
+        if (campo.clave == clave) return campo.etiqueta;
+      }
+    }
+    return clave;
+  }
+
+  /// Pregunta si imprimir igual. Devuelve `true` solo si se decide seguir.
+  Future<bool?> _confirmarCamposFaltantes(List<String> faltantes) {
+    final lista = faltantes.map(_etiquetaDeCampo).join(', ');
+    return showAppModal<bool>(
+      context: context,
+      title: 'Faltan datos',
+      icon: Icons.report_problem_outlined,
+      danger: true,
+      child: AppDangerConfirmBody(
+        message: faltantes.length == 1
+            ? 'Falta un dato que el documento imprime.'
+            : 'Faltan ${faltantes.length} datos que el documento imprime.',
+        detail: '$lista.\n\nSi imprimes igual, en el papel va a aparecer '
+            'el nombre del campo entre llaves en vez del dato.',
+        confirmText: 'Imprimir igual',
+        confirmIcon: Icons.print_outlined,
+        onCancel: () => Navigator.of(context).pop(false),
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
+    );
+  }
+
   Map<String, String> _datosDePlantilla(
     DocumentSnapshot empresa,
     DocumentSnapshot contrato,
