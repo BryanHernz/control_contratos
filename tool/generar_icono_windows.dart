@@ -15,6 +15,7 @@
 // plataformas no se separen con el tiempo.
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:image/image.dart';
 
@@ -122,8 +123,7 @@ void main() {
 
 /// Dibuja el icono centrado sobre el degradado de la app y lo guarda como BMP.
 ///
-/// BMP y no PNG porque es lo que Inno Setup lee. Y se aplana a tres canales:
-/// un BMP con canal alfa hace que Inno lo dibuje con bordes negros.
+/// BMP y no PNG porque es lo que Inno Setup lee.
 void _escribirBanner(
   Image original, {
   required int ancho,
@@ -161,6 +161,55 @@ void _escribirBanner(
     dstY: ((alto - lado) / 2).round(),
   );
 
-  File(ruta).writeAsBytesSync(encodeBmp(lienzo));
+  File(ruta).writeAsBytesSync(_bmp24(lienzo));
   stdout.writeln('  ${ancho}x$alto  -> $ruta');
+}
+
+
+/// Escribe un BMP de 24 bits con la cabecera clasica.
+///
+/// No se usa `encodeBmp` del paquete `image`: ese emite un BITMAPV5HEADER de
+/// 124 bytes con `biCompression = BI_BITFIELDS`, e **Inno Setup lo rechaza**
+/// con "Bitmap image is not valid" al abrir el asistente -- o sea que el
+/// instalador no arranca. Inno quiere BITMAPINFOHEADER de 40 bytes y BI_RGB.
+///
+/// Las filas van de abajo hacia arriba y cada una se rellena hasta un multiplo
+/// de 4 bytes, que es como se define el formato.
+Uint8List _bmp24(Image img) {
+  final ancho = img.width;
+  final alto = img.height;
+  final relleno = (4 - (ancho * 3) % 4) % 4;
+  final bytesPorFila = ancho * 3 + relleno;
+  final datos = bytesPorFila * alto;
+  const cabeceras = 14 + 40;
+
+  final salida = Uint8List(cabeceras + datos);
+  final vista = ByteData.view(salida.buffer);
+
+  salida[0] = 0x42; // 'B'
+  salida[1] = 0x4D; // 'M'
+  vista.setUint32(2, salida.length, Endian.little);
+  vista.setUint32(10, cabeceras, Endian.little);
+
+  vista.setUint32(14, 40, Endian.little); // BITMAPINFOHEADER
+  vista.setInt32(18, ancho, Endian.little);
+  vista.setInt32(22, alto, Endian.little); // positivo = de abajo hacia arriba
+  vista.setUint16(26, 1, Endian.little); // planos
+  vista.setUint16(28, 24, Endian.little); // bits por pixel
+  vista.setUint32(30, 0, Endian.little); // BI_RGB, sin compresion
+  vista.setUint32(34, datos, Endian.little);
+  vista.setInt32(38, 2835, Endian.little); // ~72 ppp
+  vista.setInt32(42, 2835, Endian.little);
+
+  var i = cabeceras;
+  for (var y = alto - 1; y >= 0; y--) {
+    for (var x = 0; x < ancho; x++) {
+      final p = img.getPixel(x, y);
+      salida[i++] = p.b.toInt(); // BMP guarda en orden BGR
+      salida[i++] = p.g.toInt();
+      salida[i++] = p.r.toInt();
+    }
+    i += relleno;
+  }
+  return salida;
 }

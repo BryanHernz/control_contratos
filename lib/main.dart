@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
@@ -46,12 +49,32 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
+  StreamSubscription<User?>? _sesion;
+
+  @override
   void initState() {
     super.initState();
-    // Verificar actualizaciones en el primer frame disponible (solo Android)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      UpdateService.checkForUpdate();
+
+    // La comprobacion de actualizaciones necesita sesion iniciada: `updates/`
+    // en Storage exige `request.auth != null`.
+    //
+    // Antes corria en el primer frame y se adelantaba a que Firebase
+    // restaurara la sesion guardada, asi que fallaba con
+    // `firebase_storage/unauthorized` **en silencio**. El efecto era que al
+    // abrir la app nunca aparecia el aviso: habia que entrar, cerrarla y
+    // volver a abrirla para que apareciera.
+    //
+    // Escuchar el estado de sesion cubre los dos casos con un solo camino: la
+    // sesion restaurada al arrancar y el login recien hecho.
+    _sesion = FirebaseAuth.instance.authStateChanges().listen((usuario) {
+      if (usuario != null) UpdateService.checkForUpdate();
     });
+  }
+
+  @override
+  void dispose() {
+    _sesion?.cancel();
+    super.dispose();
   }
 
   @override

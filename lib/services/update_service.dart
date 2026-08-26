@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -60,9 +61,18 @@ class UpdateService {
   // Clave para recordar la última versión que ya se mandó a instalar
   static const String _prefKey = 'ota_installed_version';
 
+  /// Evita dos dialogos a la vez.
+  ///
+  /// La comprobacion se dispara con el estado de sesion, y ese flujo puede
+  /// emitir mas de una vez (sesion restaurada, token renovado). Sin esto se
+  /// apilaban dos avisos identicos.
+  static bool _enCurso = false;
+
   static Future<void> checkForUpdate() async {
     final canal = CanalDeActualizacion.deLaPlataforma();
     if (canal == null) return;
+    if (_enCurso) return;
+    _enCurso = true;
     try {
       // 1. Leer el descriptor del canal desde Firebase Storage
       final ref = FirebaseStorage.instance.ref(canal.descriptor);
@@ -82,6 +92,11 @@ class UpdateService {
       final String urlInstalador = json[canal.claveUrl] ?? '';
       final bool mandatory = json['mandatory'] ?? false;
       final String changelog = json['changelog'] ?? '';
+      // Huella y tamano del instalador, para comprobar la descarga antes de
+      // ejecutarla. Opcionales: un descriptor viejo no los trae.
+      final String huella = (json['sha256'] ?? '').toString();
+      final int bytesEsperados =
+          int.tryParse((json['bytes'] ?? '0').toString()) ?? 0;
 
       if (urlInstalador.isEmpty) return;
 
@@ -109,6 +124,8 @@ class UpdateService {
           mandatory: mandatory,
           urlInstalador: urlInstalador,
           canal: canal,
+          huella: huella,
+          bytesEsperados: bytesEsperados,
           onInstalled: () async {
             // Guardar que ya enviamos esta versión al instalador
             await prefs.setString(_prefKey, remoteVersion);
@@ -118,6 +135,8 @@ class UpdateService {
       );
     } catch (e) {
       debugPrint('[UpdateService] Error: $e');
+    } finally {
+      _enCurso = false;
     }
   }
 
@@ -166,6 +185,8 @@ class _UpdateDialog extends StatefulWidget {
   final bool mandatory;
   final String urlInstalador;
   final CanalDeActualizacion canal;
+  final String huella;
+  final int bytesEsperados;
   final Future<void> Function() onInstalled;
 
   const _UpdateDialog({
@@ -175,6 +196,8 @@ class _UpdateDialog extends StatefulWidget {
     required this.mandatory,
     required this.urlInstalador,
     required this.canal,
+    required this.huella,
+    required this.bytesEsperados,
     required this.onInstalled,
   });
 
@@ -214,6 +237,30 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         },
       );
 
+      // Comprobar lo descargado ANTES de ejecutarlo.
+      //
+      // Sin esto, una descarga incompleta se lanzaba igual y el instalador
+      // moria con un error suyo -- una queja de CRC -- que no dice nada a
+      // quien lo esta viendo. Peor: ejecutar un binario a medio bajar no es
+      // algo que convenga hacer nunca.
+      final descargado = File(rutaLocal);
+      final medido = await descargado.length();
+      if (widget.bytesEsperados > 0 && medido != widget.bytesEsperados) {
+        await descargado.delete();
+        throw _DescargaCorrupta(
+          'La descarga quedo incompleta '
+          '($medido de ${widget.bytesEsperados} bytes).',
+        );
+      }
+      if (widget.huella.isNotEmpty) {
+        final calculada =
+            (await sha256.bind(descargado.openRead()).first).toString();
+        if (calculada != widget.huella) {
+          await descargado.delete();
+          throw _DescargaCorrupta('El archivo descargado no coincide.');
+        }
+      }
+
       // Marcar como "ya enviado al instalador" ANTES de abrirlo
       await widget.onInstalled();
 
@@ -234,6 +281,15 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
       await OpenFilex.open(rutaLocal);
       Get.back();
+    } on _DescargaCorrupta catch (e) {
+      if (mounted) {
+        setState(() {
+          _downloading = false;
+          // Se dice lo que paso de verdad: si vuelve a fallar, el problema no
+          // es la conexion y hay que mirar lo publicado.
+          _errorMsg = '${e.detalle} Intenta de nuevo.';
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -415,4 +471,15 @@ class _AppButton extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// La descarga llego incompleta o alterada.
+class _DescargaCorrupta implements Exception {
+  const _DescargaCorrupta(this.detalle);
+
+  final String detalle;
+
+  @override
+  String toString() => detalle;
 }
