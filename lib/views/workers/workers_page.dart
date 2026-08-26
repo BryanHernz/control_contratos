@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+
+import 'duplicados_page.dart';
 import 'package:flutter/services.dart';
 
 import 'package:pdf/pdf.dart';
@@ -466,11 +468,26 @@ class WorkersPageState extends State<WorkersPage> {
             rightWidget: Stack(
               alignment: Alignment.center,
               children: [
-                IconButton(
-                  icon: const Icon(CupertinoIcons.slider_horizontal_3,
-                      color: Colors.white),
-                  tooltip: 'Filtros Avanzados',
-                  onPressed: () => _showFilterSheet(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.copy_all_rounded,
+                          color: Colors.white),
+                      tooltip: 'Fichas repetidas',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const DuplicadosPage(),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(CupertinoIcons.slider_horizontal_3,
+                          color: Colors.white),
+                      tooltip: 'Filtros Avanzados',
+                      onPressed: () => _showFilterSheet(),
+                    ),
+                  ],
                 ),
                 if (_selectedEnterpriseFilter != 'Todas' ||
                     _selectedLaborFilter != 'Todos' ||
