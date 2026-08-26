@@ -1,7 +1,6 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -1087,8 +1086,10 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
         // significaba que crear cuentas era una capacidad del navegador y no
         // un permiso del servidor: las reglas de Firestore no pueden impedirlo
         // porque ocurre en Auth, antes de tocar Firestore.
-        await funciones.httpsCallable('crearUsuario')
-            .call({
+        // Va por `llamarFuncion` y no por el plugin directo porque en
+        // Windows el plugin `cloud_functions` no existe: alli la llamada se
+        // hace por HTTP contra el mismo endpoint.
+        await llamarFuncion('crearUsuario', {
           'email': _emailController.text.trim().toLowerCase(),
           'password': _passwordController.text.trim(),
           'nombre': _nameController.text.trim(),
@@ -1120,12 +1121,12 @@ class _UserEditorSheetState extends State<UserEditorSheet> {
             : 'Usuario actualizado con exito.',
         type: AnimatedSnackBarType.success,
       ).show(context);
-    } on FirebaseFunctionsException catch (e) {
+    } on ErrorDeFuncion catch (e) {
       // La funcion devuelve mensajes ya redactados para el usuario.
       if (!mounted) return;
       setState(() => _saving = false);
       AnimatedSnackBar.material(
-        e.message ?? 'No se pudo crear el usuario.',
+        e.mensaje,
         type: AnimatedSnackBarType.error,
       ).show(context);
       return;

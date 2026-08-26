@@ -13,16 +13,59 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../customs/constants_values.dart';
 
+/// Canal de actualizacion de una plataforma.
+///
+/// Android y Windows tienen archivos SEPARADOS a proposito. Si compartieran
+/// uno, subir la version de escritorio le ofreceria a los telefonos un
+/// instalador de Windows; y como el archivo lo interpreta la app **ya
+/// instalada**, ese error no se puede corregir despues publicando otra cosa.
+class CanalDeActualizacion {
+  const CanalDeActualizacion({
+    required this.descriptor,
+    required this.claveUrl,
+    required this.nombreDescarga,
+  });
+
+  /// Ruta del JSON en Storage.
+  final String descriptor;
+
+  /// Campo dentro de ese JSON que trae la URL `gs://` del instalador.
+  final String claveUrl;
+
+  /// Con que nombre se guarda lo descargado en la carpeta temporal.
+  final String nombreDescarga;
+
+  static const android = CanalDeActualizacion(
+    descriptor: 'updates/version.json',
+    claveUrl: 'apk_url',
+    nombreDescarga: 'app_update.apk',
+  );
+
+  static const windows = CanalDeActualizacion(
+    descriptor: 'updates/windows.json',
+    claveUrl: 'setup_url',
+    nombreDescarga: 'control_contratos_setup.exe',
+  );
+
+  /// `null` en plataformas que no se actualizan solas (web, macOS, Linux).
+  static CanalDeActualizacion? deLaPlataforma() {
+    if (kIsWeb) return null;
+    if (Platform.isAndroid) return android;
+    if (Platform.isWindows) return windows;
+    return null;
+  }
+}
+
 class UpdateService {
-  static const String _versionJsonPath = 'updates/version.json';
   // Clave para recordar la última versión que ya se mandó a instalar
   static const String _prefKey = 'ota_installed_version';
 
   static Future<void> checkForUpdate() async {
-    if (kIsWeb || !Platform.isAndroid) return;
+    final canal = CanalDeActualizacion.deLaPlataforma();
+    if (canal == null) return;
     try {
-      // 1. Leer version.json desde Firebase Storage
-      final ref = FirebaseStorage.instance.ref(_versionJsonPath);
+      // 1. Leer el descriptor del canal desde Firebase Storage
+      final ref = FirebaseStorage.instance.ref(canal.descriptor);
       final bytes = await ref.getData();
       if (bytes == null) return;
 
@@ -36,11 +79,11 @@ class UpdateService {
       final Map<String, dynamic> json = jsonDecode(utf8.decode(bytes));
 
       final String remoteVersion = json['version'] ?? '0.0.0';
-      final String apkGsUrl = json['apk_url'] ?? '';
+      final String urlInstalador = json[canal.claveUrl] ?? '';
       final bool mandatory = json['mandatory'] ?? false;
       final String changelog = json['changelog'] ?? '';
 
-      if (apkGsUrl.isEmpty) return;
+      if (urlInstalador.isEmpty) return;
 
       // 2. Versión instalada según el SO
       final info = await PackageInfo.fromPlatform();
@@ -56,7 +99,7 @@ class UpdateService {
 
       // Si ya mandamos a instalar esta versión O no es más nueva → salir
       if (alreadySent == remoteVersion) return;
-      if (!_isNewer(remoteVersion, localVersion)) return;
+      if (!esMasNueva(remoteVersion, localVersion)) return;
 
       await Get.dialog(
         _UpdateDialog(
@@ -64,7 +107,8 @@ class UpdateService {
           localVersion: localVersion,
           changelog: changelog,
           mandatory: mandatory,
-          apkGsUrl: apkGsUrl,
+          urlInstalador: urlInstalador,
+          canal: canal,
           onInstalled: () async {
             // Guardar que ya enviamos esta versión al instalador
             await prefs.setString(_prefKey, remoteVersion);
@@ -77,16 +121,37 @@ class UpdateService {
     }
   }
 
-  static bool _isNewer(String remote, String local) {
-    try {
-      final r = remote.split('.').map(int.parse).toList();
-      final l = local.split('.').map(int.parse).toList();
-      for (int i = 0; i < r.length; i++) {
-        final li = i < l.length ? l[i] : 0;
-        if (r[i] > li) return true;
-        if (r[i] < li) return false;
-      }
-    } catch (_) {}
+  /// Numeros de una version, tolerando lo que venga pegado detras.
+  ///
+  /// `1.0.4+5` -> [1, 0, 4].
+  static List<int> partesDeVersion(String v) {
+    final limpio = v.trim().split('+').first.split('-').first;
+    return limpio
+        .split('.')
+        .map((parte) => int.tryParse(parte.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0)
+        .toList();
+  }
+
+  /// Si [remota] es posterior a [local].
+  ///
+  /// Recorta el sufijo de build (`+5`) porque **no llega igual en cada
+  /// plataforma**: en Android `PackageInfo.version` devuelve el `versionName`
+  /// limpio, pero en Windows sale del recurso de version del `.exe`, que
+  /// Flutter rellena con el valor completo del pubspec -- `1.0.4+5`.
+  ///
+  /// La version anterior hacia `int.parse` directo: con `1.0.4+5` lanzaba,
+  /// el `catch` devolvia false, y en Windows **no se habria ofrecido nunca
+  /// una actualizacion**, en silencio y sin error visible.
+  static bool esMasNueva(String remota, String local) {
+    final r = partesDeVersion(remota);
+    final l = partesDeVersion(local);
+    final n = r.length > l.length ? r.length : l.length;
+    for (var i = 0; i < n; i++) {
+      final ri = i < r.length ? r[i] : 0;
+      final li = i < l.length ? l[i] : 0;
+      if (ri > li) return true;
+      if (ri < li) return false;
+    }
     return false;
   }
 }
@@ -99,7 +164,8 @@ class _UpdateDialog extends StatefulWidget {
   final String localVersion;
   final String changelog;
   final bool mandatory;
-  final String apkGsUrl;
+  final String urlInstalador;
+  final CanalDeActualizacion canal;
   final Future<void> Function() onInstalled;
 
   const _UpdateDialog({
@@ -107,7 +173,8 @@ class _UpdateDialog extends StatefulWidget {
     required this.localVersion,
     required this.changelog,
     required this.mandatory,
-    required this.apkGsUrl,
+    required this.urlInstalador,
+    required this.canal,
     required this.onInstalled,
   });
 
@@ -127,19 +194,19 @@ class _UpdateDialogState extends State<_UpdateDialog> {
     });
 
     try {
-      final ref = FirebaseStorage.instance.refFromURL(widget.apkGsUrl);
+      final ref = FirebaseStorage.instance.refFromURL(widget.urlInstalador);
       final downloadUrl = await ref.getDownloadURL();
 
       final dir = await getTemporaryDirectory();
-      final apkPath = '${dir.path}/app_update.apk';
+      final rutaLocal = '${dir.path}/${widget.canal.nombreDescarga}';
 
       // Limpiar descarga residual anterior si existe
-      final oldFile = File(apkPath);
+      final oldFile = File(rutaLocal);
       if (await oldFile.exists()) await oldFile.delete();
 
       await Dio().download(
         downloadUrl,
-        apkPath,
+        rutaLocal,
         onReceiveProgress: (received, total) {
           if (total > 0 && mounted) {
             setState(() => _progress = received / total);
@@ -150,7 +217,22 @@ class _UpdateDialogState extends State<_UpdateDialog> {
       // Marcar como "ya enviado al instalador" ANTES de abrirlo
       await widget.onInstalled();
 
-      await OpenFilex.open(apkPath);
+      if (Platform.isWindows) {
+        // Windows no deja reemplazar un `.exe` que esta en uso, asi que la
+        // app se cierra en cuanto lanza el instalador. `detached` es lo que
+        // hace que el proceso sobreviva al `exit`: sin eso muere con nosotros
+        // y la actualizacion no ocurre.
+        //
+        // No se pasa `/SILENT`: el instalador se ve, y quien lo lanzo entiende
+        // que la app se cerro a proposito. Una app que desaparece sola de la
+        // pantalla parece un cierre inesperado.
+        await Process.start(rutaLocal, const [],
+            mode: ProcessStartMode.detached);
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+        exit(0);
+      }
+
+      await OpenFilex.open(rutaLocal);
       Get.back();
     } catch (e) {
       if (mounted) {
