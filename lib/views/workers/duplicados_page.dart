@@ -7,6 +7,7 @@ import '../../customs/widgets/app_modal.dart';
 import '../../customs/widgets/app_skeleton.dart';
 import '../../customs/widgets/page_header.dart';
 import '../../services/duplicados.dart';
+import 'edit_worker_page.dart';
 
 /// Fichas que comparten RUT.
 ///
@@ -33,6 +34,48 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
 
   void _recargar() => setState(() => _grupos = Duplicados.buscar());
 
+  Future<void> _editar(FichaRepetida ficha) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => EditWorker(worker: ficha.modelo),
+      ),
+    );
+    if (mounted) _recargar();
+  }
+
+  Future<void> _eliminar(FichaRepetida ficha) async {
+    final ok = await showAppModal<bool>(
+      context: context,
+      title: 'Eliminar ficha',
+      icon: Icons.delete_outline_rounded,
+      danger: true,
+      child: AppDangerConfirmBody(
+        message: 'Se elimina la ficha de "${ficha.nombreCompleto}".',
+        detail: 'Las fotos de carnet NO se borran: se guardan por RUT, asi '
+            'que son las mismas que usa la ficha que se conserva.\n\n'
+            'Esto no se puede deshacer.',
+        confirmText: 'Eliminar',
+        confirmIcon: Icons.delete_outline_rounded,
+        onCancel: () => Navigator.of(context).pop(false),
+        onConfirm: () => Navigator.of(context).pop(true),
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await Duplicados.eliminar(ficha);
+      if (!mounted) return;
+      AnimatedSnackBar.material('Ficha eliminada.',
+              type: AnimatedSnackBarType.success)
+          .show(context);
+      _recargar();
+    } catch (e) {
+      if (!mounted) return;
+      AnimatedSnackBar.material('No se pudo eliminar: $e',
+              type: AnimatedSnackBarType.error)
+          .show(context);
+    }
+  }
+
   Future<void> _fusionar(
     GrupoRepetido grupo,
     FichaRepetida conservada,
@@ -44,8 +87,8 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
       icon: Icons.merge_rounded,
       danger: true,
       child: AppDangerConfirmBody(
-        message: 'Se conserva "${conservada.nombreCompleto}" y se elimina la '
-            'otra ficha.',
+        message: 'Se conserva "${conservada.nombreCompleto}" y se eliminan '
+            'las otras ${grupo.fichas.length - 1}.',
         detail: 'Los campos que esten vacios en la ficha que se conserva se '
             'rellenan con los de la otra. Nunca se pisa un dato existente.\n\n'
             'La fecha de ingreso queda en la mas reciente de las dos.\n\n'
@@ -59,10 +102,10 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
     if (ok != true) return;
 
     try {
-      await Duplicados.fusionar(
-        conservada: conservada,
-        descartada: descartada,
-      );
+      // Con tres fichas se funde una por una contra la que se conserva.
+      for (final otra in grupo.fichas.where((f) => f.id != conservada.id)) {
+        await Duplicados.fusionar(conservada: conservada, descartada: otra);
+      }
       if (!mounted) return;
       AnimatedSnackBar.material(
         'Fichas fusionadas.',
@@ -125,6 +168,8 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
                     return _TarjetaGrupo(
                       grupo: grupos[i - 1],
                       onFusionar: _fusionar,
+                      onEditar: _editar,
+                      onEliminar: _eliminar,
                     );
                   },
                 );
@@ -165,7 +210,12 @@ class _Resumen extends StatelessWidget {
 }
 
 class _TarjetaGrupo extends StatelessWidget {
-  const _TarjetaGrupo({required this.grupo, required this.onFusionar});
+  const _TarjetaGrupo({
+    required this.grupo,
+    required this.onFusionar,
+    required this.onEditar,
+    required this.onEliminar,
+  });
 
   final GrupoRepetido grupo;
   final Future<void> Function(
@@ -173,6 +223,8 @@ class _TarjetaGrupo extends StatelessWidget {
     FichaRepetida conservada,
     FichaRepetida descartada,
   ) onFusionar;
+  final Future<void> Function(FichaRepetida ficha) onEditar;
+  final Future<void> Function(FichaRepetida ficha) onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -228,14 +280,9 @@ class _TarjetaGrupo extends StatelessWidget {
           for (final ficha in grupo.fichas)
             _FilaFicha(
               ficha: ficha,
-              grupo: grupo,
-              onConservar: () {
-                final otras =
-                    grupo.fichas.where((f) => f.id != ficha.id).toList();
-                // De a una: con tres fichas se fusiona dos veces, y en cada
-                // paso se ve el resultado antes de seguir.
-                onFusionar(grupo, ficha, otras.first);
-              },
+              onConservar: () => onFusionar(grupo, ficha, ficha),
+              onEditar: () => onEditar(ficha),
+              onEliminar: () => onEliminar(ficha),
             ),
         ],
       ),
@@ -246,13 +293,15 @@ class _TarjetaGrupo extends StatelessWidget {
 class _FilaFicha extends StatelessWidget {
   const _FilaFicha({
     required this.ficha,
-    required this.grupo,
     required this.onConservar,
+    required this.onEditar,
+    required this.onEliminar,
   });
 
   final FichaRepetida ficha;
-  final GrupoRepetido grupo;
   final VoidCallback onConservar;
+  final VoidCallback onEditar;
+  final VoidCallback onEliminar;
 
   @override
   Widget build(BuildContext context) {
@@ -305,13 +354,49 @@ class _FilaFicha extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            TextButton.icon(
-              onPressed: onConservar,
-              icon: const Icon(Icons.check_rounded, size: 17),
-              label: const Text('Conservar esta'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.textBody,
-              ),
+            // Las tres salidas posibles, porque no todas las fichas repetidas
+            // se resuelven igual: unas se funden, otras son un RUT mal escrito
+            // que hay que corregir, y otras se cargaron mal y sobran.
+            PopupMenuButton<String>(
+              tooltip: 'Acciones',
+              icon: const Icon(Icons.more_vert_rounded,
+                  size: 20, color: AppColors.iconMuted),
+              onSelected: (v) {
+                if (v == 'conservar') onConservar();
+                if (v == 'editar') onEditar();
+                if (v == 'eliminar') onEliminar();
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: 'conservar',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.merge_rounded, size: 19),
+                    title: Text('Conservar esta y fusionar'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'editar',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.edit_outlined, size: 19),
+                    title: Text('Editar'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'eliminar',
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.delete_outline_rounded,
+                        size: 19, color: Color(0xFFB3382B)),
+                    title: Text('Eliminar solo esta',
+                        style: TextStyle(color: Color(0xFFB3382B))),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
