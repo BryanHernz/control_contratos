@@ -236,10 +236,20 @@ class _UsersPageState extends State<UsersPage> {
 
                       return LayoutBuilder(
                         builder: (context, constraints) {
-                          final hasTwoColumns = constraints.maxWidth >= 980;
-                          final cardWidth = hasTwoColumns
-                              ? (constraints.maxWidth - 12) / 2
-                              : constraints.maxWidth;
+                          // Columnas segun lo que quepa, no un umbral unico.
+                          // Antes pasaba a dos recien a los 980 px: en una
+                          // ventana de tablet quedaba una sola tarjeta
+                          // angosta con media pantalla vacia al lado.
+                          const anchoMinimo = 420.0;
+                          const separacion = 12.0;
+                          final columnas = (constraints.maxWidth / anchoMinimo)
+                              .floor()
+                              .clamp(1, 3);
+                          final cardWidth = columnas == 1
+                              ? constraints.maxWidth
+                              : (constraints.maxWidth -
+                                      separacion * (columnas - 1)) /
+                                  columnas;
                           final toolbarInline = constraints.maxWidth >= 900;
 
                           return SingleChildScrollView(

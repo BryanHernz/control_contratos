@@ -14,9 +14,19 @@ import '../../services/firestore_db.dart';
 /// creadas antes de que esto existiera va a estar vacia y eso es correcto: no
 /// se inventa un historial que nadie registro.
 class HistorialTrabajador extends StatelessWidget {
-  const HistorialTrabajador({super.key, required this.trabajadorId});
+  const HistorialTrabajador({
+    super.key,
+    required this.trabajadorId,
+    this.ultimoContrato,
+    this.fechaFiniquito,
+  });
 
   final String trabajadorId;
+
+  /// Fechas que la ficha guarda por su cuenta, para los documentos emitidos
+  /// antes de que la auditoria dejara registro.
+  final DateTime? ultimoContrato;
+  final DateTime? fechaFiniquito;
 
   /// Como se lee cada accion, y con que icono.
   static const _titulos = <String, (String, IconData)>{
@@ -53,7 +63,42 @@ class HistorialTrabajador extends StatelessWidget {
         if (!snap.hasData) return const SkeletonFilas(filas: 3);
 
         final docs = snap.data!.docs;
-        if (docs.isEmpty) {
+
+        // Los documentos emitidos ANTES de que la auditoria funcionara no
+        // dejaron registro, pero la ficha si guarda cuando fue el ultimo:
+        // seis trabajadores tienen contrato de marzo y ninguna anotacion. Se
+        // muestran desde la ficha, y solo si no hay ya un registro de esa
+        // accion que dijera lo mismo.
+        final acciones = docs.map((d) => d.data()['accion']).toSet();
+        final desdeLaFicha = <Map<String, dynamic>>[
+          if (ultimoContrato != null &&
+              !acciones.contains(Auditoria.generarContrato))
+            {
+              'accion': Auditoria.generarContrato,
+              'timestamp': Timestamp.fromDate(ultimoContrato!),
+              'usuario': '',
+            },
+          if (fechaFiniquito != null &&
+              !acciones.contains(Auditoria.generarFiniquito))
+            {
+              'accion': Auditoria.generarFiniquito,
+              'timestamp': Timestamp.fromDate(fechaFiniquito!),
+              'usuario': '',
+            },
+        ];
+
+        final filas = <Map<String, dynamic>>[
+          ...docs.map((d) => d.data()),
+          ...desdeLaFicha,
+        ]..sort((a, b) {
+            final ta = a['timestamp'];
+            final tb = b['timestamp'];
+            if (ta is! Timestamp) return -1;
+            if (tb is! Timestamp) return 1;
+            return tb.compareTo(ta);
+          });
+
+        if (filas.isEmpty) {
           return const AppEmptyNotice(
             icon: Icons.history_rounded,
             message: 'Sin movimientos registrados',
@@ -65,7 +110,7 @@ class HistorialTrabajador extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final doc in docs) _Fila(datos: doc.data()),
+            for (final fila in filas) _Fila(datos: fila),
           ],
         );
       },

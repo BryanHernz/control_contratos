@@ -411,8 +411,30 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                           items: const [],
                           child: widget.worker.id == null
                               ? null
-                              : HistorialTrabajador(
-                                  trabajadorId: widget.worker.id!,
+                              // Se lee la ficha para pasarle al historial las
+                              // fechas que ella guarda por su cuenta: los
+                              // documentos emitidos antes de que la auditoria
+                              // funcionara no dejaron registro, pero si
+                              // quedaron anotados aqui.
+                              : StreamBuilder<DocumentSnapshot>(
+                                  stream: db
+                                      .collection('Trabajadores')
+                                      .doc(widget.worker.id)
+                                      .snapshots(),
+                                  builder: (ctx, snap) {
+                                    final d = snap.data?.data()
+                                        as Map<String, dynamic>?;
+                                    DateTime? fecha(String k) {
+                                      final v = d?[k];
+                                      return v is Timestamp ? v.toDate() : null;
+                                    }
+
+                                    return HistorialTrabajador(
+                                      trabajadorId: widget.worker.id!,
+                                      ultimoContrato: fecha('ultimoContrato'),
+                                      fechaFiniquito: fecha('fechaFiniquito'),
+                                    );
+                                  },
                                 ),
                         ),
                       ],

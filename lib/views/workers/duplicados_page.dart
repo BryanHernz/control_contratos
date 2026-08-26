@@ -5,9 +5,24 @@ import '../../customs/app_colors.dart';
 import '../../customs/widgets/app_form.dart';
 import '../../customs/widgets/app_modal.dart';
 import '../../customs/widgets/app_skeleton.dart';
-import '../../customs/widgets/page_header.dart';
 import '../../services/duplicados.dart';
 import 'edit_worker_page.dart';
+
+/// Abre las fichas repetidas como modal.
+///
+/// Como modal y no como pagina: las vistas de la app viven dentro del
+/// `Scaffold` de `HomePage`, que no tiene `AppBar`. Empujada como ruta, esta
+/// pantalla tapaba todo sin ningun boton de volver y dejaba la app sin salida.
+Future<void> mostrarFichasRepetidas(BuildContext context) {
+  return showAppModal<void>(
+    context: context,
+    title: 'Fichas repetidas',
+    subtitle: 'Trabajadores que aparecen con el mismo RUT',
+    icon: Icons.join_inner_rounded,
+    maxWidth: 720,
+    child: const DuplicadosPage(),
+  );
+}
 
 /// Fichas que comparten RUT.
 ///
@@ -35,10 +50,15 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
   void _recargar() => setState(() => _grupos = Duplicados.buscar());
 
   Future<void> _editar(FichaRepetida ficha) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => EditWorker(worker: ficha.modelo),
-      ),
+    // Como modal, igual que desde el detalle del trabajador. Empujada como
+    // ruta tapaba el modal de fichas repetidas sin dejar como volver.
+    await showAppModal<void>(
+      context: context,
+      title: 'Editar trabajador',
+      subtitle: ficha.nombreCompleto.toUpperCase(),
+      badge: 'Ficha',
+      icon: Icons.edit_note_rounded,
+      child: EditWorker(worker: ficha.modelo),
     );
     if (mounted) _recargar();
   }
@@ -123,15 +143,12 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Column(
+    // Alto acotado: el modal se adapta al contenido, y con 16 grupos la lista
+    // crecerian mas que la pantalla.
+    return SizedBox(
+      height: (MediaQuery.sizeOf(context).height * 0.62).clamp(320.0, 620.0),
+      child: Column(
         children: [
-          const PageHeader(
-            title: 'Fichas repetidas',
-            subtitle: 'Trabajadores que aparecen con el mismo RUT',
-            icon: Icons.copy_all_rounded,
-          ),
           Expanded(
             child: FutureBuilder<List<GrupoRepetido>>(
               future: _grupos,
@@ -161,7 +178,7 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
                   itemCount: grupos.length + 1,
                   itemBuilder: (context, i) {
                     if (i == 0) return _Resumen(grupos: grupos);

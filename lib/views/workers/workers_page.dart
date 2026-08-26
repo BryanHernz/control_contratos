@@ -472,14 +472,10 @@ class WorkersPageState extends State<WorkersPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.copy_all_rounded,
+                      icon: const Icon(Icons.join_inner_rounded,
                           color: Colors.white),
                       tooltip: 'Fichas repetidas',
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const DuplicadosPage(),
-                        ),
-                      ),
+                      onPressed: () => mostrarFichasRepetidas(context),
                     ),
                     IconButton(
                       icon: const Icon(CupertinoIcons.slider_horizontal_3,

@@ -1584,9 +1584,13 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = fraction == 1.0
+    // Entre N tarjetas hay N-1 separaciones, no N. Restando una de mas cada
+    // fila quedaba corta y sobraba aire a la derecha; con muchas tarjetas el
+    // hueco se hacia evidente.
+    final columnas = (1 / fraction).round();
+    final width = columnas <= 1
         ? maxWidth
-        : (maxWidth - (16 * (1 / fraction).round())) * fraction;
+        : (maxWidth - 16 * (columnas - 1)) / columnas;
     return SizedBox(
       width: width,
       // Material y no Container porque necesita el InkWell del tap, pero con
