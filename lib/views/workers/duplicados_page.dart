@@ -178,7 +178,7 @@ class _DuplicadosPageState extends State<DuplicadosPage> {
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                   itemCount: grupos.length + 1,
                   itemBuilder: (context, i) {
                     if (i == 0) return _Resumen(grupos: grupos);

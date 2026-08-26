@@ -104,9 +104,20 @@ class _ContractPageState extends State<ContractPage> {
                       }
                       return LayoutBuilder(
                         builder: (context, constraints) {
-                          final crossCount = constraints.maxWidth >= 800
-                              ? 3
-                              : (constraints.maxWidth >= 600 ? 2 : 1);
+                          // El ancho REAL que tienen las tarjetas, no el del
+                          // area: el Wrap vive dentro de un Padding de 20 por
+                          // lado, y calcularlas con 40 px de mas hacia que la
+                          // tercera no cupiera nunca. La fila se partia en dos
+                          // y dejaba el hueco de la derecha.
+                          const margenHorizontal = 20.0 * 2;
+                          final anchoUtil =
+                              constraints.maxWidth - margenHorizontal;
+
+                          // Columnas segun lo que quepa, como en la lista de
+                          // trabajadores, en vez de dos umbrales fijos.
+                          const anchoMinimo = 300.0;
+                          final crossCount =
+                              (anchoUtil / anchoMinimo).floor().clamp(1, 4);
                           final validDocs = snapshot.data!.docs
                               .where((doc) => doc['nombre'] != 'lugaresHoras')
                               .toList();
@@ -134,7 +145,7 @@ class _ContractPageState extends State<ContractPage> {
                                 title: doc['nombreempresa'],
                                 subtitle: 'RUT: ' + doc['rut'],
                                 fraction: 1 / crossCount,
-                                maxWidth: constraints.maxWidth,
+                                maxWidth: anchoUtil,
                                 onTap: () {
                                   _openStyledSettingsSheet(
                                     context: context,
@@ -152,7 +163,7 @@ class _ContractPageState extends State<ContractPage> {
                                 title: 'Monto diario',
                                 subtitle: numfor.format(doc['montonum']),
                                 fraction: 1 / crossCount,
-                                maxWidth: constraints.maxWidth,
+                                maxWidth: anchoUtil,
                                 onTap: () {
                                   _openStyledSettingsSheet(
                                     context: context,
@@ -172,7 +183,7 @@ class _ContractPageState extends State<ContractPage> {
                                 subtitle:
                                     '${labores.length} opciones registradas',
                                 fraction: 1 / crossCount,
-                                maxWidth: constraints.maxWidth,
+                                maxWidth: anchoUtil,
                                 onTap: () {
                                   _manageGenericCategory(
                                       context, 'labores', 'Labores');
@@ -185,7 +196,7 @@ class _ContractPageState extends State<ContractPage> {
                                 title: 'Establecimientos',
                                 subtitle: '${lugares.length} sedes registradas',
                                 fraction: 1 / crossCount,
-                                maxWidth: constraints.maxWidth,
+                                maxWidth: anchoUtil,
                                 onTap: () {
                                   _openStyledSettingsSheet(
                                     context: context,
@@ -224,7 +235,7 @@ class _ContractPageState extends State<ContractPage> {
                                 subtitle:
                                     '${tipos.length} opciones disponibles',
                                 fraction: 1 / crossCount,
-                                maxWidth: constraints.maxWidth,
+                                maxWidth: anchoUtil,
                                 onTap: () {
                                   _manageGenericCategory(
                                       context, doc['nombre'], label);
@@ -274,7 +285,7 @@ class _ContractPageState extends State<ContractPage> {
                                             title: tipo.nombre,
                                             subtitle: tipo.descripcion,
                                             fraction: 1 / crossCount,
-                                            maxWidth: constraints.maxWidth,
+                                            maxWidth: anchoUtil,
                                             onTap: () => abrirEditorDePlantilla(
                                                 context, tipo),
                                           ),
@@ -1588,9 +1599,12 @@ class _SettingsCard extends StatelessWidget {
     // fila quedaba corta y sobraba aire a la derecha; con muchas tarjetas el
     // hueco se hacia evidente.
     final columnas = (1 / fraction).round();
+    // `floorToDouble` y no el valor exacto: un ancho que calza justo se parte
+    // igual por el redondeo a subpixeles, y basta con eso para que la ultima
+    // tarjeta salte de fila y deje el hueco.
     final width = columnas <= 1
         ? maxWidth
-        : (maxWidth - 16 * (columnas - 1)) / columnas;
+        : ((maxWidth - 16 * (columnas - 1)) / columnas).floorToDouble();
     return SizedBox(
       width: width,
       // Material y no Container porque necesita el InkWell del tap, pero con
