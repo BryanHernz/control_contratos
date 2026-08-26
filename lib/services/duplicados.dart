@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/worker_model.dart';
+import 'eliminar_trabajador.dart';
 import 'firestore_db.dart';
 
 /// Una ficha que comparte RUT con otra.
@@ -194,11 +195,13 @@ class Duplicados {
 
   /// Borra una ficha repetida.
   ///
-  /// **No toca las imagenes de carnet.** Viven en Storage bajo
-  /// `WorkersIdImages/{rut}_front`, o sea indexadas por RUT: dos fichas que
-  /// comparten RUT comparten tambien las fotos, y borrarlas al eliminar una
-  /// dejaria sin carnet a la que se conserva.
-  static Future<void> eliminar(FichaRepetida ficha) {
-    return db.collection('Trabajadores').doc(ficha.id).delete();
+  /// Las fotos se van con ella solo si nadie mas usa ese RUT: ver
+  /// [EliminarTrabajador], que es el mismo camino que usa el detalle del
+  /// trabajador.
+  static Future<bool> eliminar(FichaRepetida ficha) {
+    return EliminarTrabajador.eliminar(
+      id: ficha.id,
+      rut: ficha.texto('rut'),
+    );
   }
 }

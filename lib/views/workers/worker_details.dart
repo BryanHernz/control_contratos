@@ -3,7 +3,6 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ModalBottomSheetRoute;
 import 'package:flutter/services.dart';
@@ -26,6 +25,7 @@ import '../../services/firestore_db.dart';
 import '../../services/auditoria.dart';
 import '../../services/plantilla_render.dart';
 import '../../customs/widgets/app_form.dart';
+import '../../services/eliminar_trabajador.dart';
 import '../../services/plantilla_campos.dart';
 import '../../services/plantilla_service.dart';
 
@@ -504,20 +504,14 @@ class _WorkerDetailsState extends State<WorkerDetails> {
   }
 
   Future<void> _deleteWorker() async {
-    const path = 'WorkersIdImages/';
-    final frontFile = '${widget.worker.rut}_front';
-    final backFile = '${widget.worker.rut}_back';
-
     try {
-      try {
-        await FirebaseStorage.instance.ref(path).child(frontFile).delete();
-      } catch (_) {}
-
-      try {
-        await FirebaseStorage.instance.ref(path).child(backFile).delete();
-      } catch (_) {}
-
-      await db.collection('Trabajadores').doc(widget.worker.id).delete();
+      // Las fotos se borran SOLO si ninguna otra ficha comparte este RUT.
+      // Antes se borraban siempre, y como la ruta en Storage se arma con el
+      // RUT, eliminar un duplicado dejaba sin carnet a la ficha que quedaba.
+      await EliminarTrabajador.eliminar(
+        id: widget.worker.id!,
+        rut: widget.worker.rut ?? '',
+      );
       await Auditoria.registrar(
         Auditoria.eliminarTrabajador,
         entidadId: widget.worker.id,
