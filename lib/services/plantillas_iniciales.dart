@@ -170,11 +170,14 @@ const Map<String, dynamic> deltaContrato = {
       'insert': '{{trabajador.rut}}',
       'attributes': {'bold': true},
     },
-    {'insert': ', correo electrónico '},
+    // Bloque opcional: el correo del trabajador falta en 9 de cada 10 fichas,
+    // y sin esto la frase quedaba colgando seguida de nada.
+    {'insert': '{{si trabajador.correo}}, correo electrónico '},
     {
       'insert': '{{trabajador.correo}}',
       'attributes': {'bold': true},
     },
+    {'insert': '{{fin}}'},
     {'insert': ', de nacionalidad '},
     {
       'insert': '{{trabajador.nacionalidad}}',

@@ -101,7 +101,20 @@ class AnalizadorPlantilla {
 
   static final RegExp _marcador = RegExp(r'\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}');
 
+  /// Bloque opcional: `{{si trabajador.correo}} ... {{fin}}`.
+  ///
+  /// Existe porque una plantilla es texto plano y no sabe decir "esto solo si
+  /// hay dato". El contrato en codigo SI lo sabia: omitia entero el trozo
+  /// `, correo electronico ...` cuando el trabajador no tenia correo. Al
+  /// migrarlo a plantilla eso se perdio, y 640 de 676 contratos salian con la
+  /// frase colgando y nada detras.
+  static final RegExp _bloque =
+      RegExp(r'\{\{\s*(si\s+[a-zA-Z0-9_.]+|fin)\s*\}\}');
+
   final Set<String> _sinValor = <String>{};
+
+  /// `true` mientras se recorre un bloque opcional cuya clave no tiene valor.
+  bool _omitiendo = false;
 
   PlantillaAnalizada analizar(Map<String, dynamic> delta) {
     final ops = (delta['ops'] as List?) ?? const [];
@@ -130,13 +143,7 @@ class AnalizadorPlantilla {
       final partes = insert.split('\n');
       for (var i = 0; i < partes.length; i++) {
         if (partes[i].isNotEmpty) {
-          pendientes.add(TrozoPlantilla(
-            texto: _sustituir(partes[i]),
-            negrita: attrs['bold'] == true,
-            cursiva: attrs['italic'] == true,
-            subrayado: attrs['underline'] == true,
-            tamano: (attrs['size'] as num?)?.toDouble(),
-          ));
+          _agregarTrozos(partes[i], attrs, pendientes);
         }
         // Cada separador cierra un parrafo; el ultimo pedazo no lleva salto
         // detras, asi que no cierra nada.
@@ -152,6 +159,46 @@ class AnalizadorPlantilla {
       parrafos: parrafos,
       marcadoresSinValor: _sinValor,
     );
+  }
+
+  /// Parte el texto en los bloques `{{si ...}}` / `{{fin}}` y emite solo lo
+  /// que corresponde imprimir.
+  ///
+  /// El estado de omision vive en el analizador y no aqui adentro porque un
+  /// bloque casi siempre abarca varios `insert`: la frase suele ir en uno y el
+  /// marcador con el valor en otro, porque va en negrita.
+  void _agregarTrozos(
+    String texto,
+    Map<String, dynamic> attrs,
+    List<TrozoPlantilla> destino,
+  ) {
+    void emitir(String t) {
+      if (_omitiendo || t.isEmpty) return;
+      destino.add(TrozoPlantilla(
+        texto: _sustituir(t),
+        negrita: attrs['bold'] == true,
+        cursiva: attrs['italic'] == true,
+        subrayado: attrs['underline'] == true,
+        tamano: (attrs['size'] as num?)?.toDouble(),
+      ));
+    }
+
+    var desde = 0;
+    for (final m in _bloque.allMatches(texto)) {
+      emitir(texto.substring(desde, m.start));
+      final token = m.group(1)!;
+      if (token == 'fin') {
+        _omitiendo = false;
+      } else {
+        final clave = token.substring(2).trim();
+        final valor = datos[clave];
+        // Un bloque opcional sin valor NO cuenta como marcador sin resolver:
+        // que falte es exactamente para lo que existe el bloque.
+        _omitiendo = valor == null || valor.trim().isEmpty;
+      }
+      desde = m.end;
+    }
+    emitir(texto.substring(desde));
   }
 
   String _sustituir(String texto) {
