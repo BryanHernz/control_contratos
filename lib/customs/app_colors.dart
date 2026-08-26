@@ -63,6 +63,24 @@ class AppColors {
 
   /// Blanco al 80%. Sobre el header (#263238) da 8.19:1.
   static const Color onDarkMuted = Color(0xCCFFFFFF);
+
+  /// El degradado del chrome oscuro: cabeceras de pagina y, en
+  /// escritorio, la barra de titulo de la ventana.
+  ///
+  /// Vive aqui porque las dos superficies se tocan. Cuando la barra se
+  /// dibujo con el color de arranque plano (#263238), el borde superior
+  /// derecho de la cabecera ya iba al 96% del recorrido -- casi #455A64 --
+  /// y se veia un escalon de casi todo el rango justo en la union.
+  /// El tono de arranque. Todas las superficies oscuras empiezan aqui en su
+  /// borde superior, y por eso la barra de titulo de escritorio puede ser
+  /// plana de este color y calzar con cualquiera de ellas.
+  static const Color chromeOscuroInicio = Color(0xFF263238); // blueGrey.900
+  static const Color chromeOscuroFin = Color(0xFF455A64); // blueGrey.700
+
+  static const List<Color> chromeOscuro = [
+    chromeOscuroInicio,
+    chromeOscuroFin,
+  ];
 }
 
 /// Radio por defecto de las tarjetas, el que trae el proyecto de origen.

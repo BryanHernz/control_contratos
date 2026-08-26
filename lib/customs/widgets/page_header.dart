@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../app_colors.dart';
 import 'menu_lateral.dart';
 
 class PageHeader extends StatelessWidget {
@@ -32,11 +33,8 @@ class PageHeader extends StatelessWidget {
       height: compacta ? (bottomWidget != null ? 168 : 128) : 190,
       padding: EdgeInsets.symmetric(horizontal: compacta ? 16 : 24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blueGrey.shade900,
-            Colors.blueGrey.shade700,
-          ],
+        gradient: const LinearGradient(
+          colors: AppColors.chromeOscuro,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),

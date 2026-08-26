@@ -1,6 +1,8 @@
 import 'package:animated_snack_bar/animated_snack_bar.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import '../../../customs/app_colors.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -183,16 +185,17 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
+          // El mismo degradado que las cabeceras del sistema.
+          //
+          // Antes era vertical y terminaba en blanco. Se cambio porque en
+          // escritorio la barra de titulo de la ventana toca este fondo, y
+          // con dos degradados distintos -- uno vertical aqui y uno diagonal
+          // adentro -- no habia una sola barra que empalmara con los dos.
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blueGrey.shade900,
-              Colors.blueGrey.shade700,
-              Colors.white,
-            ],
-            stops: const [0.0, 0.42, 1.0],
+            colors: AppColors.chromeOscuro,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
         child: SafeArea(

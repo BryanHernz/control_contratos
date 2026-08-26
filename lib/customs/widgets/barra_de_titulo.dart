@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_colors.dart';
 import '../../services/ventana.dart';
 
 /// Barra de titulo propia, para la version de escritorio.
@@ -56,62 +57,72 @@ class _BarraDeTituloState extends State<BarraDeTitulo> {
 
     return SizedBox(
       height: BarraDeTitulo.alto,
-      // `Material` y no `ColoredBox`: sin un Material encima, Flutter dibuja
-      // el texto con su estilo de aviso -- amarillo y subrayado -- porque la
-      // barra vive en el `builder` de la app, por fuera de cualquier Scaffold.
-      child: Material(
-        // El mismo tono que la cabecera de las paginas: asi la ventana se lee
-        // como una sola pieza y no como la app dentro de un marco ajeno.
-        color: const Color(0xFF263238),
-        child: Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                // `translucent` para que el area vacia tambien arrastre, no
-                // solo donde hay texto.
-                behavior: HitTestBehavior.translucent,
-                onPanStart: (_) => ControlDeVentana.arrastrar(),
-                onDoubleTap: ControlDeVentana.alternarMaximizada,
-                child: Row(
-                  children: [
-                    const SizedBox(width: 16),
-                    Text(
-                      widget.titulo,
-                      style: const TextStyle(
-                        color: Color(0xE6FFFFFF),
-                        fontSize: 13,
-                        letterSpacing: 0.3,
-                        fontWeight: FontWeight.w600,
+      child: DecoratedBox(
+        // El mismo degradado que las cabeceras, en el mismo sentido: la
+        // barra toca ese borde, y cualquier diferencia se ve como una
+        // costura.
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: AppColors.chromeOscuro,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        // `Material` transparente: sin un Material encima, Flutter dibuja el
+        // texto con su estilo de aviso -- amarillo y subrayado -- porque la
+        // barra vive en el `builder` de la app, fuera de cualquier Scaffold.
+        child: Material(
+          type: MaterialType.transparency,
+          child: Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  // `translucent` para que el area vacia tambien arrastre, no
+                  // solo donde hay texto.
+                  behavior: HitTestBehavior.translucent,
+                  onPanStart: (_) => ControlDeVentana.arrastrar(),
+                  onDoubleTap: ControlDeVentana.alternarMaximizada,
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 16),
+                      Text(
+                        widget.titulo,
+                        style: const TextStyle(
+                          color: Color(0xE6FFFFFF),
+                          fontSize: 13,
+                          letterSpacing: 0.3,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-            _BotonDeVentana(
-              icono: Icons.remove,
-              descripcion: 'Minimizar',
-              onTap: ControlDeVentana.minimizar,
-            ),
-            _BotonDeVentana(
-              icono: _maximizada
-                  ? Icons.filter_none_outlined
-                  : Icons.crop_square_outlined,
-              descripcion: _maximizada ? 'Restaurar' : 'Maximizar',
-              // El icono de restaurar son dos cuadros superpuestos y se ve
-              // mas grande de lo que mide; se compensa aqui.
-              tamanoIcono: _maximizada ? 13 : 15,
-              onTap: ControlDeVentana.alternarMaximizada,
-            ),
-            _BotonDeVentana(
-              icono: Icons.close,
-              descripcion: 'Cerrar',
-              // El rojo de cerrar es el de Windows 11. Se respeta porque es
-              // la senal que la gente ya reconoce sin leer.
-              colorAlPasar: const Color(0xFFC42B1C),
-              onTap: ControlDeVentana.cerrar,
-            ),
-          ],
+              _BotonDeVentana(
+                icono: Icons.remove,
+                descripcion: 'Minimizar',
+                onTap: ControlDeVentana.minimizar,
+              ),
+              _BotonDeVentana(
+                icono: _maximizada
+                    ? Icons.filter_none_outlined
+                    : Icons.crop_square_outlined,
+                descripcion: _maximizada ? 'Restaurar' : 'Maximizar',
+                // El icono de restaurar son dos cuadros superpuestos y se ve
+                // mas grande de lo que mide; se compensa aqui.
+                tamanoIcono: _maximizada ? 13 : 15,
+                onTap: ControlDeVentana.alternarMaximizada,
+              ),
+              _BotonDeVentana(
+                icono: Icons.close,
+                descripcion: 'Cerrar',
+                // El rojo de cerrar es el de Windows 11. Se respeta porque es
+                // la senal que la gente ya reconoce sin leer.
+                colorAlPasar: const Color(0xFFC42B1C),
+                onTap: ControlDeVentana.cerrar,
+              ),
+            ],
+          ),
         ),
       ),
     );

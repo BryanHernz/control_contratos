@@ -3,7 +3,7 @@
 ; Se compila con `tool/empaquetar_windows.sh`, que le pasa la version leida del
 ; pubspec. No editar el numero aqui.
 ;
-;   ISCC.exe /DVersionApp=1.0.4 windows\installer\control_contratos.iss
+;   ISCC.exe /DVersionApp=1.0.7 windows\installer\control_contratos.iss
 
 #ifndef VersionApp
   #define VersionApp "0.0.0"
@@ -47,6 +47,21 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=..\runner\resources\app_icon.ico
+
+; Marca del asistente. Las imagenes las genera
+; `tool/generar_icono_windows.dart` a partir del mismo icono de la app, sobre
+; el degradado de sus cabeceras, para que el instalador se vea como la misma
+; pieza de software y no como un asistente generico.
+;
+; Van varios tamanos: Inno elige segun la escala de pantalla del equipo.
+WizardImageFile=imagenes\banner-*.bmp
+WizardSmallImageFile=imagenes\cabecera-*.bmp
+
+; El estilo moderno oculta la pagina de bienvenida, que es justo donde se
+; muestra el banner grande. Se vuelve a activar: es la primera pantalla que ve
+; quien instala.
+DisableWelcomePage=no
+
 UninstallDisplayName={#NombreApp}
 UninstallDisplayIcon={app}\{#Ejecutable}
 
@@ -63,10 +78,19 @@ Name: "escritorio"; Description: "Crear un acceso directo en el escritorio"; Gro
 ; para ejecutar y solo engordan la descarga de cada actualizacion.
 Source: "..\..\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Excludes: "*.lib,*.exp"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+; El icono tambien como archivo suelto, para que los accesos directos apunten
+; a el y no al `.exe`.
+;
+; Windows cachea el icono POR RUTA, y esa cache sobrevive incluso a desinstalar
+; y volver a instalar: el acceso directo del escritorio seguia mostrando el
+; logo de Flutter aunque el ejecutable ya tuviera el correcto. Apuntar a una
+; ruta que nunca estuvo en la cache la esquiva.
+Source: "..\runner\resources\app_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
+
 [Icons]
-Name: "{group}\{#NombreApp}"; Filename: "{app}\{#Ejecutable}"
+Name: "{group}\{#NombreApp}"; Filename: "{app}\{#Ejecutable}"; IconFilename: "{app}\app_icon.ico"
 Name: "{group}\Desinstalar {#NombreApp}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#NombreApp}"; Filename: "{app}\{#Ejecutable}"; Tasks: escritorio
+Name: "{autodesktop}\{#NombreApp}"; Filename: "{app}\{#Ejecutable}"; IconFilename: "{app}\app_icon.ico"; Tasks: escritorio
 
 [Run]
 Filename: "{app}\{#Ejecutable}"; Description: "Abrir {#NombreApp}"; Flags: nowait postinstall skipifsilent
