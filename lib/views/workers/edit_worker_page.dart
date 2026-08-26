@@ -486,7 +486,32 @@ class _EditWorkerState extends State<EditWorker> {
     }
   }
 
-  void saveWorker(WorkerModel worker) {
+  /// Los campos que cambiaron entre la ficha original y la editada.
+  static List<String> _camposCambiados(WorkerModel antes, WorkerModel ahora) {
+    String n(String? v) => (v ?? '').trim().toLowerCase();
+    final pares = <String, List<String?>>{
+      'nombres': [antes.name, ahora.name],
+      'apellidos': [antes.lastName, ahora.lastName],
+      'rut': [antes.rut, ahora.rut],
+      'correo': [antes.email, ahora.email],
+      'nacionalidad': [antes.nacionality, ahora.nacionality],
+      'estado civil': [antes.civilState, ahora.civilState],
+      'fecha de nacimiento': [antes.birth, ahora.birth],
+      'direccion': [antes.adress, ahora.adress],
+      'comuna': [antes.commune, ahora.commune],
+      'labor': [antes.labor, ahora.labor],
+      'lugar': [antes.place, ahora.place],
+      'afp': [antes.afp, ahora.afp],
+      'prevision': [antes.prevision, ahora.prevision],
+      'fecha de ingreso': [antes.ingress, ahora.ingress],
+    };
+    return [
+      for (final e in pares.entries)
+        if (n(e.value[0]) != n(e.value[1])) e.key,
+    ];
+  }
+
+  Future<void> saveWorker(WorkerModel worker) async {
     try {
       var user = FirebaseAuth.instance.currentUser!;
       db.collection('Trabajadores').doc(widget.worker.id).update({
@@ -526,10 +551,20 @@ class _EditWorkerState extends State<EditWorker> {
           rut: worker.rut,
         ),
       });
-      Auditoria.registrar(
+      // Que campos cambiaron, no sus valores.
+      //
+      // Guardar el antes y el despues de cada campo seria duplicar la ficha en
+      // cada guardado, y ademas dejaria datos personales repetidos en una
+      // coleccion que nadie limpia. Con saber que se toco alcanza para
+      // responder "quien cambio esto y cuando".
+      final cambiados = _camposCambiados(widget.worker, worker);
+      await Auditoria.registrar(
         Auditoria.editarTrabajador,
         entidadId: widget.worker.id,
-        detalle: {'rut': worker.rut},
+        detalle: {
+          'rut': worker.rut,
+          if (cambiados.isNotEmpty) 'campos': cambiados,
+        },
       );
       Get.back();
       Get.back();

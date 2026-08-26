@@ -26,6 +26,7 @@ import '../../services/auditoria.dart';
 import '../../services/plantilla_render.dart';
 import '../../customs/widgets/app_form.dart';
 import '../../services/eliminar_trabajador.dart';
+import 'historial_trabajador.dart';
 import '../../services/plantilla_campos.dart';
 import '../../services/plantilla_service.dart';
 
@@ -399,6 +400,20 @@ class _WorkerDetailsState extends State<WorkerDetails> {
                               ),
                             );
                           },
+                        ),
+                        const SizedBox(height: 14),
+                        // El historial va a todo el ancho y al final: es lo
+                        // que se consulta cuando surge una duda, no lo que se
+                        // mira al abrir la ficha.
+                        _InfoCard(
+                          title: 'Historial',
+                          icon: Icons.history_rounded,
+                          items: const [],
+                          child: widget.worker.id == null
+                              ? null
+                              : HistorialTrabajador(
+                                  trabajadorId: widget.worker.id!,
+                                ),
                         ),
                       ],
                     ),
@@ -4565,10 +4580,15 @@ class _InfoCard extends StatelessWidget {
   final IconData icon;
   final List<_InfoItem> items;
 
+  /// Contenido libre en vez de la lista de filas, para las tarjetas que no
+  /// son pares etiqueta-valor. Hoy: el historial.
+  final Widget? child;
+
   const _InfoCard({
     required this.title,
     required this.icon,
     required this.items,
+    this.child,
   });
 
   @override
@@ -4607,6 +4627,11 @@ class _InfoCard extends StatelessWidget {
             ),
           ),
           const Divider(height: 1, color: Color(0xFFF0F2F5)),
+          if (child != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              child: child,
+            ),
           // Rows
           ...items.asMap().entries.map((entry) {
             final i = entry.key;
