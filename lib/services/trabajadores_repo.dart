@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 import '../models/worker_model.dart';
 import '../utils/normalize.dart';
@@ -256,5 +257,32 @@ class TrabajadoresRepo {
       }
     }
     return prefijos.toList()..sort();
+  }
+}
+
+
+/// Convierte la fecha de ingreso escrita por el formulario a una fecha real.
+///
+/// El formulario guarda `ingreso` como texto en espanol -- "4 de noviembre de
+/// 2025" -- porque es lo que produce su selector. Firestore no puede ordenar
+/// ni filtrar por eso, asi que ademas se guarda `fechaIngreso`.
+///
+/// Se AGREGA, no reemplaza: `ingreso` es lo que imprime el contrato
+/// (`contrato.fecha_ingreso` sale de ahi tal cual), y tocarlo seria arriesgar
+/// el documento legal para ahorrar un campo.
+///
+/// Devuelve `null` si el texto no se puede interpretar, para que quien llame
+/// decida -- nunca una fecha inventada.
+DateTime? fechaDeIngreso(String? texto) {
+  final t = (texto ?? '').trim();
+  if (t.isEmpty) return null;
+  try {
+    final d = DateFormat.yMMMMd('es').parseLoose(t.toLowerCase());
+    // Mediodia UTC y no medianoche: Chile va en UTC-3 o UTC-4, asi que las
+    // 00:00Z se leen como el dia ANTERIOR en hora local y todas las fechas se
+    // correrian un dia.
+    return DateTime.utc(d.year, d.month, d.day, 12);
+  } catch (_) {
+    return null;
   }
 }

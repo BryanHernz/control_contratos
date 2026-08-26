@@ -545,6 +545,11 @@ class _NewWorkerState extends State<NewWorker> {
         'afp': worker.afp!.toLowerCase(),
         'prevision': worker.prevision!.toLowerCase(),
         'ingreso': worker.ingress,
+        // La misma fecha, pero como fecha: `ingreso` es texto y no se
+        // puede ordenar ni filtrar. Se guardan las dos.
+        'fechaIngreso': fechaDeIngreso(worker.ingress) == null
+            ? null
+            : Timestamp.fromDate(fechaDeIngreso(worker.ingress)!),
         // Nace sin contrato vigente: se marca al emitirle uno, o a mano desde
         // la ficha. Sin escribirlo aqui el documento nacería SIN el campo, y
         // un campo ausente no lo encuentra ninguna consulta -- que es

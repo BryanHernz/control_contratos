@@ -505,6 +505,11 @@ class _EditWorkerState extends State<EditWorker> {
         'afp': worker.afp!.toLowerCase(),
         'prevision': worker.prevision!.toLowerCase(),
         'ingreso': worker.ingress,
+        // La misma fecha, pero como fecha: `ingreso` es texto y no se
+        // puede ordenar ni filtrar. Se guardan las dos.
+        'fechaIngreso': fechaDeIngreso(worker.ingress) == null
+            ? null
+            : Timestamp.fromDate(fechaDeIngreso(worker.ingress)!),
         'activo': _activo,
         // Se reescribe junto con el nombre y el RUT: si no, buscar seguiria
         // encontrando al trabajador por su nombre anterior.
