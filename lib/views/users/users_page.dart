@@ -236,20 +236,30 @@ class _UsersPageState extends State<UsersPage> {
 
                       return LayoutBuilder(
                         builder: (context, constraints) {
+                          // El ancho REAL de las tarjetas, no el del area: el
+                          // contenido va dentro de un Padding de 20 por lado
+                          // que este LayoutBuilder no ve. Calcularlas con 40
+                          // px de mas las dejaba cortas y sobraba espacio a la
+                          // derecha.
+                          const margenHorizontal = 20.0 * 2;
+                          final anchoUtil =
+                              constraints.maxWidth - margenHorizontal;
+
                           // Columnas segun lo que quepa, no un umbral unico.
                           // Antes pasaba a dos recien a los 980 px: en una
                           // ventana de tablet quedaba una sola tarjeta
                           // angosta con media pantalla vacia al lado.
                           const anchoMinimo = 420.0;
                           const separacion = 12.0;
-                          final columnas = (constraints.maxWidth / anchoMinimo)
-                              .floor()
-                              .clamp(1, 3);
+                          final columnas =
+                              (anchoUtil / anchoMinimo).floor().clamp(1, 3);
+                          // Redondeado hacia abajo: un ancho que calza justo
+                          // se parte igual por el redondeo a subpixeles.
                           final cardWidth = columnas == 1
-                              ? constraints.maxWidth
-                              : (constraints.maxWidth -
-                                      separacion * (columnas - 1)) /
-                                  columnas;
+                              ? anchoUtil
+                              : ((anchoUtil - separacion * (columnas - 1)) /
+                                      columnas)
+                                  .floorToDouble();
                           final toolbarInline = constraints.maxWidth >= 900;
 
                           return SingleChildScrollView(
@@ -666,7 +676,9 @@ class _UsersSummaryCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
+        // 12, el mismo radio de los botones de la tarjeta. Con 999 quedaban
+        // en forma de pildora y se leian como otra familia de elementos.
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
@@ -743,7 +755,9 @@ class _UserInfoChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
+        // 12, el mismo radio de los botones de la tarjeta. Con 999 quedaban
+        // en forma de pildora y se leian como otra familia de elementos.
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
       child: Row(
