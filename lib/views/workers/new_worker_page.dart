@@ -545,6 +545,11 @@ class _NewWorkerState extends State<NewWorker> {
         'afp': worker.afp!.toLowerCase(),
         'prevision': worker.prevision!.toLowerCase(),
         'ingreso': worker.ingress,
+        // Nace sin contrato vigente: se marca al emitirle uno, o a mano desde
+        // la ficha. Sin escribirlo aqui el documento nacería SIN el campo, y
+        // un campo ausente no lo encuentra ninguna consulta -- que es
+        // exactamente como 675 trabajadores quedaron fuera del dashboard.
+        'activo': false,
         'imagenFront': '',
         'imagenBack': '',
         // Texto normalizado con que se busca al trabajador. Firestore no sabe

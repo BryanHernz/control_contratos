@@ -18,6 +18,7 @@ import '../../models/worker_model.dart';
 import '../widgets/settings_dialogs.dart';
 import '../../services/firestore_db.dart';
 import '../../services/auditoria.dart';
+import '../../customs/widgets/app_form.dart';
 import '../../services/trabajadores_repo.dart';
 
 class EditWorker extends StatefulWidget {
@@ -44,6 +45,15 @@ class _EditWorkerState extends State<EditWorker> {
   final TextEditingController _ingressController = TextEditingController();
   final TextEditingController _civilStateController = TextEditingController();
   final TextEditingController _adressController = TextEditingController();
+
+  /// Si el trabajador tiene contrato vigente.
+  ///
+  /// Normalmente lo mueve la app sola: emitir un contrato lo pone en `true` y
+  /// un finiquito en `false`. Este interruptor existe porque los 675
+  /// trabajadores cargados antes de que ese campo existiera quedaron todos en
+  /// `false`, y esperar a emitirle un contrato a cada uno para ponerse al dia
+  /// no es realista.
+  late bool _activo = widget.worker.activo ?? false;
 
   final _formKey = GlobalKey<FormState>();
 
@@ -495,6 +505,7 @@ class _EditWorkerState extends State<EditWorker> {
         'afp': worker.afp!.toLowerCase(),
         'prevision': worker.prevision!.toLowerCase(),
         'ingreso': worker.ingress,
+        'activo': _activo,
         // Se reescribe junto con el nombre y el RUT: si no, buscar seguiria
         // encontrando al trabajador por su nombre anterior.
         'busqueda': TrabajadoresRepo.textoDeBusqueda(
@@ -1234,6 +1245,19 @@ class _EditWorkerState extends State<EditWorker> {
                 ),
               ],
             ),
+          ),
+        ),
+        // Fuera de la grilla, por lo mismo que el pie: dentro contaria como un
+        // campo mas y quedaria en una sola columna.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(25, 4, 25, 0),
+          child: AppSwitchRow(
+            title: 'Contrato vigente',
+            subtitle: _activo
+                ? 'Cuenta en el dashboard y en los informes'
+                : 'No cuenta como trabajador con contrato vigente',
+            value: _activo,
+            onChanged: (v) => setState(() => _activo = v),
           ),
         ),
         // El pie va FUERA de la grilla. Estando dentro contaba como un campo

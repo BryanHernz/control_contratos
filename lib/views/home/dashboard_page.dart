@@ -37,14 +37,21 @@ class _DashboardPageState extends State<DashboardPage> {
   late final DateTime _today;
   late final DateTime _monthStart;
 
-  // La tarjeta "Trabajadores activos" y el grafico por lugar/labor usan la
-  // misma consulta. Se dejan como dos `.snapshots()` sobre la MISMA query a
-  // proposito, no como un broadcast: el SDK de Firestore comparte el target
-  // subyacente entre escuchas identicas (se cobra una vez), y un
-  // `asBroadcastStream` en cambio le negaria el snapshot inicial a quien se
-  // suscriba despues.
-  late final Stream<QuerySnapshot> _activosStreamMetrica;
-  late final Stream<QuerySnapshot> _activosStreamGrafico;
+  // El padron completo, para los graficos por lugar y por labor.
+  //
+  // Antes esto filtraba por `activo == true`, y los graficos mostraban un solo
+  // registro al 100%: de los 676 trabajadores, 675 fueron creados ANTES de que
+  // existiera ese campo, asi que no lo tienen y quedaban fuera de la consulta.
+  // El dashboard no estaba mostrando el padron sino un registro de prueba.
+  //
+  // Es un `.get()` y no un `.snapshots()`: baja los documentos una vez al
+  // entrar, en vez de mantener viva una escucha sobre la coleccion entera.
+  late final Future<List<Map<String, dynamic>>> _padron;
+
+  // Los dos numeros de la primera tarjeta, por agregacion: 1 lectura cada uno
+  // en vez de bajar los documentos para contarlos.
+  late final Future<int> _totalRegistrados;
+  late final Future<int> _conContratoVigente;
 
   late final Stream<QuerySnapshot> _ultimosContratosStream;
   late final Stream<QuerySnapshot> _auditoriaStream;
@@ -66,10 +73,18 @@ class _DashboardPageState extends State<DashboardPage> {
     _monthStart = DateTime(_now.year, _now.month, 1);
 
     final trabajadores = db.collection('Trabajadores');
-    final activos = trabajadores.where('activo', isEqualTo: true);
 
-    _activosStreamMetrica = activos.snapshots();
-    _activosStreamGrafico = activos.snapshots();
+    _totalRegistrados =
+        trabajadores.count().get().then((s) => s.count ?? 0);
+    _conContratoVigente = trabajadores
+        .where('activo', isEqualTo: true)
+        .count()
+        .get()
+        .then((s) => s.count ?? 0);
+
+    _padron = trabajadores.get().then(
+          (s) => s.docs.map((e) => e.data()).toList(),
+        );
 
     _contratosDelMes = trabajadores
         .where('ultimoContrato',
@@ -138,19 +153,34 @@ class _DashboardPageState extends State<DashboardPage> {
                                   spacing: 16,
                                   runSpacing: 16,
                                   children: [
-                                    StreamBuilder<QuerySnapshot>(
-                                      stream: _activosStreamMetrica,
-                                      builder: (ctx, snap) {
-                                        final total =
-                                            snap.data?.docs.length ?? 0;
-                                        return _MetricCard(
-                                          icon: Icons.people_rounded,
-                                          label: 'Trabajadores activos',
-                                          value: '$total',
-                                          subtitle: 'Con contrato activo',
-                                          accentColor: const Color(0xFF546E7A),
-                                          fraction: 1 / crossCount,
-                                          maxWidth: constraints.maxWidth,
+                                    // Dos numeros y no uno: el padron es un
+                                    // registro historico de todos los que han
+                                    // pasado, y "con contrato vigente" son los
+                                    // que tienen uno emitido hoy. Mostrar solo
+                                    // el segundo daba un 1 que parecia un
+                                    // error.
+                                    FutureBuilder<int>(
+                                      future: _totalRegistrados,
+                                      builder: (ctx, snapTotal) {
+                                        return FutureBuilder<int>(
+                                          future: _conContratoVigente,
+                                          builder: (ctx, snapVigentes) {
+                                            final total = snapTotal.data;
+                                            final vigentes = snapVigentes.data;
+                                            return _MetricCard(
+                                              icon: Icons.people_rounded,
+                                              label: 'Trabajadores registrados',
+                                              value: '${total ?? '-'}',
+                                              subtitle: vigentes == null
+                                                  ? 'Contando...'
+                                                  : '$vigentes con contrato '
+                                                      'vigente',
+                                              accentColor:
+                                                  const Color(0xFF546E7A),
+                                              fraction: 1 / crossCount,
+                                              maxWidth: constraints.maxWidth,
+                                            );
+                                          },
                                         );
                                       },
                                     ),
@@ -203,17 +233,14 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                             const SizedBox(height: 14),
 
-                            StreamBuilder<QuerySnapshot>(
-                              stream: _activosStreamGrafico,
+                            FutureBuilder<List<Map<String, dynamic>>>(
+                              future: _padron,
                               builder: (ctx, snap) {
                                 if (!snap.hasData) {
                                   return _ChartLoadingPlaceholder();
                                 }
 
-                                final workers = snap.data!.docs
-                                    .map(
-                                        (e) => e.data() as Map<String, dynamic>)
-                                    .toList();
+                                final workers = snap.data!;
 
                                 final placesData = <String, int>{};
                                 final taskData = <String, int>{};
