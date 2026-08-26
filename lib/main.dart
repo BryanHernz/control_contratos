@@ -12,10 +12,12 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'auth/auth_pages.dart';
 import 'customs/app_colors.dart';
 import 'customs/widgets/banda_barra_estado.dart';
+import 'customs/widgets/barra_de_titulo.dart';
 import 'customs/constants_values.dart';
 import 'firebase_options.dart';
 import 'services/firestore_db.dart';
 import 'services/update_service.dart';
+import 'services/ventana.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +28,11 @@ Future<void> main() async {
   await initializeDateFormatting('es');
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Oculta la barra de titulo del sistema en escritorio. Va antes de `runApp`
+  // para que la ventana no llegue a mostrarse con la barra nativa puesta: si
+  // se hace despues, se ve un parpadeo al arrancar.
+  await ControlDeVentana.preparar();
 
   runApp(const MyApp());
 }
@@ -184,7 +191,17 @@ class _MyAppState extends State<MyApp> {
           data: MediaQuery.of(context).copyWith(
             textScaler: const TextScaler.linear(1.0),
           ),
-          child: BandaBarraDeEstado(color: primario, child: contenido),
+          child: BandaBarraDeEstado(
+            color: primario,
+            // En escritorio la barra de titulo es nuestra; en web y en
+            // Android `BarraDeTitulo` mide cero y esta Column no cambia nada.
+            child: Column(
+              children: [
+                const BarraDeTitulo(titulo: 'Control de Contratos'),
+                Expanded(child: contenido),
+              ],
+            ),
+          ),
         );
       },
       home: const MainPage(),
